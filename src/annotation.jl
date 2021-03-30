@@ -1,0 +1,22 @@
+# Experimental features for gene annotation
+
+using BioSequences
+
+seqa = dna"TAGCTGATCTATCTCGCGCGCATTATCGTATTCTCAGTGATCTCTTTTACCCAG"
+seqb = dna"ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATG"
+seqc = dna"GCGATCTCGATCTATCTCTCTCTTAGGCGCTAGCCGATTCTAGCTGCTATCTAA"
+
+STARTCODONS = ["ATG"]
+STOPCODONS = ["TAG", "TGA", "TA"]
+SPLICEDONORS = ["GT"]
+SPLICEACCEPTORS = ["AG"]
+# 30, 70, 150, 300, 600
+MIN_ORFLENGTH = 30
+ignorenested = true # ignore nested ORFs
+# Genetic code
+
+reverse_complement(seqa)
+
+# TODO:
+# 1. Implement an ORF graph
+# 2.
