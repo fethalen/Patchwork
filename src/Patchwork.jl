@@ -1,7 +1,6 @@
 module Patchwork
 
 using ArgParse
-using Crayons
 using DataFrames
 
 include("alignedregion.jl")
@@ -17,23 +16,7 @@ include("multiplesequencealignment.jl")
 Prints the Patchwork logo to stdout.
 """
 function print_logo()
-    r = string(Crayons.Crayon(foreground = :red))
-    g = string(Crayons.Crayon(foreground = :green))
-    y = string(Crayons.Crayon(foreground = :yellow))
-    b = string(Crayons.Crayon(foreground = :blue))
-    c = string(Crayons.Crayon(foreground = :cyan))
-    e = string(Crayon(foreground = :dark_gray))
-    res = string(Crayons.Crayon(reset = true))
-    und = string(Crayons.Crayon(underline = true))
-    bol = string(Crayons.Crayon(bold = true))
-
-    str = """
-    $(r)██$(e)██$(y)██$(g)██$(res)
-    $(e)██$(c)██$(g)██$(r)██$(res) $(bol)Patchwork$(res)
-    $(y)██$(g)██$(r)██$(c)██$(res)
-    """
-
-    print(str)
+    println("Patchwork")
 end
 
 """
@@ -133,10 +116,12 @@ function main()
     end
     println("BLAST-engine: $blastengine")
 
-    query = "/media/feli/Storage/phylogenomics/1st_wo_nextera/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
-    subject = "/home/feli/ownCloud/projects/Patchwork/test/07673_Alitta_succinea.fa"
-    subject_db = diamond_makeblastdb(subject, ["--threads", Sys.CPU_THREADS])
-    hits = diamond_blastx(query, subject_db, ["--threads", Sys.CPU_THREADS])
+    # query = "/media/feli/Storage/phylogenomics/1st_wo_nextera/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
+    # subject = "/home/feli/ownCloud/projects/Patchwork/test/07673_Alitta_succinea.fa"
+    # subject_db = Patchwork.diamond_makeblastdb(subject, ["--threads", Sys.CPU_THREADS])
+    # diamondresults = Patchwork.diamond_blastx(query, subject_db, ["--threads", Sys.CPU_THREADS])
+    # blastresults = Patchwork.readblastTSV(diamondresults)
+    hits = DataFrame(Patchwork.readblastTSV("test/c_australis_x_07673.tsv"))
     queryids = convert(Array, select(DataFrames.DataFrame(hits), :queryid))
     querymsa = selectsequences(query, queryids)
 
@@ -144,11 +129,6 @@ function main()
     # querysubject_aln = mafft_linsi(queryalignment, ["--thread", Sys.CPU_THREADS])
     # regions = AlignedRegionCollection(querymsa,hits)
     # # uniqueregions = uniquesequences(regions)
-
-    # # alittahits = filter(result -> result.queryotu == "ASUC", results)
-    # merge!(queryalignment, alittahits)
-    # querysubject_aln = mafft_linsi(queryalignment, ["--thread", Sys.CPU_THREADS])
-    # regions = AlignedRegionCollection(queryalignment, hits)
 end
 
 end # module
