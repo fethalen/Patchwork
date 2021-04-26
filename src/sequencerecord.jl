@@ -271,3 +271,21 @@ Returns the identifier of `sequence`, including the OTU separated by
 function identifier(sequence::SequenceRecord, separator::AbstractChar='@')
     return *(sequence.otu, separator, sequence.identifier)
 end
+
+"""
+    isnucleotide(record)
+
+Returns true if this record's `sequencedata` consists of nucleotides.
+"""
+function isnucleotide(record::SequenceRecord)
+    return isa(BioSequences.Alphabet(record.sequencedata), BioSequences.DNAAlphabet)
+end
+
+"""
+    isaminoacid(record)
+
+Returns true if this record's `sequencedata` consists of amino acids.
+"""
+function isaminoacid(record::SequenceRecord)
+    return ! isnucleotide(record)
+end
