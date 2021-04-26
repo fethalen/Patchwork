@@ -7,8 +7,8 @@ using BioSequences
 include("multiplesequencealignment.jl")
 include("sequencerecord.jl")
 
-HEADER = ["qseqid", "sseqid", "pident", "length", "mismatch", "gapopen", 
-          "qstart", "qend", "sstart", "send", "evalue", "bitscore", 
+HEADER = ["qseqid", "sseqid", "pident", "length", "mismatch", "gapopen",
+          "qstart", "qend", "sstart", "send", "evalue", "bitscore",
           "qseq", "qframe", "sseq"]
 OUTPUT_FORMAT = [6; HEADER]
 
@@ -55,7 +55,7 @@ end
     readblastTSV(path, min_percentidentity)
 
 Read the contents of a tabular BLAST output into an array of `BLASTSearchResult`s.
-Filters non-unique results and results with less percent identity than 
+Filters non-unique results and results with less percent identity than
 `min_percentidentity`. Adhear to the following BLAST `-outfmt`:
 
 `6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore
@@ -65,11 +65,11 @@ function readblastTSV(path::AbstractString; delimiter='@')::Array{BLASTSearchRes
     results = CSV.File(path; header=HEADER, delim='\t') |> DataFrame
     unique!(results)
 
-    qsplits = [(qotu=first, qid=last) 
+    qsplits = [(qotu=first, qid=last)
         for (first, last) in splitdescription(Vector{String}(results.qseqid); delimiter)] |>
         DataFrames.DataFrame
-    ssplits = [(sotu=first, sid=last) 
-        for (first, last) in splitdescription(Vector{String}(results.sseqid); delimiter)] |> 
+    ssplits = [(sotu=first, sid=last)
+        for (first, last) in splitdescription(Vector{String}(results.sseqid); delimiter)] |>
         DataFrames.DataFrame
     select!(results, Not([:qseqid, :sseqid]))
     results = hcat(qsplits, ssplits, results)
@@ -77,8 +77,8 @@ function readblastTSV(path::AbstractString; delimiter='@')::Array{BLASTSearchRes
     blastsearchresults = []
     for row in eachrow(results)
         result = BLASTSearchResult(
-            row.qid, row.qotu, row.sid, row.sotu, row.pident, row.length, row.mismatch, 
-            row.gapopen, row.qstart, row.qend, row.sstart, row.send, row.evalue, 
+            row.qid, row.qotu, row.sid, row.sotu, row.pident, row.length, row.mismatch,
+            row.gapopen, row.qstart, row.qend, row.sstart, row.send, row.evalue,
             row.bitscore, LongAminoAcidSeq(row.sseq), row.qframe, LongDNASeq(row.qseq))
         push!(blastsearchresults, result)
     end
@@ -91,9 +91,9 @@ end
 Write `results` to a TSV file to `path`, using the provided `delimiter` to separate
 columns (default: `'\\t'`). No header is added when `header` is set to `false`.
 """
-function writeblastTSV(path::AbstractString, results::Array{BLASTSearchResult,1}; 
+function writeblastTSV(path::AbstractString, results::Array{BLASTSearchResult,1};
                        delimiter='\t', header=false)::AbstractString
-    CSV.write(path, select!(DataFrames.DataFrame(results), Not(:subjectotu)), 
+    CSV.write(path, select!(DataFrames.DataFrame(results), Not(subjectotu)),
               delim=delimiter, writeheader=header)
     return path
 end
@@ -176,10 +176,8 @@ automatically before the BLAST search.
 """
 function diamond_blastx(query::AbstractString, subject::AbstractString,
                         flags=[])::AbstractString
-    results_file, results_io= mktemp()
+    results_file, results_io = mktemp()
     write(results_file, join(HEADER, '\t') * '\n')
-    # query_fasta = mktemp_fasta(query, removehyphens=true)
-
     diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
                             --outfmt $OUTPUT_FORMAT --out $results_file`)
     run(diamond_cmd)
@@ -191,7 +189,6 @@ function diamond_blastx(query::MultipleSequenceAlignment, subject::AbstractStrin
                         flags=[])::AbstractString
     results_file, results_io = mktemp()
     write(results_file, join(HEADER, '\t') * '\n')
-    # query_fasta = mktemp_fasta(query, removehyphens=true)
     diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
                             --outfmt $OUTPUT_FORMAT --out $results_file`)
     run(diamond_cmd)
@@ -200,18 +197,16 @@ function diamond_blastx(query::MultipleSequenceAlignment, subject::AbstractStrin
 end
 
 """
-Uses DIAMOND to create a BLAST database from the provided `reference` FASTA
-sequence. May include optional `flags` such as `["--taxonnodes"]`.
+Runs `diamond makedb` on the provided `reference` FASTA sequence. May include
+optional `flags` such as `["--taxonnodes"]`.
 """
 function diamond_makeblastdb(reference::AbstractString, flags=[])
-    # TODO
     db_file, db_io = mktemp()
     makedb_cmd = pipeline(`diamond makedb --in $reference -d $db_file $flags`)
     run(makedb_cmd)
     close(db_io)
     return db_file
 end
-
 
 function queryids(results::Vector{BLASTSearchResult}, speciesdelimiter='@')::Vector{String}
     return map(result -> *(result.queryotu, speciesdelimiter, result.queryid), results)
