@@ -220,3 +220,21 @@ function consensus(regions::AlignedRegionCollection)
         println(precedes(regiona, regionb))
     end
 end
+
+"""
+    isnucleotide(region)
+
+Returns true if this region collection's first `record` consists of nucleotides.
+"""
+function isnucleotide(regions::AlignedRegionCollection)
+    return isnucleotide(regions[1]) 
+end
+
+"""
+    isaminoacid(region)
+
+Returns true if this region collection's first `record` consists of amino acids.
+"""
+function isaminoacid(regions::AlignedRegionCollection)
+    return isaminoacid(regions[1])
+end

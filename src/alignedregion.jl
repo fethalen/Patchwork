@@ -367,3 +367,21 @@ function bestpick(a::AlignedRegion, b::AlignedRegion)
         return longest(a, b)
     end
 end
+
+"""
+    isnucleotide(region)
+
+Returns true if this region's `record` consists of nucleotides.
+"""
+function isnucleotide(region::AlignedRegion)
+    return isnucleotide(region.record)
+end
+
+"""
+    isaminoacid(region)
+
+Returns true if this record's `record` consists of amino acids.
+"""
+function isaminoacid(region::AlignedRegion)
+    return isaminoacid(region.record)
+end
