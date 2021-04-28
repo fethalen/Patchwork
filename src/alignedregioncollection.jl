@@ -33,6 +33,17 @@ Base.firstindex(regions::AlignedRegionCollection) = 1
 Base.lastindex(regions::AlignedRegionCollection) = length(regions)
 Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
 
+function AlignedRegionCollection(results::Vector{BLASTSearchResult})
+    regions = AlignedRegionCollection()
+    for result in results
+        record = SequenceRecord(result.queryotu, result.queryid, result.querysequence)
+        region = AlignedRegion(record, result.querystart, result.queryend, 
+                               result.queryframe, result.percentidentical)
+        push!(regions, region)
+    end
+    return regions
+end
+
 function AlignedRegionCollection(msa::MultipleSequenceAlignment,
                                  searchresults::Array{BLASTSearchResult})
     querycount = length(msa)
