@@ -29,7 +29,7 @@ function commandexists(command::AbstractString)
     cmdexists = `which $command`
     try
         run(cmdexists)
-    catch 
+    catch
         return false
     end
     return true
@@ -44,26 +44,32 @@ function parse_parameters()
                                 version = "0.1.0",
                                 add_version = true)
     @add_arg_table! settings begin
-        "--query-alignments"
-            help = "Path to one or more query alignments in FASTA format"
+        "--contigs"
+            help = "Path to one or more sequences in FASTA format"
             required = true
+            arg_type = String
             metavar = "PATH"
-        "--subject"
-            help = "Path to one or more subject sequences or a subject database"
+        "--reference"
+            help = "Either (1) a path to one or more sequences in FASTA format or (2) a
+                    subject database (set --database)"
             required = true
+            arg_type = String
             metavar = "PATH"
-        "--output"
-            help = "Store outputs in this folder"
+        "--database"
+            help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
+            arg_type = Bool
+            action = :store_true
+        "--output-dir"
+            help = "Write output files to this directory"
+            arg_type = String
             default = "patchworks_output"
             metavar = "PATH"
         "--blast-engine"
-            help = "Which program to use for performing the BLAST search (diamond/blast; 
-                    default: try diamond, fall back to blast)"
+            help = "Which program to use for performing the BLAST search (diamond/blast;
+                    default: try diamond, then try blast)"
+            arg_type = String
             default = "diamond"
             metavar = "PATH"
-        "--database"
-            help = "When true, subject holds a path to a BLAST database"
-            action = :store_true
         "--extensions"
             help = "Filetype extensions used to detect alignment FASTA files (default:
                     [\"aln\", \"fa\", \"fn\", \"fna\", \"faa\", \"fasta\", \"FASTA\"])"
@@ -71,29 +77,23 @@ function parse_parameters()
             default = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
             metavar = "LIST"
         "--seq-type"
-            help = "Type of input alignments (default: auto-detect; valid types:
-                    nucleotide, aminoacid, and auto)"
-            default = "auto"
+            help = "Type of input alignments (nucleotide/aminoacid; default: autodetect)"
+            default = "autodetect"
             arg_type = String
             metavar = "NAME"
-        "--translate"
-            help = "Translate nucleotide sequence into amino acid sequences"
-            action = :store_true
-        "--reverse-translate"
-            help = "Reverse translate amino acid sequences into nucleotide sequences"
-            action = :store_true
         "--species-delimiter"
-            help = "Used to separate species names from sequence identifiers in FASTA records
-                    (default: species@identifier)"
-            default = "@"
+            help = "Used to separate the species name from the rest of the identifier in
+                    FASTA records (default: @)"
+            default = '@'
             arg_type = Char
             metavar = "CHARACTER"
         "--threads"
-            help = "Number of threads that will be utilized (default: all available)"
+            help = "Number of threads to utilize (default: all available)"
             default = Sys.CPU_THREADS
-            arg_type = Int
+            arg_type = UInt
+            metavar = "NUMBER"
         "--wrap-column"
-            help = "Wrap output sequences at the provided column number"
+            help = "Wrap output sequences at this column number (default: no wrap)"
             arg_type = UInt
             metavar = "NUMBER"
     end
