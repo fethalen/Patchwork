@@ -385,3 +385,8 @@ Returns true if this record's `record` consists of amino acids.
 function isaminoacid(region::AlignedRegion)
     return isaminoacid(region.record)
 end
+
+function BioSequences.translate(region::AlignedRegion)
+    isnucleotide(region) || error("cannot translate non-nucleic region: ", region)
+    return BioSequences.translate(region.record)
+end

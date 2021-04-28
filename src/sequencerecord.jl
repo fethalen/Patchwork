@@ -289,3 +289,10 @@ Returns true if this record's `sequencedata` consists of amino acids.
 function isaminoacid(record::SequenceRecord)
     return ! isnucleotide(record)
 end
+
+function BioSequences.translate(record::SequenceRecord)
+    isnucleotide(record) || error("cannot translate non-nucleotide sequence in record: ", record)
+    recordtranslated = SequenceRecord(record.otu, record.identifier, 
+        BioSequences.translate(record.sequencedata))
+    return recordtranslated
+end
