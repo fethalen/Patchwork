@@ -37,7 +37,7 @@ function AlignedRegionCollection(results::Vector{BLASTSearchResult})
     regions = AlignedRegionCollection()
     for result in results
         record = SequenceRecord(result.queryotu, result.queryid, result.querysequence)
-        region = AlignedRegion(record, result.querystart, result.queryend, 
+        region = AlignedRegion(record, result.subjectstart, result.subjectend, 
                                result.queryframe, result.percentidentical)
         push!(regions, region)
     end
@@ -248,4 +248,12 @@ Returns true if this region collection's first `record` consists of amino acids.
 """
 function isaminoacid(regions::AlignedRegionCollection)
     return isaminoacid(regions[1])
+end
+
+function BioSequences.translate(regions::AlignedRegionCollection)
+    translatedregions = []
+    for region in regions
+        push!(translatedregions, translate(region))
+    end
+    return translatedregions
 end

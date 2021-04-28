@@ -208,10 +208,18 @@ function diamond_makeblastdb(reference::AbstractString, flags=[])
     return db_file
 end
 
+function queryid(result::BLASTSearchResult, speciesdelimiter='@')::String
+    return *(result.queryotu, speciesdelimiter, result.queryid)
+end
+
+function subjectid(result::BLASTSearchResult, speciesdelimiter='@')::String
+    return *(result.subjectotu, speciesdelimiter, result.subjectid)
+end
+
 function queryids(results::Vector{BLASTSearchResult}, speciesdelimiter='@')::Vector{String}
-    return map(result -> *(result.queryotu, speciesdelimiter, result.queryid), results)
+    return map(result -> queryid(result), results)
 end
 
 function subjectids(results::Vector{BLASTSearchResult}, speciesdelimiter='@')::Vector{String}
-    return map(result -> *(result.subjectotu, speciesdelimiter, result.subjectid), results)
+    return map(result -> subjectid(result), results)
 end
