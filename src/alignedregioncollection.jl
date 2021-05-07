@@ -26,9 +26,10 @@ function Base.push!(regions::AlignedRegionCollection, region::AlignedRegion)
 end
 
 function Base.getindex(regions::AlignedRegionCollection, index::Integer)
-    return Base.getindex(regions.records, index)
+    return getindex(regions.records, index)
 end
 
+Base.isempty(regions::AlignedRegionCollection) = length(regions) >= 1
 Base.firstindex(regions::AlignedRegionCollection) = 1
 Base.lastindex(regions::AlignedRegionCollection) = length(regions)
 Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
@@ -37,7 +38,7 @@ function AlignedRegionCollection(results::Vector{BLASTSearchResult})
     regions = AlignedRegionCollection()
     for result in results
         record = SequenceRecord(result.queryotu, result.queryid, result.querysequence)
-        region = AlignedRegion(record, result.subjectstart, result.subjectend, 
+        region = AlignedRegion(record, result.subjectstart, result.subjectend,
                                result.queryframe, result.percentidentical)
         push!(regions, region)
     end
@@ -59,8 +60,8 @@ function AlignedRegionCollection(msa::MultipleSequenceAlignment,
 
         for compoundregion in compoundregions(record)
             (leftmost, rightmost) = nongap_range(compoundregion)
-            compound_seqrecord = SequenceRecord(record.otu, 
-                *(record.identifier, '_', string(leftmost), '-', 
+            compound_seqrecord = SequenceRecord(record.otu,
+                *(record.identifier, '_', string(leftmost), '-',
                     string(rightmost)), compoundregion)
             region = AlignedRegion(compound_seqrecord, leftmost, rightmost,
                 result.subjectframe, result.percentidentical)
@@ -70,7 +71,7 @@ function AlignedRegionCollection(msa::MultipleSequenceAlignment,
     return regions
 end
 
-@inline function iterate(regions::AlignedRegionCollection, i::Int = firstindex(regions))
+@inline function Base.iterate(regions::AlignedRegionCollection, i::Int = firstindex(regions))
     if i > lastindex(regions)
         return nothing
     else
@@ -187,7 +188,7 @@ function mergeoverlapping(regions::AlignedRegionCollection)
     while hasoverlaps(regions)
         popfirst!(tovisit)
         for overlap in eachoverlap(regions)
-            
+
         end
     end
 end
@@ -211,26 +212,26 @@ end
 """
     removeredundant(regions)
 
-Delete 
+Delete
 """
-function removeredundant(regions::AlignedRegionCollection)
-end
+# function removeredundant(regions::AlignedRegionCollection)
+# end
 
 # TODO: function layout
-function layout(regions::AlignedRegionCollection)
-end
+# function layout(regions::AlignedRegionCollection)
+# end
 
 # TODO: function consensus
-function consensus(regions::AlignedRegionCollection)
-    order = sortperm(map(region -> (leftposition(region), rightposition(region)), uniqueregions))
-    for i in order
-        println(count)
-        regiona = uniqueregions[i]
-        regionb = uniqueregions[i + 1]
-        println((leftposition(regiona), rightposition(regiona)))
-        println(precedes(regiona, regionb))
-    end
-end
+# function consensus(regions::AlignedRegionCollection)
+#     order = sortperm(map(region -> (leftposition(region), rightposition(region)), uniqueregions))
+#     for i in order
+#         println(count)
+#         regiona = uniqueregions[i]
+#         regionb = uniqueregions[i + 1]
+#         println((leftposition(regiona), rightposition(regiona)))
+#         println(precedes(regiona, regionb))
+#     end
+# end
 
 """
     isnucleotide(region)
@@ -238,7 +239,7 @@ end
 Returns true if this region collection's first `record` consists of nucleotides.
 """
 function isnucleotide(regions::AlignedRegionCollection)
-    return isnucleotide(regions[1]) 
+    return isnucleotide(regions[1])
 end
 
 """
