@@ -10,182 +10,139 @@ using BioCore
 TESTDIR = "/home/clara/Desktop/SHK-Job_Bleidorn/Projects/BioFmtSpecimens/GFF3/"
 TESTFILES = [TESTDIR * "au9_scaffold_subset.gff3", TESTDIR * "directives.gff3", TESTDIR * "TAIR10.part.gff.bgz"]
 TESTRECORD = GFF3.Record("CCDS1.1\tCCDS\tgene\t801943\t802434\t.\t-\t.\tID=LINC00115;Name=LINC00115")
-TESTATTRIBUTES = GFF3Attributes(TESTRECORD)
 
 columns = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
-attributes = ["ID", "Name", "Alias", "Parent", "Target", "Gap", "Derives_from", "Note", "Dbxref", "Ontology_term", "Is_circular"]
 
-mutable struct GFF3Attributes
-    id::Union{String, Missing}
-    name::Union{String, Missing}
-    alias::Union{AbstractVector{String}, Missing} # multiple values
-    parent::Union{AbstractVector{String}, Missing} # multiple values
-    target::Union{String, Missing}
-    gap::Union{String, Missing} # RegEx?
-    derivesfrom::Union{String, Missing}
-    note::Union{String, Missing}
-    dbcrossreference::Union{AbstractVector{String}, Missing} # multiple values
-    ontologyterm::Union{AbstractVector{String}, Missing} # multiple values
-    iscircular::Union{Bool, Missing}
+###############################################################################################################
+################################### converting GFF3.Records to other types ####################################
+###############################################################################################################
 
-    # attention: case sensitivity in attribute keys ! 
-    function GFF3Attributes(gff3record::GFF3.Record)
-        attributes = ["ID", "Name", "Alias", "Parent", "Target", "Gap", "Derives_from", "Note", "Dbxref", "Ontology_term", "Is_circular"]
-        allowsmultiplevalues = [3,4,9,10] # attribute data fields that allow multiple values
-        result = Vector{Any}(missing, length(attributes))
-        recordattributes = Dict(GFF3.attributes(gff3record))
-        recordkeys = collect(keys(recordattributes))
-        
-        for (i, key) in enumerate(attributes)
-            if key in recordkeys
-                result[i] = recordattributes[key]
-            end
-            if !(i in allowsmultiplevalues) && !(result[i] === missing)
-                result[i] = result[i][1]
+mutable struct GFF3Record
+    record::Tuple
+
+    function GFF3Record()
+        return new(Tuple([]))
+    end
+
+    function GFF3Record(gff3record::GFF3.Record)
+        result = AbstractVector{Any}(split(GFF3.content(gff3record), '\t'))
+        for i in eachindex(result)
+            if result[i] == "."
+                result[i] = missing # or nothing ? or don't change at all ? 
+            elseif i in 4:5
+                result[i] = parse(Int64, result[i])
+            elseif i == 6
+                result[i] = parse(Float64, result[i])
+            # else
+            #   result[i] = String(result[i])
+            elseif i == 9
+                result[i] = GFF3.attributes(gff3record)
             end
         end
-        return new(result...)
+        return new(Tuple(result))
     end
-end 
-
-#function Base.convert(::AbstractVector{Any}, gff3attributes::GFF3Attributes)
-#    return [gff3attributes.id, gff3attributes.name, gff3attributes.alias, gff3attributes.parent, 
-#            gff3attributes.target, gff3attributes.gap, gff3attributes.derivesfrom, gff3attributes.note, 
-#            gff3attributes.dbcrossreference, gff3attributes.ontologyterm, gff3attributes.iscircular]
-#end
-
-# function to convert to list of tuples or pairs ? 
-function Base.convert(::Dict, gff3attributes::GFF3Attributes)
-    attributes = ["ID", "Name", "Alias", "Parent", "Target", "Gap", "Derives_from", "Note", "Dbxref", "Ontology_term", "Is_circular"]
-    return Dict(zip(attributes, [gff3attributes.id, gff3attributes.name, gff3attributes.alias, gff3attributes.parent, 
-                                 gff3attributes.target, gff3attributes.gap, gff3attributes.derivesfrom, gff3attributes.note, 
-                                 gff3attributes.dbcrossreference, gff3attributes.ontologyterm, gff3attributes.iscircular]))
 end
 
-function Base.Dict(gff3attributes::GFF3Attributes)
-    return convert(Dict, gff3attributes)
+function Base.getindex(gff3record::GFF3Record, index::Integer)
+    return getindex(gff3record.record, index)
 end
-
-# For :directive and :comment gff3-records ??
-function Base.convert(::Type{AbstractVector{Any}}, gff3record::GFF3.Record) 
-    result = AbstractVector{Any}(split(GFF3.content(gff3record), '\t'))
-    for i in eachindex(result)
-        if result[i] == "."
-            result[i] = missing # or nothing ? or don't change at all ? 
-        elseif i in 4:5
-             result[i] = parse(Int64, result[i])
-        elseif i == 6
-            result[i] = parse(Float64, result[i])
-        # else
-        #   result[i] = String(result[i])
-        elseif i == 9
-            result[i] = GFF3Attributes(gff3record)
-        end
+function Base.getindex(gff3record::GFF3Record, indexes::UnitRange{Int})
+    result = []
+    for i in indexes
+        push!(result, getindex(gff3record, i))
     end
-    return result
+    return Tuple(result)
 end
 
-function Base.AbstractVector(gff3record::GFF3.Record)
-    return convert(AbstractVector{Any}, gff3record)
+Base.length(gff3record::GFF3Record) = length(gff3record.record)
+Base.firstindex(gff3record::GFF3Record) = 1
+Base.lastindex(gff3record::GFF3Record) = length(gff3record)
+Base.eachindex(gff3record::GFF3Record) = Base.OneTo(lastindex(gff3record))
+
+function Base.isempty(gff3record::GFF3Record)
+    return isempty(gff3record.record)
 end
 
-function Base.convert(::Type{Tuple}, gff3record::GFF3.Record)
-    return Tuple(AbstractVector{Any}(gff3record))
+function Base.iterate(gff3record::GFF3Record)
+    return iterate(gff3record.record)
 end
 
-function Base.Tuple(gff3record::GFF3.Record)
-    return convert(Tuple{Any}, gff3record)
+function Base.iterate(gff3record::GFF3Record, i::Int)
+    return iterate(gff3record.record, i)
 end
 
 # convert vector or tuple back to gff3-record --> for gff3-writer
-function Base.convert(::Type{GFF3.Record}, gff3record::Union{AbstractVector{Any}, Tuple{Any}}) 
+function Base.convert(::Type{GFF3.Record}, gff3record::GFF3Record) 
+    return GFF3.Record(String(gff3record))
+end
+function GFF3.Record(gff3record::GFF3Record)
+    return convert(GFF3.Record, gff3record)
+end
+
+function Base.convert(::Type{String}, gff3record::GFF3Record)
     tmp = replace(join(gff3record[1:8], "\t"), "missing" => ".")
     attributes_tmp = []
-    for (key, value) in Dict(gff3record[9]) 
+    for (key, value) in gff3record[9]
         if !ismissing(value)
-            if isa(AbstractVector{String}, value)
+            if isa(value, AbstractVector{String})
                 push!(attributes_tmp, join([key, join(value, ",")], "="))
             else
                 push!(attributes_tmp, join([key, value], "="))
             end
         end
     end
-    return GFF3.Record(join(tmp, join(attributes_tmp, ";"), "\t"))
+    return join([tmp, join(attributes_tmp, ";")], "\t")
+end
+function Base.String(gff3record::GFF3Record)
+    return convert(String, gff3record)
 end
 
+function Base.convert(::Type{DataFrames.DataFrame}, gff3record::GFF3Record)
+    result = DataFrames.DataFrame([gff3record.record])
+    DataFrames.rename!(result, columns)
+    return result
+end
+function DataFrames.DataFrame(gff3record::GFF3Record)
+    return convert(DataFrames.DataFrame, gff3record)
+end
+
+###############################################################################################################
+######################################### GFF3RecordCollection ################################################
+###############################################################################################################
+
 mutable struct GFF3RecordCollection
-    records::Vector{GFF3.Record}
+    records::Vector{GFF3Record}
 end
 
 function GFF3RecordCollection()
     return GFF3RecordCollection([])
 end
-
-function Base.length(gff3recordcollection::GFF3RecordCollection)
-    return length(gff3recordcollection.records)
-end
-
-function Base.push!(gff3recordcollection::GFF3RecordCollection, gff3record::GFF3.Record)
-    return push!(gff3recordcollection.records, gff3record)
-end
-
-function Base.getindex(gff3recordcollection::GFF3RecordCollection, index::Integer)
-    return getindex(gff3recordcollection.records, index)
-end
-
-Base.firstindex(gff3recordcollection::GFF3RecordCollection) = 1
-Base.lastindex(gff3recordcollection::GFF3RecordCollection) = length(gff3recordcollection)
-Base.eachindex(gff3recordcollection::GFF3RecordCollection) = Base.OneTo(lastindex(gff3recordcollection))
-
-function Base.isempty(gff3recordcollection::GFF3RecordCollection)
-    return isempty(gff3recordcollection.records)
-end
-
-function Base.iterate(gff3recordcollection::GFF3RecordCollection)
-    if isempty(gff3recordcollection)
-        return nothing
-    else
-        i = firstindex(gff3recordcollection)
-        return getindex(gff3recordcollection, i), i + 1
-    end
-end
-
-function Base.iterate(gff3recordcollection::GFF3RecordCollection, i::Int)
-    if i > lastindex(gff3recordcollection)
-        return nothing
-    else
-        return getindex(gff3recordcollection, i), i + 1
-    end
-end
-
-# better way ??
-function Base.convert(::Type{DataFrames.DataFrame}, gff3recordcollection::GFF3RecordCollection)
-    columns = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
-    result = []
-    for record in gff3recordcollection
-        if BioCore.isfilled(record)
-            push!(result, Tuple(record))
-        end
-    end
-    result = DataFrames.DataFrame(result)
-    DataFrames.rename!(result, columns)
+function GFF3RecordCollection(reader::GFF3.Reader)
+    result = GFF3RecordCollection(readfeatureGFF3(reader))
+    filterGFF3input!(result)
     return result
 end
-
-function DataFrames.DataFrame(gff3recordcollection::GFF3RecordCollection)
-    return convert(DataFrames.DataFrame, gff3recordcollection)
+function GFF3RecordCollection(file::AbstractString; idx=:auto) # Tabix index ??
+    result = GFF3RecordCollection(readfeatureGFF3(file; idx))
+    filterGFF3input!(result)
+    return result
+end
+function GFF3RecordCollection(input::IO; idx=nothing) # Tabix index ??
+    result = GFF3RecordCollection(readfeatureGFF3(input; idx))
+    filterGFF3input!(result)
+    return result
 end
 
 # read whole gff3 file: 
 # what about directive and comment records ? 
 # --> checkkind and checkfilled for each record before saving into result ? 
-# filter result DF for lines with invalid data 
 # Do you really nead to convert GFF3.Records to Tuples for creating a DF ? 
 function readfeatureGFF3(reader::GFF3.Reader)
-    result = GFF3RecordCollection()
+    #result = GFF3RecordCollection()
+    result = []
     for record in reader
-        if(BioCore.isfilled(record)) # && GFF3.isfeature(record)) # omit others; is checking type :feature really always necessary? 
-            push!(result, record)
+        if BioCore.isfilled(record) && GFF3.isfeature(record) # omit others; is checking type :feature really always necessary? 
+            push!(result, GFF3Record(record))
         end
     end
     return result
@@ -207,34 +164,250 @@ function readfeatureGFF3(input::IO; idx=nothing) # Tabix index ??
     return result
 end
 
+function Base.length(gff3recordcollection::GFF3RecordCollection)
+    return length(gff3recordcollection.records)
+end
 
+function Base.push!(gff3recordcollection::GFF3RecordCollection, gff3record::GFF3Record)
+    return push!(gff3recordcollection.records, gff3record)
+end
 
+function Base.getindex(gff3recordcollection::GFF3RecordCollection, index::Integer)
+    return getindex(gff3recordcollection.records, index)
+end
 
-# once you have a DataFrame from a gff3-file: check for errors in data (data cleaning)
-# maybe for later:
+Base.firstindex(gff3recordcollection::GFF3RecordCollection) = 1
+Base.lastindex(gff3recordcollection::GFF3RecordCollection) = length(gff3recordcollection)
+Base.eachindex(gff3recordcollection::GFF3RecordCollection) = Base.OneTo(lastindex(gff3recordcollection))
 
+function Base.isempty(gff3recordcollection::GFF3RecordCollection)
+    return isempty(gff3recordcollection.records)
+end
 
-
-function requires_phase(gff3record::GFF3.Record)
-    GFF3.checkfilled(gff3record)
-    GFF3.checkkind(gff3record, :feature)
-    if GFF3.source(gff3record) == "CDS" && GFF3.phase(gff3record) != r"[012]"
-        print("Phase is required for feature records.") # Throw an error!
+# function Base.iterate(gff3recordcollection::GFF3RecordCollection) = iterate(gff3recordcollection.records)
+function Base.iterate(gff3recordcollection::GFF3RecordCollection)
+    if isempty(gff3recordcollection)
+        return nothing
+    else
+        i = firstindex(gff3recordcollection)
+        return getindex(gff3recordcollection, i), i + 1
+    end
+end
+# function Base.iterate(gff3recordcollection::GFF3RecordCollection, i::Int) = iterate(gff3recordcollection.records, i)
+function Base.iterate(gff3recordcollection::GFF3RecordCollection, i::Int)
+    if i > lastindex(gff3recordcollection)
+        return nothing
+    else
+        return getindex(gff3recordcollection, i), i + 1
     end
 end
 
-function requires_phase(gff3recordvector::AbstractVector{Any})
-    gff3record = convert(GFF3.Record, gff3recordvector)
-    return requires_phase(gff3record)
+function Base.eltype(::Type{GFF3RecordCollection})
+    return GFF3Record
 end
 
-function hasvalidseqend(gff3record::GFF3.Record)
-    GFF3.checkfilled(gff3record)
-    GFF3.checkkind(gff3record, :feature)
-    return (GFF3.seqend(gff3record) - GFF3.seqstart(gff3record)) >= 0 # missingerror if no start or end
+function Base.deleteat!(gff3recordcollection::GFF3RecordCollection, i::Int)
+    return deleteat!(gff3recordcollection.records, i)
+end
+function Base.popat!(gff3recordcollection::GFF3RecordCollection, i::Int)
+    return popat!(gff3recordcollection.records, i)
+end
+function Base.pop!(gff3recordcollection::GFF3RecordCollection)
+    return popat!(gff3recordcollection, lastindex(gff3recordcollection))
 end
 
-
-for c in collection
-    print(c)
+function Base.filter(f, gff3recordcollection::GFF3RecordCollection)
+    return filter(f, gff3recordcollection.records)
 end
+function Base.filter!(f, gff3recordcollection::GFF3RecordCollection)
+    return filter!(f, gff3recordcollection.records)
+end
+
+# better way ??
+function Base.convert(::Type{DataFrames.DataFrame}, gff3recordcollection::GFF3RecordCollection)
+    columns = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
+    result = []
+    for gff3record in gff3recordcollection
+        if !isempty(gff3record)
+            push!(result, gff3record.record)
+        end
+    end
+    result = DataFrames.DataFrame(result)
+    DataFrames.rename!(result, columns)
+    return result
+end
+
+function DataFrames.DataFrame(gff3recordcollection::GFF3RecordCollection)
+    return convert(DataFrames.DataFrame, gff3recordcollection)
+end
+
+################################################################################################################
+###################################### checking input data/ filtering ##########################################
+################################################################################################################
+
+# What happened before: You've loaded the whole file into a GFF3RecordColleciton.
+testcollection = readfeatureGFF3(TESTFILES[1]; idx=nothing)
+testcollection = GFF3RecordCollection(TESTFILES[1]; idx=nothing)
+testdf = DataFrames.DataFrame(testcollection)
+
+# type: must be a SO sequence_feature or is_a child - How do you check that? 
+
+# start <= end
+filter(["start", "end"] => (start, end_) -> start <= end_, testdf)
+# for GFF3RecordCollection{GFF3.Record}: filter(rec -> (GFF3.seqstart(rec) <= GFF3.seqend(rec)), testcollection)
+filter(rec -> (rec[4] <= rec[5]), testcollection)
+
+# phase required in CDS features (and is_a children?)
+filter(["type", "phase"] => (type, phase) -> !(type == "CDS" && phase === missing), testdf)
+#filter(rec -> !(GFF3.featuretype(rec) == "CDS" && GFF3.phase(rec) === missing), testcollection)
+filter(rec -> !(rec[3] == "CDS" && rec[8] === missing), testcollection)
+
+# attributes ##################################################################################################
+
+# ID required for features with children; i.e. you can only describe a part_of relationship via the IDS 
+# --> if there's no ID, there's nothing to be done about it/ how are you supposed to know if they just forgot it?
+# ID UNIQUE within Collection: 
+# or rather not; think again: features that exist over multiple genomic locations
+function allids(gff3recordcollection::GFF3RecordCollection)
+    allids = []
+    for gff3record in gff3recordcollection
+        recordattributes = Dict(gff3record[9])
+        if "ID" in keys(recordattributes)
+            push!(allids, recordattributes["ID"])
+        end
+    end
+    return allids
+end
+function checkids(gff3recordcollection::GFF3RecordCollection)
+    ids = allids(gff3recordcollection)
+    result = []
+    @assert allunique(ids) "IDs must be unique within scope of file."
+    for id in ids
+        @assert length(id)==1 "Can only assign up to one ID per record."
+        push!(result, id[1])
+    end
+    return result
+end
+checkids(testcollection)
+
+# parent: only part_of relationship (between sequence_features?), no cycles
+# ID must be found within file (?)
+function allparents(gff3recordcollection::GFF3RecordCollection)
+    parents = []
+    for gff3record in gff3recordcollection
+        recordattributes = Dict(gff3record[9])
+        if "Parent" in keys(recordattributes) && !(recordattributes["Parent"] in parents)
+            push!(parents, recordattributes["Parent"]...)
+        end
+    end
+    return parents
+end
+function checkparents(gff3recordcollection::GFF3RecordCollection)
+    ids = checkids(gff3recordcollection)
+    parents = allparents(gff3recordcollection)
+    for parentid in parents
+        @assert parentid in ids "Parent $parentid must be found within scope of file"
+    end
+    return
+end
+checkparents(testcollection)
+
+# right formatting of "target": "target_id start end [strand]" with strand = "+" or "-"
+# target_id must be found in file (?)
+
+# r"^.+ [0-9]+ [0-9]+( [+-])?$"
+function alltargets(gff3recordcollection::GFF3RecordCollection)
+    targets = []
+    for gff3record in gff3recordcollection
+        recordattributes = Dict(gff3record[9])
+        if "Target" in keys(recordattributes) && !(recordattributes["Target"] in targets)
+            push!(targets, recordattributes["Target"]...)
+        end
+    end
+    return targets
+end
+function checktargets(gff3recordcollection::GFF3RecordCollection)
+    ids = checkids(gff3recordcollection)
+    targets = alltargets(gff3recordcollection)
+    for t in targets
+        @assert !isnothing(match(r"^.+ [0-9]+ [0-9]+( [+-])?$", t)) "Target $t has wrong format."
+        target = split(t, ' ')
+        @assert target[1] in ids "Target $targetid must be found within scope of file"
+    end
+    return
+end
+
+# gap: only when target was specified (?)
+#filter(rec -> !(GFF3Attributes(rec).target === missing && !ismissing(GFF3Attributes(rec).gap)), testcollection.records)
+function gap_hastarget(gff3record::GFF3Record)
+    recordattributes = Dict(gff3record[9])
+    attributekeys = keys(recordattributes)
+    if "Gap" in attributekeys && !("Target" in attributekeys)
+        return false
+    else
+        return true
+    end
+end
+filter(rec -> gap_hastarget(rec), testcollection)
+
+# check gap format: 
+function checkgaps!(gff3recordcollection::GFF3RecordCollection)
+    pattern = r"(D[0-9]+|F[0-9]+|I[0-9]+|M[0-9]+|R[0-9]+)( (D[0-9]+|F[0-9]+|I[0-9]+|M[0-9]+|R[0-9]+))*"
+    filter!(gff3record -> gap_hastarget(gff3record), gff3recordcollection)
+    for gff3record in gff3recordcollection
+        recordattributes = Dict(gff3record[9])
+        attributekeys = keys(recordattributes)
+        if "Gap" in attributekeys
+            gap = recordattributes["Gap"]
+            @assert !isnothing(match(pattern, gap)) "Gap $gap has wrong format."
+        end
+    end
+    return
+end
+
+# derives_from: must be found in file (?)
+function allderivesfrom(gff3recordcollection::GFF3RecordCollection)
+    derivesfrom = []
+    for gff3record in gff3recordcollection
+        recordattributes = Dict(gff3record[9])
+        if "Derives_from" in keys(recordattributes)
+            push!(derivesfrom, recordattributes["Derives_from"]...)
+        end
+    end
+    return derivesfrom
+end
+function checkderivesfrom(gff3recordcollection::GFF3RecordCollection)
+    ids = checkids(gff3recordcollection)
+    derivesfrom = allderivesfrom(gff3recordcollection)
+    for originid in derivesfrom
+        @assert originid in ids "Derives_from origin $originid must be found within scope of file"
+    end
+    return
+end
+
+# the whole check-up:
+# think about order of checks! 
+# filter or throw an error? 
+function filterGFF3input!(gff3recordcollection::GFF3RecordCollection)
+    #gff3dataframe = DataFrames.DataFrame(gff3recordcollection)
+
+    # start <= end
+    filter!(record -> (record[4] <= record[5]), gff3recordcollection)
+    
+    # phase
+    filter!(record -> !(record[3] == "CDS" && record[8] === missing), gff3recordcollection)
+
+    # attributes: 
+    # unique IDs 
+    checkids(gff3recordcollection)
+    # parents
+    checkparents(gff3recordcollection)
+    # targets
+    checktargets(gff3recordcollection)
+    # gaps
+    checkgaps!(gff3recordcollection)
+    # derives_from origins
+    checkderivesfrom(gff3recordcollection)
+end
+
+filterGFF3input!(testcollection)
