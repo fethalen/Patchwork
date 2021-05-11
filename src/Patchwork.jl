@@ -11,15 +11,6 @@ include("sequencerecord.jl")
 include("multiplesequencealignment.jl")
 
 """
-    print_logo()
-
-Prints the Patchwork logo to stdout.
-"""
-function print_logo()
-    println("Patchwork")
-end
-
-"""
     commandexists(command)
 
 Returns `true` if the provided command exists within the current path and throw an error
@@ -29,7 +20,7 @@ function commandexists(command::AbstractString)
     cmdexists = `which $command`
     try
         run(cmdexists)
-    catch 
+    catch
         return false
     end
     return true
@@ -57,7 +48,7 @@ function parse_parameters()
             default = "patchworks_output"
             metavar = "PATH"
         "--blast-engine"
-            help = "Which program to use for performing the BLAST search (diamond/blast; 
+            help = "Which program to use for performing the BLAST search (diamond/blast;
                     default: try diamond, fall back to blast)"
             default = "diamond"
             metavar = "PATH"
@@ -103,7 +94,7 @@ end
 
 function main()
     # args = parse_parameters()
-    print_logo()
+    println("Patchwork")
     if ! commandexists("mafft")
         error("Cannot find command \'mafft\' in current path")
     end
