@@ -80,13 +80,13 @@ end
 end
 
 """
-    sameid(regions)
+    sameids(regions)
 
 Returns a dictionary where (unique) sequence identifiers of each region
 contained within `regions` are key(s) and the value is a vector with elements
 of the type `AlignedRegion`.
 """
-function sameid(regions::AlignedRegionCollection)
+function sameids(regions::AlignedRegionCollection)
     idgroups = Dict()
     for region in regions
         id = identifier(region)
@@ -193,6 +193,27 @@ function mergeoverlapping(regions::AlignedRegionCollection)
     end
 end
 
+function mergeoverlapping(regions::AlignedRegionCollection; sorted=false)
+    if sorted
+        sortedregions = regions
+    else
+        sortedregions = sort(regions)
+    end
+
+    mergedregions = AlignedRegionCollection()
+
+    for i in 1:lastindex(sortedregions) - 1
+        println(i)
+        regiona = sortedregions[i]
+        regionb = sortedregions[i + 1]
+        if isoverlapping(regiona, regionb)
+            push!(mergedregions, consensus(regiona, regionb))
+        end
+    end
+
+    return mergedregions
+end
+
 """
     sort(regions)
 
@@ -201,8 +222,7 @@ with the leftmost region and ending with the rightmost region.
 """
 function Base.sort(regions::AlignedRegionCollection)
     sortedregions = AlignedRegionCollection()
-    order = sortperm(
-        map(region -> (leftposition(region), rightposition(region)), regions))
+    order = sortperm(map(region -> (leftposition(region), rightposition(region)), regions))
     for i in order
         push!(sortedregions, regions[i])
     end

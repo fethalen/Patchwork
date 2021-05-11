@@ -12,7 +12,7 @@ include("sequencerecord.jl")
 - `record::SequenceRecord`: the sequence record associated with the interval.
 - `first::Int64`: the leftmost position.
 - `last::Int64`: the rightmost position.
-- `frame::Int64: the frame of the sequence (-3, -2, -1, 1, 2, or 3; 
+- `frame::Int64: the frame of the sequence (-3, -2, -1, 1, 2, or 3;
   0 = undefined).
 - `percentidentity::Float64: percent identity in BLAST search results`
 """
@@ -24,7 +24,7 @@ struct AlignedRegion
     percentidentical::Float64
 end
 
-function AlignedRegion(record::SequenceRecord, range::UnitRange, frame::Int64, 
+function AlignedRegion(record::SequenceRecord, range::UnitRange, frame::Int64,
     percentidentity::Float64)
     return AlignedRegion(record, first(range), last(range), frame, percentidentity)
 end
@@ -92,7 +92,7 @@ end
 Check whether the interval in `a` entirely precedes that of `b`.
 """
 function precedes(a::AlignedRegion, b::AlignedRegion)
-    return rightposition(a) < leftposition(b) 
+    return rightposition(a) < leftposition(b)
 end
 
 """
@@ -102,7 +102,17 @@ Returns `true` if the interval of `a` overlaps that of `b`.
 """
 function isoverlapping(a::AlignedRegion, b::AlignedRegion)
     return leftposition(a) <= rightposition(b) &&
-           leftposition(b) <= rightposition(a) 
+           leftposition(b) <= rightposition(a)
+end
+
+"""
+    samerange(a::AlignedRegion, b::AlignedRegion)
+
+Returns `true` if the interval of `a` is the same as that of `b`.
+"""
+function samerange(a::AlignedRegion, b::AlignedRegion)
+    return leftposition(a) == rightposition(b) &&
+           leftposition(b) == rightposition(a)
 end
 
 """
@@ -136,7 +146,7 @@ end
 """
     consensus(a, b)
 
-Returns 
+Returns
 """
 function consensus(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
     !skipcheck && !isoverlapping(a, b) && error("region $a and $b are not overlapping")
@@ -157,11 +167,11 @@ function consensus(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
     # A sequence that doesn't "shadow" another sequence cannot start and end
     # at an earlier and a later position than that of the other sequence.
     if leftposition(a) < leftposition(b)
-        sequence = *(a.record.sequencedata[beforeoverlap(a, b)], 
+        sequence = *(a.record.sequencedata[beforeoverlap(a, b)],
                      bestpick(a, b).record.sequencedata[overlap(a, b)],
                      b.record.sequencedata[afteroverlap(a, b)])
     elseif leftposition(b) < leftposition(a)
-        sequence = *(a.record.sequencedata[beforeoverlap(a, b)], 
+        sequence = *(a.record.sequencedata[beforeoverlap(a, b)],
                      bestpick(a, b).record.sequencedata[overlap(a, b)],
                      b.record.sequencedata[afteroverlap(a, b)])
     end
@@ -252,7 +262,7 @@ end
     shadows(a, b)
 
 An `AlignedRegion`, `a`, shadows another `AlignedRegion`, `b`, if and only if
-`a` is longer than `b` and `a` starts at an earlier, or the same, position as 
+`a` is longer than `b` and `a` starts at an earlier, or the same, position as
 that of `b` and `b` ends before `a` does.
 
 Example 1: `true` since `a` is shadowing `b`.
@@ -273,7 +283,7 @@ b: [--------------]
 """
 function shadows(a::AlignedRegion, b::AlignedRegion)
     return length(a) > length(b) &&
-           leftposition(a) <= leftposition(b) && 
+           leftposition(a) <= leftposition(b) &&
            rightposition(a) >= rightposition(b)
 end
 
