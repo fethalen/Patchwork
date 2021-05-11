@@ -13,10 +13,14 @@ TESTRECORD = GFF3.Record("CCDS1.1\tCCDS\tgene\t801943\t802434\t.\t-\t.\tID=LINC0
 
 columns = ["seqid", "source", "type", "start", "end", "score", "strand", "phase", "attributes"]
 
+# change the variable names to something shorter
+# throw errors instead of filtering
+
 ###############################################################################################################
 ################################### converting GFF3.Records to other types ####################################
 ###############################################################################################################
 
+# change that to individual data fields
 mutable struct GFF3Record
     record::Tuple
 
@@ -117,16 +121,19 @@ end
 function GFF3RecordCollection()
     return GFF3RecordCollection([])
 end
+
 function GFF3RecordCollection(reader::GFF3.Reader)
     result = GFF3RecordCollection(readfeatureGFF3(reader))
     filterGFF3input!(result)
     return result
 end
+
 function GFF3RecordCollection(file::AbstractString; idx=:auto) # Tabix index ??
     result = GFF3RecordCollection(readfeatureGFF3(file; idx))
     filterGFF3input!(result)
     return result
 end
+
 function GFF3RecordCollection(input::IO; idx=nothing) # Tabix index ??
     result = GFF3RecordCollection(readfeatureGFF3(input; idx))
     filterGFF3input!(result)
@@ -193,6 +200,7 @@ function Base.iterate(gff3recordcollection::GFF3RecordCollection)
         return getindex(gff3recordcollection, i), i + 1
     end
 end
+
 # function Base.iterate(gff3recordcollection::GFF3RecordCollection, i::Int) = iterate(gff3recordcollection.records, i)
 function Base.iterate(gff3recordcollection::GFF3RecordCollection, i::Int)
     if i > lastindex(gff3recordcollection)
@@ -263,32 +271,29 @@ filter(["type", "phase"] => (type, phase) -> !(type == "CDS" && phase === missin
 filter(rec -> !(rec[3] == "CDS" && rec[8] === missing), testcollection)
 
 # attributes ##################################################################################################
+# alias, parent, dbxref and ontologyterm allow multiple values
 
-# ID required for features with children; i.e. you can only describe a part_of relationship via the IDS 
+# ID required for features with children; i.e. you can only describe a part_of relationship via the IDs
 # --> if there's no ID, there's nothing to be done about it/ how are you supposed to know if they just forgot it?
-# ID UNIQUE within Collection: 
-# or rather not; think again: features that exist over multiple genomic locations
 function allids(gff3recordcollection::GFF3RecordCollection)
     allids = []
     for gff3record in gff3recordcollection
         recordattributes = Dict(gff3record[9])
         if "ID" in keys(recordattributes)
-            push!(allids, recordattributes["ID"])
+            @assert length(recordattributes["ID"]) == 1 "Can only assign up to one ID per record."
+            push!(allids, recordattributes["ID"]...)
         end
     end
     return allids
 end
 function checkids(gff3recordcollection::GFF3RecordCollection)
     ids = allids(gff3recordcollection)
-    result = []
-    @assert allunique(ids) "IDs must be unique within scope of file."
-    for id in ids
-        @assert length(id)==1 "Can only assign up to one ID per record."
-        push!(result, id[1])
+    for (i, id) in enumerate(ids)
+        @assert length(id) == 1 "Can only assign up to one ID per record."
+        ids[i] = id[1]
     end
-    return result
+    return ids
 end
-checkids(testcollection)
 
 # parent: only part_of relationship (between sequence_features?), no cycles
 # ID must be found within file (?)
@@ -303,7 +308,7 @@ function allparents(gff3recordcollection::GFF3RecordCollection)
     return parents
 end
 function checkparents(gff3recordcollection::GFF3RecordCollection)
-    ids = checkids(gff3recordcollection)
+    ids = allids(gff3recordcollection)
     parents = allparents(gff3recordcollection)
     for parentid in parents
         @assert parentid in ids "Parent $parentid must be found within scope of file"
@@ -321,18 +326,19 @@ function alltargets(gff3recordcollection::GFF3RecordCollection)
     for gff3record in gff3recordcollection
         recordattributes = Dict(gff3record[9])
         if "Target" in keys(recordattributes) && !(recordattributes["Target"] in targets)
-            push!(targets, recordattributes["Target"]...)
+            push!(targets, recordattributes["Target"])
         end
     end
     return targets
 end
 function checktargets(gff3recordcollection::GFF3RecordCollection)
-    ids = checkids(gff3recordcollection)
+    ids = allids(gff3recordcollection)
     targets = alltargets(gff3recordcollection)
     for t in targets
-        @assert !isnothing(match(r"^.+ [0-9]+ [0-9]+( [+-])?$", t)) "Target $t has wrong format."
-        target = split(t, ' ')
-        @assert target[1] in ids "Target $targetid must be found within scope of file"
+        @assert length(t) == 1 "Can only assign up to one alignement target per record."
+        @assert !isnothing(match(r"^.+ [0-9]+ [0-9]+( [+-])?$", t[1])) "Target $(t[1]) has wrong format."
+        target = split(t[1], ' ')
+        @assert target[1] in ids "Target $(target[1]) must be found within scope of file."
     end
     return
 end
@@ -359,6 +365,7 @@ function checkgaps!(gff3recordcollection::GFF3RecordCollection)
         attributekeys = keys(recordattributes)
         if "Gap" in attributekeys
             gap = recordattributes["Gap"]
+            @assert length(gap) == 1 "Can only specify up to one alignment per record/ target."
             @assert !isnothing(match(pattern, gap)) "Gap $gap has wrong format."
         end
     end
@@ -371,16 +378,17 @@ function allderivesfrom(gff3recordcollection::GFF3RecordCollection)
     for gff3record in gff3recordcollection
         recordattributes = Dict(gff3record[9])
         if "Derives_from" in keys(recordattributes)
-            push!(derivesfrom, recordattributes["Derives_from"]...)
+            push!(derivesfrom, recordattributes["Derives_from"])
         end
     end
     return derivesfrom
 end
 function checkderivesfrom(gff3recordcollection::GFF3RecordCollection)
-    ids = checkids(gff3recordcollection)
+    ids = allids(gff3recordcollection)
     derivesfrom = allderivesfrom(gff3recordcollection)
     for originid in derivesfrom
-        @assert originid in ids "Derives_from origin $originid must be found within scope of file"
+        @assert length(originid) == 1 "Can only specify up to one Derives_from origin per record."
+        @assert originid[1] in ids "Derives_from origin $originid must be found within scope of file"
     end
     return
 end
@@ -399,7 +407,7 @@ function filterGFF3input!(gff3recordcollection::GFF3RecordCollection)
 
     # attributes: 
     # unique IDs 
-    checkids(gff3recordcollection)
+    allids(gff3recordcollection)
     # parents
     checkparents(gff3recordcollection)
     # targets
