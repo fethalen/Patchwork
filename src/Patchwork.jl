@@ -117,14 +117,16 @@ function main()
     println("BLAST-engine: $blastengine")
 
     speciesdelimiter = '@'
-    query = "/media/feli/Storage/phylogenomics/1st_wo_nextera/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
-    subject = "/home/feli/ownCloud/projects/Patchwork/test/07673_Alitta_succinea.fa"
+    # query = "/media/feli/Storage/phylogenomics/1st_wo_nextera/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
+    subject = "test/07673_Alitta_succinea.fa"
     # subject_db = Patchwork.diamond_makeblastdb(subject, ["--threads", Sys.CPU_THREADS])
     # diamondresults = Patchwork.diamond_blastx(query, subject_db, ["--threads", Sys.CPU_THREADS])
     # blastresults = Patchwork.readblastTSV(diamondresults)
     hits = Patchwork.readblastTSV("test/c_australis_x_07673.tsv")
-    querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
+    # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
+    referenceseq = Patchwork.readmsa(subject, speciesdelimiter)
     regions = Patchwork.AlignedRegionCollection(hits)
+    uniqueregions = Patchwork.uniquesequences(regions)
 
     # merge!(queryalignment, results)
     # querysubject_aln = mafft_linsi(queryalignment, ["--thread", Sys.CPU_THREADS])
