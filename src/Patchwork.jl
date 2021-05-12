@@ -17,7 +17,7 @@ Returns `true` if the provided command exists within the current path and throw 
 otherwise.
 """
 function commandexists(command::AbstractString)
-    cmdexists = `which $command`
+    cmdexists = `command -v $command`
     try
         run(cmdexists)
     catch
@@ -57,12 +57,7 @@ function parse_parameters()
             metavar = "PATH"
         "--blast-engine"
             help = "Which program to use for performing the BLAST search (diamond/blast;
-<<<<<<< HEAD
-                    default: try diamond, then try blast)"
-            arg_type = String
-=======
                     default: try diamond, fall back to blast)"
->>>>>>> 962f53e5eab83bc3cf7b1ded6497c92527264476
             default = "diamond"
             metavar = "PATH"
         "--extensions"
@@ -99,9 +94,6 @@ end
 function main()
     # args = parse_parameters()
     println("Patchwork")
-    if ! commandexists("mafft")
-        error("Cannot find command \'mafft\' in current path")
-    end
     if commandexists("diamond")
         blastengine = "diamond"
     elseif commandexists("blastx")
@@ -122,11 +114,6 @@ function main()
     referenceseq = Patchwork.readmsa(subject, speciesdelimiter)
     regions = Patchwork.AlignedRegionCollection(hits)
     uniqueregions = Patchwork.uniquesequences(regions)
-
-    # merge!(queryalignment, results)
-    # querysubject_aln = mafft_linsi(queryalignment, ["--thread", Sys.CPU_THREADS])
-    # regions = AlignedRegionCollection(querymsa,hits)
-    # uniqueregions = uniquesequences(regions)
 end
 
 end # module
