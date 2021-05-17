@@ -33,7 +33,7 @@ end
 Takes the path to a multiple sequence alignment (MSA) as an input and returns a
 MultipleSequenceAlignment object
 """
-function readmsa(fastafile::String, delimiter::Char)::MultipleSequenceAlignment
+function readmsa(fastafile::String, delimiter='@'::Char)::MultipleSequenceAlignment
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
     record = FASTA.Record()
@@ -57,7 +57,7 @@ Searches within a `fastafile` for sequence records with identifiers that matches
 provided `identifiers`. The provided `delimiter` separates the OTU from the sequence
 name (set to '@' by default).
 """
-function selectsequences(fastafile::AbstractString, 
+function selectsequences(fastafile::AbstractString,
                          identifiers::Array{String};
                          delimiter='@'::Char)::MultipleSequenceAlignment
     abs_fastafile = abspath(fastafile)
