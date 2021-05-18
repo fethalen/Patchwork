@@ -1,5 +1,4 @@
-# Provides I/O utilities and basic types for working with the general feature
-# format (GFF)
+# Provides basic types for working with the general feature format (GFF).
 
 import Base
 import GFF3
@@ -55,7 +54,7 @@ mutable struct GFF3Attributes # mutable ?
     # attention: case sensitivity in attribute keys ! 
     function GFF3Attributes(gff3record::GFF3.Record)
         allowsmultiplevalues = [3,4,9,10,12]
-        result = Vector{Any}(missing, length(attributelist))
+        result = Vector{Any}(missing, length(attributelist) + 1)
         result[12] = [] # other
         recordattributes = Dict(GFF3.attributes(gff3record))
         recordkeys = collect(keys(recordattributes))
@@ -285,5 +284,19 @@ Verify that a record of `type`== "CDS" also specifies a `phase`.
 function checkcdsphase(record::GFF3Record)
     if !ismissing(record.type)
         @assert !(record.type == "CDS" && ismissing(record.phase)) "Feature type \"CDS\" requires a phase."
+    end
+end
+
+
+"""
+    gap_hastarget(record::GFF3Record)
+
+Returns false if this record specifies a `gap` attribute but does not specify a `target` attribute, and true otherwise.
+"""
+function gap_hastarget(record::GFF3Record)
+    if !ismissing(record.attributes) && !ismissing(record.attributes.gap) && ismissing(record.attributes.target)
+        return false
+    else
+        return true
     end
 end
