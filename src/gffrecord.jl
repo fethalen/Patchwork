@@ -18,6 +18,26 @@ attributelist = ["ID", "Name", "Alias", "Parent", "Target", "Gap", "Derives_from
 ################################################ GFF3Attributes ###############################################
 ###############################################################################################################
 
+# only makes sense when used inside a GFF3Record...
+"""
+    struct GFF3Attributes
+
+Datastructure which holds the attributes of a `GFF3Record`.
+All data fields are optional and can contain the value `missing`.
+- `id::String`: the ID assigned to the record; required for features with children.
+- `name::String`: an arbitrary name.
+- `alias::AbstractVector{String}`: an arbitrary number of aliases.
+- `parent::AbstractVector{String}`: the parent feature ID(s); indicates Sequence Ontology part_of relationships.
+- `target::String`: the ID of the alignment target.
+- `gap::String`: the alignment of the target to this record; requires that `target` be specified.
+- `derivesfrom::String`: the ID of the ancestral feature, when the relationship is not a part_of relationship;
+                         e.g. for polycistronic genes.
+- `note::String`: a free text.
+- `dbcrossreference::AbstractVector{String}`: an arbitrary number of database cross references.
+- `ontologyterm::AbstractVector{String}`: an arbitrary number of cross references to ontology terms.
+- `iscircular::Bool`: indicates whether the feature is circular.
+- `other`: any attributes that are not covered by the above; stored as a Vector of Pairs.
+"""
 mutable struct GFF3Attributes # mutable ? 
     id::Union{String, Missing}
     name::Union{String, Missing}
@@ -111,7 +131,22 @@ end
 ################################################ GFF3Record ###################################################
 ###############################################################################################################
 
+"""
+    struct GFF3Record
 
+A Datastructure which holds a single feature record in the GFF3 format.
+All data fields are optional and can contain the value `missing`.
+- `seqid::String`: the ID of the landmark used to establish the coordinate system for the current feature.
+- `source::String`: the program or procedure used to generate the feature.
+- `type::String`: the type of the feature; restricted to Sequence Ontology sequence_features and their is_a children.
+- `start::Int64`: the start of the feature (given as a positive 1-based integer), relative to the landmark in `seqid`.
+- `end_::Int64`: the end of the feature (given as a positive 1-based integer), relative to the landmark in `seqid`.
+- `score::Float64`: the score of the feature; e-values recommended for sequence similarity features
+                    and p-values for ab initio gene prediction features.
+- `strand::GenomicFeatures.Strand`: the strand of the feature ('+', '-', or '?').
+- `phase::Char`: the phase of the feature (0, 1, or 2); required for features of type "CDS".
+- `attributes::GFF3Attributes`: optional additional information, see `GFF3Attributes`. 
+"""
 mutable struct GFF3Record
     seqid::Union{String, Missing}
     source::Union{String, Missing}
@@ -123,6 +158,11 @@ mutable struct GFF3Record
     phase::Union{Char, Missing}
     attributes::Union{GFF3Attributes, Missing}
 
+    """
+        GFF3Record()
+
+    Empty initialization.
+    """
     function GFF3Record()
         return new(Vector{Any}(missing, 9)...)
     end
@@ -148,6 +188,12 @@ mutable struct GFF3Record
         end
 
         return new(result...)
+    end
+
+    # third constructor for building a GFF3Record from a String 
+    # makes use of the fancy GFF3.jl FSM/parser (thus the extra conversion step).
+    function GFF3Record(record::AbstractString)
+        return GFF3Record(GFF3.Record(record))
     end
 
 end
@@ -212,14 +258,32 @@ function DataFrames.DataFrame(gff3record::GFF3Record)
     return convert(DataFrames.DataFrame, gff3record)
 end
 
+"""
+    checkstartend(record::GFF3Record)
+
+Verify that `start` and `end` of this record are valid.
+`start` must be before or same as `end`.
+Both are given as positive 1-based integers relative to the landmark `seqid`.
+"""
 function checkstartend(record::GFF3Record)
-    if record.start > record.end_ 
-        error("Sequence start must be before or same as end.")
+    if !ismissing(record.start) || !ismissing(record.end_)
+        @assert !ismissing(record.seqid) "Sequence start and end must be given in relation to the landmark seqid."
+        if !ismissing(record.start) 
+            @assert record.start >= 1 "Sequence start and end must be given as positive 1-based integers relativ to the landmark seqid."
+            if !ismissing(record.end_)
+                @assert record.start <= record.end_ "Sequence end must be greater than or equal to start."
+            end
+        end
     end
 end
 
+"""
+    checkcdsphase(record::GFF3Record)
+
+Verify that a record of `type`== "CDS" also specifies a `phase`. 
+"""
 function checkcdsphase(record::GFF3Record)
-    if record.type == "CDS" && ismissing(record.phase)
-        error("Feature type \"CDS\" requires a phase.")
+    if !ismissing(record.type)
+        @assert !(record.type == "CDS" && ismissing(record.phase)) "Feature type \"CDS\" requires a phase."
     end
 end
