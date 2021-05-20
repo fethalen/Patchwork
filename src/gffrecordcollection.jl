@@ -22,8 +22,6 @@ The function verifies the validity of the records in `records`.
 mutable struct GFF3RecordCollection
     records::Vector{GFF3Record}
 
-    ####### TODO: Why doesn't the check-up work inside a constructor ? #############################################
-    # When applied to a vector outside of the constructor, it works just fine.
     function GFF3RecordCollection(records::AbstractVector{GFF3Record})
         checkgff3input(records)
         return new(records)
@@ -53,7 +51,7 @@ function GFF3RecordCollection(reader::GFF3.Reader)
             push!(result, GFF3Record(record))
         end
     end
-    checkgff3input(result)
+    checkgff3input(Vector{GFF3Record}(result))
     return GFF3RecordCollection(result)
 end
 
