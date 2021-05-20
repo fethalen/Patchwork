@@ -6,10 +6,6 @@ import DataFrames
 using GenomicFeatures
 using BioCore
 
-TESTDIR = "/home/clara/Desktop/SHK-Job_Bleidorn/Projects/BioFmtSpecimens/GFF3/"
-TESTFILES = [TESTDIR * "au9_scaffold_subset.gff3", TESTDIR * "directives.gff3", TESTDIR * "TAIR10.part.gff.bgz"]
-TESTRECORD = GFF3.Record("CCDS1.1\tCCDS\tgene\t801943\t802434\t.\t-\t.\tID=LINC00115;Name=LINC00115")
-
 columns = [:seqid, :source, :type, :start, :end_, :score, :strand, :phase, :attributes]
 attributelist = ["ID", "Name", "Alias", "Parent", "Target", "Gap", "Derives_from", "Note", "Dbxref", "Ontology_term", "Is_circular"]
 
@@ -45,7 +41,7 @@ mutable struct GFF3Attributes # mutable ?
     target::Union{String, Missing}
     gap::Union{String, Missing}
     derivesfrom::Union{String, Missing}
-    note::Union{String, Missing}
+    note::Union{String, Missing} 
     dbcrossreference::Union{AbstractVector{String}, Missing} # multiple values
     ontologyterm::Union{AbstractVector{String}, Missing} # multiple values
     iscircular::Union{Bool, Missing}
@@ -62,8 +58,12 @@ mutable struct GFF3Attributes # mutable ?
         for key in recordkeys
             if key in attributelist
                 index = findfirst(isequal(key), attributelist)
-                if !(index in allowsmultiplevalues)
-                    @assert length(recordattributes[key]) == 1 "Attribute $key only allows one value per record."
+                if key == "Note"
+                    result[index] = join(recordattributes[key], ',')
+                elseif !(index in allowsmultiplevalues)
+                    if length(recordattributes[key]) != 1 
+                        error("Attribute $key only allows one value per record.")
+                    end
                     result[index] = recordattributes[key][1]
                 else
                     result[index] = recordattributes[key]
