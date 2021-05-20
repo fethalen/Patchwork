@@ -1,7 +1,7 @@
 # Provides I/O utilites for working with entire GFF3-files.
 # Collection of zero or more GFF3Records
 
-include("src/gffrecord.jl")
+include("gffrecord.jl")
 
 ###############################################################################################################
 ######################################### GFF3RecordCollection ################################################
@@ -10,7 +10,7 @@ include("src/gffrecord.jl")
 """
     struct GFF3RecordCollection
 
-Datastructure that holds one or more `GFF3Record`s read from a GFF3-file or entered as an `AbstractVector{GFF3Record}`.
+Datastructure that holds one or more `GFF3Record`s read from a GFF3-file or entered as a vector of `GFF3Record`s.
 - `records::Vector{GFF3Record}`
 
 
@@ -52,7 +52,7 @@ function GFF3RecordCollection(reader::GFF3.Reader)
         end
     end
     checkgff3input(Vector{GFF3Record}(result))
-    return GFF3RecordCollection(result)
+    return GFF3RecordCollection(Vector{GFF3Record}(result))
 end
 
 """
@@ -169,7 +169,7 @@ end
 """
     checkstartend(records::AbstractVector{GFF3Record})
 
-Verify that all the records in `records` have valid `start` and `end`.
+Verify that each record in `records` has valid `start` and `end`.
 """
 function checkstartend(records::AbstractVector{GFF3Record})
     for record in records
@@ -181,7 +181,7 @@ end
 """
     checkcdsphase(records::AbstractVector{GFF3Record})
 
-Verify that all the records in `records` have a `phase` if required by their `type`.
+Verify that each record in `records` has a `phase` if required by their `type`.
 """
 function checkcdsphase(records::AbstractVector{GFF3Record})
     for record in records
@@ -209,6 +209,16 @@ function allids(records::AbstractVector{GFF3Record})
     return allids
 end
 
+"""
+    allids(records::GFF3RecordCollection)
+
+Returns a vector that contains all attribute IDs found in `records`. 
+IDs can appear multiple times.
+"""
+function allids(records::GFF3RecordCollection)
+    return allids(records.records)
+end
+
 function allparents(records::AbstractVector{GFF3Record})
     parents = []
     for record in records
@@ -217,6 +227,10 @@ function allparents(records::AbstractVector{GFF3Record})
         end
     end
     return parents
+end
+
+function allparents(records::GFF3RecordCollection)
+    return allparents(records.records)
 end
 
 """
@@ -243,6 +257,10 @@ function alltargets(records::AbstractVector{GFF3Record})
         end
     end
     return targets
+end
+
+function alltargets(records::GFF3RecordCollection)
+    return alltargets(records.records)
 end
 
 """
@@ -294,6 +312,10 @@ function allderivesfrom(records::AbstractVector{GFF3Record})
     return derivesfrom
 end
 
+function allderivesfrom(records::GFF3RecordCollection)
+    return allderivesfrom(records.records)
+end
+
 """
     checkderivesfrom(records::AbstractVector{GFF3Record})
 
@@ -314,7 +336,8 @@ end
 """
     checkgff3input(records::AbstractVector{GFF3Record})
 
-Verify EVERYTHING.
+Run all available tests on the records in `records`.
+`records` will be treated like 
 """
 function checkgff3input(records::AbstractVector{GFF3Record})
     checkstartend(records)
@@ -325,10 +348,4 @@ function checkgff3input(records::AbstractVector{GFF3Record})
     checkderivesfrom(records)
 end
 
-
-TESTCOLLECTION = GFF3RecordCollection(TESTFILES[1]; index=nothing)
-TESTCOLLECTION_empty = GFF3RecordCollection(TESTFILES[2]; index=nothing)
-TESTCOLLECTION_bgz = GFF3RecordCollection(TESTFILES[3])
-
-DataFrames.DataFrame(TESTCOLLECTION)
 
