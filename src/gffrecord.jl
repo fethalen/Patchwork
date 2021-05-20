@@ -229,20 +229,18 @@ function Base.String(record::GFF3Record)
 end
 
 function Base.show(io::IO, record::GFF3Record)
-    print(io, summary(record), ":")
     if BioCore.isfilled(record)
-        println(io)
-        println(io, "        seqid: ", record.seqid)
-        println(io, "       source: ", record.source)
-        println(io, "         type: ", record.type)
-        println(io, "        start: ", record.start)
-        println(io, "          end: ", record.end_)
-        println(io, "        score: ", record.score)
-        println(io, "       strand: ", record.strand)
-        println(io, "        phase: ", record.phase)
-        println(io, "   attributes: ", String(record.attributes))
+        println(io, "seqid: ", record.seqid)
+        println(io, "source: ", record.source)
+        println(io, "type: ", record.type)
+        println(io, "start: ", record.start)
+        println(io, "end: ", record.end_)
+        println(io, "score: ", record.score)
+        println(io, "strand: ", record.strand)
+        println(io, "phase: ", record.phase)
+        println(io, "attributes: ", String(record.attributes))
     else
-        println(io, " empty record")
+        println(io, "empty record")
     end
 end
 
