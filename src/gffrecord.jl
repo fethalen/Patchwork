@@ -46,40 +46,46 @@ mutable struct GFF3Attributes # mutable ?
     ontologyterm::Union{AbstractVector{String}, Missing} # multiple values
     iscircular::Union{Bool, Missing}
     other::Any # Union{AbstractVector{Pair{String, AbstractVector{String}}}, Missing}
-
-    # attention: case sensitivity in attribute keys ! 
-    function GFF3Attributes(gff3record::GFF3.Record)
-        allowsmultiplevalues = [3,4,9,10,12]
-        result = Vector{Any}(missing, length(attributelist) + 1)
-        result[12] = [] # other
-        recordattributes = Dict(GFF3.attributes(gff3record))
-        recordkeys = collect(keys(recordattributes))
-        
-        for key in recordkeys
-            if key in attributelist
-                index = findfirst(isequal(key), attributelist)
-                if key == "Note"
-                    result[index] = join(recordattributes[key], ',')
-                elseif !(index in allowsmultiplevalues)
-                    if length(recordattributes[key]) != 1 
-                        error("Attribute $key only allows one value per record.")
-                    end
-                    result[index] = recordattributes[key][1]
-                else
-                    result[index] = recordattributes[key]
-                end
-            else
-                push!(result[12], key => recordattributes[key])
-            end
-        end
-
-        if(isempty(result[12]))
-            result[12] = missing
-        end
-
-        return new(result...)
-    end
 end 
+
+# attention: case sensitivity in attribute keys ! 
+"""
+    GFF3Attributes(record::GFF3.Record)
+
+Get all the attributes from a GFF3.Record.
+This enables easier access to the data fields as well as validity checks on the data.
+"""
+function GFF3Attributes(record::GFF3.Record)
+    allowsmultiplevalues = [3,4,9,10,12]
+    result = Vector{Any}(missing, length(attributelist) + 1)
+    result[12] = [] # other
+    recordattributes = Dict(GFF3.attributes(record))
+    recordkeys = collect(keys(recordattributes))
+    
+    for key in recordkeys
+        if key in attributelist
+            index = findfirst(isequal(key), attributelist)
+            if key == "Note"
+                result[index] = join(recordattributes[key], ',')
+            elseif !(index in allowsmultiplevalues)
+                if length(recordattributes[key]) != 1 
+                    error("Attribute $key only allows one value per record.")
+                end
+                result[index] = recordattributes[key][1]
+            else
+                result[index] = recordattributes[key]
+            end
+        else
+            push!(result[12], key => recordattributes[key])
+        end
+    end
+
+    if(isempty(result[12]))
+        result[12] = missing
+    end
+
+    return GFF3Attributes(result...)
+end
 
 function Base.isempty(attributes::GFF3Attributes)
     return (ismissing(attributes.id) && ismissing(attributes.name) && ismissing(attributes.alias) &&
@@ -156,45 +162,56 @@ mutable struct GFF3Record
     strand::Union{GenomicFeatures.Strand, Missing}
     phase::Union{Char, Missing}
     attributes::Union{GFF3Attributes, Missing}
+end
 
-    """
-        GFF3Record()
+"""
+    GFF3Record()
 
-    Empty initialization.
-    """
-    function GFF3Record()
-        return new(Vector{Any}(missing, 9)...)
-    end
+Empty initialization.
+"""
+function GFF3Record()
+    return GFF3Record(Vector{Any}(missing, 9)...)
+end
 
-    function GFF3Record(record::GFF3.Record)
-        result = Vector{Any}(missing, 9)
-        functions = [GFF3.seqid, GFF3.source, GFF3.featuretype, GFF3.seqstart, 
-                     GFF3.seqend, GFF3.score, GFF3.strand, GFF3.phase, GFF3Attributes]
+"""
+    GFF3Record(record::GFF3.Record)
 
-        for i in eachindex(result)
-            try
-                result[i] = functions[i](record)
-            catch e
-                if !(isa(e, BioCore.Exceptions.MissingFieldException))
-                    println(e)
-                    return GFF3Record()
-                end
+Convert the provided GFF3.Record to GFF3Record. 
+This enables easier access to data fields as well as validity checks on the data.
+"""
+function GFF3Record(record::GFF3.Record)
+    result = Vector{Any}(missing, 9)
+    functions = [GFF3.seqid, GFF3.source, GFF3.featuretype, GFF3.seqstart, 
+                 GFF3.seqend, GFF3.score, GFF3.strand, GFF3.phase, GFF3Attributes]
+
+    for i in eachindex(result)
+        try
+            result[i] = functions[i](record)
+        catch e
+            if !(isa(e, BioCore.Exceptions.MissingFieldException))
+                println(e)
+                return GFF3Record()
             end
         end
-
-        if isempty(result[9])
-            result[9] = missing
-        end
-
-        return new(result...)
     end
 
-    # third constructor for building a GFF3Record from a String 
-    # makes use of the fancy GFF3.jl FSM/parser (thus the extra conversion step).
-    function GFF3Record(record::AbstractString)
-        return GFF3Record(GFF3.Record(record))
+    if isempty(result[9])
+        result[9] = missing
     end
 
+    return GFF3Record(result...)
+end
+
+# third constructor for building a GFF3Record from a String 
+# makes use of the fancy GFF3.jl FSM/parser (thus the extra conversion step).
+"""
+    GFF3Record(record::AbstractString)
+
+Convert the provided String to a GFF3Record. 
+The String is parsed to ensure it is correctly formatted.
+"""
+function GFF3Record(record::AbstractString)
+    return GFF3Record(GFF3.Record(record))
 end
 
 function BioCore.isfilled(record::GFF3Record)
