@@ -31,6 +31,7 @@ end
 
 TESTCOLLECTION = GFF3RecordCollection(TESTFILES[1]; index=nothing)
 TESTCOLLECTION_empty = GFF3RecordCollection(TESTFILES[2]; index=nothing) # only directives
+@assert isempty(TESTCOLLECTION_empty)
 TESTCOLLECTION_bgz = GFF3RecordCollection(TESTFILES[3])
 TESTCOLLECTION_4 = GFF3RecordCollection(TESTFILES[4]; index=nothing) # error: BLAST Target not found in file 
                                                                      # not sure if that should be an error though
