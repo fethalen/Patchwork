@@ -19,10 +19,16 @@ uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 version = "1.3.0"
 
 [[Automa]]
-deps = ["DataStructures", "Printf", "Random", "Test", "TranscodingStreams"]
-git-tree-sha1 = "c81526bf5f6fb4616b4e22a3cd62ac20e255fd3c"
+deps = ["Printf", "ScanByte", "TranscodingStreams"]
+git-tree-sha1 = "d50976f217489ce799e366d9561d56a98a30d7fe"
 uuid = "67c07d97-cdcb-5c2c-af73-a7f9c32a568b"
-version = "0.8.0"
+version = "0.8.2"
+
+[[BGZFStreams]]
+deps = ["CodecZlib", "Test"]
+git-tree-sha1 = "b0e322aef9f1895a09a0c48a118111fd509f666a"
+uuid = "28d598bf-9b8f-59f1-b38c-5a06b4a0f5e6"
+version = "0.3.0"
 
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -32,6 +38,12 @@ deps = ["BioGenerics", "BioSequences", "BioSymbols", "IntervalTrees", "LinearAlg
 git-tree-sha1 = "f610a3a965f187890edb0b1fdef4f30d77852edd"
 uuid = "00701ae9-d1dc-5365-b64a-a3a3ebf5695e"
 version = "2.0.0"
+
+[[BioCore]]
+deps = ["Automa", "BufferedStreams", "YAML"]
+git-tree-sha1 = "476edbf4ef94594fff430a84ca96f86cb2327a71"
+uuid = "37cfa864-2cd6-5c12-ad9e-b6597d696c81"
+version = "2.0.5"
 
 [[BioGenerics]]
 deps = ["TranscodingStreams"]
@@ -361,7 +373,7 @@ uuid = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 version = "0.14.12"
 
 [[LibGit2]]
-deps = ["Printf"]
+deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
 
 [[LibVPX_jll]]
@@ -522,7 +534,7 @@ uuid = "30392449-352a-5448-841d-b1acce4e97dc"
 version = "0.40.0+0"
 
 [[Pkg]]
-deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
+deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PlotThemes]]
@@ -576,7 +588,7 @@ uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
 version = "5.15.2+0"
 
 [[REPL]]
-deps = ["InteractiveUtils", "Markdown", "Sockets"]
+deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[Random]]
@@ -705,8 +717,12 @@ git-tree-sha1 = "5131a624173d532299d1c7eb05341c18112b21b8"
 uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 version = "1.2.1"
 
+[[Tar]]
+deps = ["ArgTools", "SHA"]
+uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
+
 [[Test]]
-deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
+deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[TextWrap]]
