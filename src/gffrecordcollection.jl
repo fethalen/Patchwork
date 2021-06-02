@@ -337,7 +337,6 @@ end
     checkgff3input(records::AbstractVector{GFF3Record})
 
 Run all available tests on the records in `records`.
-`records` will be treated like 
 """
 function checkgff3input(records::AbstractVector{GFF3Record})
     checkstartend(records)
