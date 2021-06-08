@@ -1,11 +1,12 @@
 module Patchwork
 
+using Base: Bool
 using ArgParse
 using DataFrames
 
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
-include("blast.jl")
+include("diamond.jl")
 include("fasta.jl")
 include("sequencerecord.jl")
 include("multiplesequencealignment.jl")
@@ -53,19 +54,54 @@ function parse_parameters()
         "--output-dir"
             help = "Write output files to this directory"
             arg_type = String
-            default = "patchworks_output"
+            default = "patchwork_output"
             metavar = "PATH"
-        "--blast-engine"
-            help = "Which program to use for performing the BLAST search (diamond/blast;
-                    default: try diamond, fall back to blast)"
-            default = "diamond"
-            metavar = "PATH"
-        "--extensions"
+        "--fasta-extensions"
             help = "Filetype extensions used to detect alignment FASTA files (default:
                     [\"aln\", \"fa\", \"fn\", \"fna\", \"faa\", \"fasta\", \"FASTA\"])"
             arg_type = Array{String, 1}
             default = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
             metavar = "LIST"
+        "--matrix"
+            help = "Set scoring matrix"
+            arg_type = String
+            default = "BLOSUM62"
+            metavar = "NAME"
+        "--custom-matrix"
+            help = "Use a custom scoring matrix"
+            arg_type = String
+            default = "BLOSUM62"
+            metavar = "PATH"
+        "--gapopen"
+            help = "Set gap open penalty (non-negative integer)"
+            arg_type = UInt
+            default = 11
+            metavar = "NUMBER"
+        "--gapextend"
+            help = "Set gap extension penalty (non-negative integer)"
+            arg_type = UInt
+            default = 1
+            metavar = "NUMBER"
+        "--mid-sensitive"
+            help = "Run DIAMOND in mid-sensitive mode"
+            arg_type = Bool
+            action = :store_true
+        "--sensitive"
+            help = "Run DIAMOND in sensitive mode"
+            arg_type = Bool
+            action = :store_true
+        "--more-sensitive"
+            help = "Run DIAMOND in more sensitive mode"
+            arg_type = Bool
+            action = :store_true
+        "--very-sensitive"
+            help = "Run DIAMOND in very sensitive mode"
+            arg_type = Bool
+            action = :store_true
+        "--ultra-sensitive"
+            help = "Run DIAMOND in ultra-sensitive mode"
+            arg_type = Bool
+            action = :store_true
         "--seq-type"
             help = "Type of input alignments (nucleotide/aminoacid; default: autodetect)"
             default = "autodetect"
@@ -94,20 +130,20 @@ end
 function main()
     # args = parse_parameters()
     println("Patchwork")
-    if commandexists("diamond")
-        blastengine = "diamond"
-    elseif commandexists("blastx")
+    if commandexists("blastx")
         blastengine = "blastx"
     else
-        error("\'diamond\' or \'blastx\' must be in the current path to run Patchwork")
+        error("\'diamond\' not found in current path and is required")
     end
-    println("BLAST-engine: $blastengine")
 
+    matrix = "BLOSUM62"
+    gapopen = 11
+    gapextend = 1
     speciesdelimiter = '@'
-    # query = "/media/feli/Storage/phylogenomics/1st_wo_nextera/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
     subject = "test/07673_Alitta_succinea.fa"
+    query = "/media/feli/Storage/phylogenomics/1st_wo_nextera/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
     # subject_db = Patchwork.diamond_makeblastdb(subject, ["--threads", Sys.CPU_THREADS])
-    # diamondresults = Patchwork.diamond_blastx(query, subject_db, ["--threads", Sys.CPU_THREADS])
+    diamondresults = Patchwork.diamond_blastx(query, subject_db, ["--threads", Sys.CPU_THREADS])
     # blastresults = Patchwork.readblastTSV(diamondresults)
     hits = Patchwork.readblastTSV("test/c_australis_x_07673.tsv")
     # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
