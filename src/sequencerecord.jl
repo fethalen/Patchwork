@@ -292,7 +292,7 @@ end
 
 function BioSequences.translate(record::SequenceRecord)
     isnucleotide(record) || error("cannot translate non-nucleotide sequence in record: ", record)
-    recordtranslated = SequenceRecord(record.otu, record.identifier, 
+    recordtranslated = SequenceRecord(record.otu, record.identifier,
         BioSequences.translate(record.sequencedata))
     return recordtranslated
 end

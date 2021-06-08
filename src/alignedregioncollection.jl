@@ -1,6 +1,6 @@
 # Collection of zero or more AlignedRegions
 
-include("blast.jl")
+include("diamond.jl")
 include("mafft.jl")
 
 """
@@ -34,7 +34,7 @@ Base.firstindex(regions::AlignedRegionCollection) = 1
 Base.lastindex(regions::AlignedRegionCollection) = length(regions)
 Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
 
-function AlignedRegionCollection(results::Vector{BLASTSearchResult})
+function AlignedRegionCollection(results::Vector{DiamondSearchResult})
     regions = AlignedRegionCollection()
     for result in results
         record = SequenceRecord(result.queryotu, result.queryid, result.querysequence)
@@ -46,7 +46,7 @@ function AlignedRegionCollection(results::Vector{BLASTSearchResult})
 end
 
 function AlignedRegionCollection(msa::MultipleSequenceAlignment,
-                                 searchresults::Array{BLASTSearchResult})
+                                 searchresults::Array{DiamondSearchResult})
     querycount = length(msa)
     merge!(msa, searchresults)
     hitcount = length(msa) - querycount
@@ -169,46 +169,38 @@ function hasoverlaps(regions::AlignedRegionCollection)
     return length(eachoverlap(regions)) > 0
 end
 
-"""
-    mergeoverlapping(regions)
-
-Returns an `AlignedRegionCollection` which is a subset of `regions` where
-overlapping sequences has been merged into longer stretches.
-"""
-function mergeoverlapping(regions::AlignedRegionCollection)
-    order = sortperm(
-        map(region -> (leftposition(region), rightposition(region)), regions))
-    for i in order
-        if rightposition(i)
-        end
+# """
+#     mergeoverlapping(regions)
+#
+# Returns an `AlignedRegionCollection` which is a subset of `regions` where
+# overlapping sequences has been merged into longer stretches.
+# """
+function mergeoverlapping(regions::AlignedRegionCollection, sorted=false)
+    if !sorted
+        regions = sort(regions)
     end
 
-    tovisit = collect(1:lastindex(regions))
-    nonoverlapping_regions = AlignedRegionCollection()
-    while hasoverlaps(regions)
-        popfirst!(tovisit)
-        for overlap in eachoverlap(regions)
-
-        end
-    end
-end
-
-function mergeoverlapping(regions::AlignedRegionCollection; sorted=false)
-    if sorted
-        sortedregions = regions
-    else
-        sortedregions = sort(regions)
-    end
-
+    length(regions) < 2 && return regions
     mergedregions = AlignedRegionCollection()
+    push!(mergedregions, first(regions))
 
-    for i in 1:lastindex(sortedregions) - 1
-        println(i)
-        regiona = sortedregions[i]
-        regionb = sortedregions[i + 1]
-        if isoverlapping(regiona, regionb)
-            push!(mergedregions, consensus(regiona, regionb))
+    for i in 2:lastindex(regions)
+        if isoverlapping(regions[i], last(mergedregions))
+            println("A IS overlapping with B")
+            showinterval(regions[i])
+            showinterval(last(mergedregions))
+            println()
+        else
+            println("A is NOT overlapping with B")
+            showinterval(regions[i])
+            showinterval(last(mergedregions))
+            println()
         end
+        # if last(mergedregions).first < regions[i].last
+        #     println(last(mergedregions).first, ' ', regions[i].first)
+        # else
+        #     # TODO: Merge overlapping regions...
+        # end
     end
 
     return mergedregions

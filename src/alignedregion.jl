@@ -2,8 +2,6 @@
 # alignment. Provides methods and types for working with the range and
 # length of such regions.
 
-using IntervalTrees
-
 include("sequencerecord.jl")
 
 """
@@ -30,11 +28,31 @@ function AlignedRegion(record::SequenceRecord, range::UnitRange, frame::Int64,
 end
 
 function Base.show(region::AlignedRegion)
-    println("sequence name: ", *(region.record.otu, '@', region.record.identifier))
-    println("leftmost position: ", leftposition(region))
-    println("rightmost position: ", rightposition(region))
+    println("name: ", *(region.record.otu, '@', region.record.identifier))
+    println("length: ", *(region.record.otu, '@', region.record.identifier))
+    println("query interval: ", leftposition(region), " -> ", rightposition(region))
     println("frame: ", region.frame)
-    println("percent identity: ", region.percentidentity)
+    println("percent identity: ", region.percentidentical)
+    println("translation: ", region.frame)
+end
+
+showrange(region::AlignedRegion) = println(region.first, ' ', region.last)
+
+"""
+    compare(a:AlignedRegion, b:AlignedRegion)
+
+Display the (translated) regions side-by-side.
+TODO: Complete unfinished comparison function.
+"""
+function compare(a::AlignedRegion, b::AlignedRegion)
+    first = min(a.first, b.first)
+    last = max(a.last, b.last)
+    aprefix = repeat('-', a.first - first)
+    bprefix = repeat('-', b.first - first)
+    apostfix = repeat('-', last - a.last)
+    bpostfix = repeat('-', last - b.last)
+    println(aprefix, translate(a.record.sequencedata), apostfix)
+    println(bprefix, translate(b.record.sequencedata), bpostfix)
 end
 
 """
@@ -64,8 +82,23 @@ function rightposition(region::AlignedRegion)
     return region.last
 end
 
-IntervalTrees.first(region::AlignedRegion) = leftposition(region)
-IntervalTrees.last(region::AlignedRegion) = rightposition(region)
+"""
+    interval(region::AlignedRegion)
+
+Return the first and last positions of `region` as a tuple (`(first, last)`).
+"""
+function interval(region::AlignedRegion)::Tuple
+    return (leftposition(region), rightposition(region))
+end
+
+"""
+    interval(region::AlignedRegion)
+
+Print the first and last positions of `region` (like so: first -> last).
+"""
+function showinterval(region::AlignedRegion)
+    println(leftposition(region), " -> ", rightposition(region))
+end
 
 """
     frame(region::AlignedRegion)
