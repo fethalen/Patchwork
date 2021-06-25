@@ -1,13 +1,13 @@
 # Provides a type for sequence identifiers
 
-struct SequenceIdentifier
-    id::AbstractString
+mutable struct SequenceIdentifier
+    id::String
 
     function SequenceIdentifier()
         return new("")
     end
 
-    function SequenceIdentifier(id::AbstractString)
+    function SequenceIdentifier(id::String)
         return new(id)
     end
 end

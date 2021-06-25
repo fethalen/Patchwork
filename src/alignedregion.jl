@@ -2,41 +2,59 @@
 # alignment. Provides methods and types for working with the range and
 # length of such regions.
 
+import BioSequences
+import BioAlignments
+
+include("diamond.jl")
 include("sequencerecord.jl")
 
 """
     struct AlignedRegion
 
 - `record::SequenceRecord`: the sequence record associated with the interval.
-- `first::Int64`: the leftmost position.
-- `last::Int64`: the rightmost position.
-- `frame::Int64: the frame of the sequence (-3, -2, -1, 1, 2, or 3;
+- `subjectfirst::Int64`: the leftmost position.
+- `subjectlast::Int64`: the rightmost position.
+- `queryframe::Int64: the queryframe of the sequence (-3, -2, -1, 1, 2, or 3;
   0 = undefined).
-- `percentidentity::Float64: percent identity in BLAST search results`
+- `percentidentity::Float64: percent identity in Bsubjectlast search results`
 """
 struct AlignedRegion
-    record::SequenceRecord
-    first::Int64
-    last::Int64
-    frame::Int64
-    percentidentical::Float64
+    pairwisealignment::BioAlignments.PairwiseAlignment
+    subjectfirst::Int64
+    subjectlast::Int64
+    queryid::SequenceIdentifier
+    queryfirst::Int64
+    querylast::Int64
+    queryframe::Int64
+
+    function AlignedRegion(result::DiamondSearchResult)
+        alignment = BioAlignments.PairwiseAlignment(BioSequences.translate(result.querysequence),
+            result.subjectsequence, result.cigar)
+        return new(alignment, result.subjectstart, result.subjectend, result.queryid,
+                   result.querystart, result.queryend, result.queryframe)
+    end
 end
 
-function AlignedRegion(record::SequenceRecord, range::UnitRange, frame::Int64,
-    percentidentity::Float64)
-    return AlignedRegion(record, first(range), last(range), frame, percentidentity)
+function Base.show(io::IO, region::AlignedRegion)
+    compact = get(io, :compact, false)
+
+    if compact
+        print(io, "query name: ", region.queryid)
+    else
+        println(io, "query name: ", *(otupart(region.queryid), '@', sequencepart(region.queryid)))
+        println(io, "length: ", length(region))
+        println(io, "subject interval: ", region.subjectfirst, " -> ", region.subjectlast)
+        println(io, "query interval: ", region.queryfirst, " -> ", region.querylast)
+        println(io, "queryframe: ", region.queryframe)
+        println(io, "alignment: \n", region.pairwisealignment)
+    end
 end
 
-function Base.show(region::AlignedRegion)
-    println("name: ", *(region.record.otu, '@', region.record.identifier))
-    println("length: ", *(region.record.otu, '@', region.record.identifier))
-    println("query interval: ", leftposition(region), " -> ", rightposition(region))
-    println("frame: ", region.frame)
-    println("percent identity: ", region.percentidentical)
-    println("translation: ", region.frame)
+function Base.show(io::IO, ::MIME"text/plain", region::AlignedRegion)
+    println(io, typeof(region))
 end
 
-showrange(region::AlignedRegion) = println(region.first, ' ', region.last)
+showrange(region::AlignedRegion) = println(region.subjectfirst, ' ', region.subjectlast)
 
 """
     compare(a:AlignedRegion, b:AlignedRegion)
@@ -45,12 +63,12 @@ Display the (translated) regions side-by-side.
 TODO: Complete unfinished comparison function.
 """
 function compare(a::AlignedRegion, b::AlignedRegion)
-    first = min(a.first, b.first)
-    last = max(a.last, b.last)
-    aprefix = repeat('-', a.first - first)
-    bprefix = repeat('-', b.first - first)
-    apostfix = repeat('-', last - a.last)
-    bpostfix = repeat('-', last - b.last)
+    subjectfirst = min(a.subjectfirst, b.subjectfirst)
+    subjectlast = max(a.subjectlast, b.subjectlast)
+    aprefix = repeat('-', a.subjectfirst - subjectfirst)
+    bprefix = repeat('-', b.subjectfirst - subjectfirst)
+    apostfix = repeat('-', subjectlast - a.subjectlast)
+    bpostfix = repeat('-', subjectlast - b.subjectlast)
     println(aprefix, translate(a.record.sequencedata), apostfix)
     println(bprefix, translate(b.record.sequencedata), bpostfix)
 end
@@ -61,7 +79,7 @@ end
 Returns the length of this sequence region (without gaps).
 """
 function Base.length(region::AlignedRegion)
-    return length(ungap(region.record))
+    return 1 + region.subjectlast - region.subjectfirst
 end
 
 """
@@ -70,7 +88,7 @@ end
 Return the leftmost position of `region`.
 """
 function leftposition(region::AlignedRegion)
-    return region.first
+    return region.subjectfirst
 end
 
 """
@@ -79,13 +97,13 @@ end
 Return the rightmost position of `region`.
 """
 function rightposition(region::AlignedRegion)
-    return region.last
+    return region.subjectlast
 end
 
 """
     interval(region::AlignedRegion)
 
-Return the first and last positions of `region` as a tuple (`(first, last)`).
+Return the subjectfirst and subjectlast positions of `region` as a tuple (`(subjectfirst, subjectlast)`).
 """
 function interval(region::AlignedRegion)::Tuple
     return (leftposition(region), rightposition(region))
@@ -94,19 +112,19 @@ end
 """
     interval(region::AlignedRegion)
 
-Print the first and last positions of `region` (like so: first -> last).
+Print the subjectfirst and subjectlast positions of `region` (like so: subjectfirst -> subjectlast).
 """
 function showinterval(region::AlignedRegion)
     println(leftposition(region), " -> ", rightposition(region))
 end
 
 """
-    frame(region::AlignedRegion)
+    queryframe(region::AlignedRegion)
 
-Return the frame of `region`.
+Return the queryframe of `region`.
 """
-function frame(region::AlignedRegion)
-    return region.frame
+function queryframe(region::AlignedRegion)
+    return region.queryframe
 end
 
 """
@@ -397,7 +415,7 @@ end
 
 Choose between two `AlignedRegion`s, `a` and `b`, and retain the region with
 the longest region. Or, if both regions cover the same region, return the
-region with the highest amount of percent identity from the BLAST results.
+region with the highest amount of percent identity from the Bsubjectlast results.
 """
 function bestpick(a::AlignedRegion, b::AlignedRegion)
     if equalrange(a, b)

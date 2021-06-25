@@ -1,18 +1,39 @@
 using BioSequences
 
+include("sequenceidentifier.jl")
+
 """
 A `SequenceRecord` represents a record in a multiple sequence alignment
 (MSA). A sequence record has an operational taxonomic unit (OTU; usually a
 species), a sequence identifier, and the sequence data itself.
 """
-struct SequenceRecord
-    otu::AbstractString
-    identifier::AbstractString
+mutable struct SequenceRecord
+    id::SequenceIdentifier
     sequencedata::LongSequence
-end
 
-function SequenceRecord()
-    return SequenceRecord("", "", LongSequence())
+    function SequenceRecord()
+        return new(SequenceIdentifier(), BioSequences.LongSequence())
+    end
+
+    function SequenceRecord(id::AbstractString)
+        return new(SequenceIdentifier(id), BioSequences.LongSequence())
+    end
+
+    function SequenceRecord(sequencedata::BioSequences.LongSequence)
+        return new(SequenceIdentifier(), sequencedata)
+    end
+
+    function SequenceRecord(id::AbstractString, sequencedata::BioSequences.LongSequence)
+        return new(SequenceIdentifier(id), sequencedata)
+    end
+
+    function SequenceRecord(id::SequenceIdentifier)
+        return new(id, BioSequences.LongSequence())
+    end
+
+    function SequenceRecord(id::SequenceIdentifier, sequencedata::BioSequences.LongSequence)
+        return new(id, sequencedata)
+    end
 end
 
 function SequenceRecord(otuid::String, sequencedata::LongSequence, separator::Char)

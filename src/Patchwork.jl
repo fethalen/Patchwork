@@ -1,6 +1,6 @@
 module Patchwork
 
-using Base: Bool
+using Base: Bool, Int64, func_for_method_checked
 using ArgParse
 using DataFrames
 
@@ -11,26 +11,52 @@ include("fasta.jl")
 include("sequencerecord.jl")
 include("multiplesequencealignment.jl")
 
-"""
-    commandexists(command)
+const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
+const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
+const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads", Sys.CPU_THREADS]
+const MIN_DIAMONDVERSION = "2.0.3"
+const MATRIX = "BLOSUM62"
+const GAPOPEN = 11
+const GAPEXTEND = 1
 
-Returns `true` if the provided command exists within the current path and throw an error
-otherwise.
 """
-function commandexists(command::AbstractString)
-    cmdexists = `command -v $command`
+    printinfo()
+
+Print basic information about this program.
+"""
+function printinfo()
+    about = """
+    P A T C H W O R K
+    Developed by: Felix Thalen and Clara Köhne
+    Dept. for Animal Evolution and Biodiversity, University of Göttingen
+
+    """
+    println(about)
+    return
+end
+
+"""
+    min_diamondversion(version)
+
+Returns `true` if DIAMOND is installed with a version number equal to or higher than the
+provided `minversion`. Returns false if the version number is lower or DIAMOND is not found at
+all.
+"""
+function min_diamondversion(minversion::AbstractString)
     try
-        run(cmdexists)
+        run(`diamond --version`)
     catch
         return false
     end
-    return true
+    versioncmd = read(`diamond --version`, String)
+    diamondversion = last(split(versioncmd))
+    return diamondversion >= minversion
 end
 
 function parse_parameters()
     overview = """
-    Concatenates two or more sequence alignments into a single supermatrix
-    and provides detailed information about that supermatrix.
+    Alignment-based Exon Retrieval and Concatenation with Phylogenomic
+    Applications
     """
     settings = ArgParseSettings(description=overview,
                                 version = "0.1.0",
@@ -56,11 +82,10 @@ function parse_parameters()
             arg_type = String
             default = "patchwork_output"
             metavar = "PATH"
-        "--fasta-extensions"
-            help = "Filetype extensions used to detect alignment FASTA files (default:
-                    [\"aln\", \"fa\", \"fn\", \"fna\", \"faa\", \"fasta\", \"FASTA\"])"
-            arg_type = Array{String, 1}
-            default = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
+        "--diamond-flags"
+            help = "Flags sent to DIAMOND"
+            arg_type = Vector
+            default = DIAMONDFLAGS
             metavar = "LIST"
         "--matrix"
             help = "Set scoring matrix"
@@ -73,35 +98,15 @@ function parse_parameters()
             default = "BLOSUM62"
             metavar = "PATH"
         "--gapopen"
-            help = "Set gap open penalty (non-negative integer)"
-            arg_type = UInt
+            help = "Set gap open penalty (positive integer)"
+            arg_type = Int64
             default = 11
             metavar = "NUMBER"
         "--gapextend"
-            help = "Set gap extension penalty (non-negative integer)"
-            arg_type = UInt
+            help = "Set gap extension penalty (positive integer)"
+            arg_type = Int64
             default = 1
             metavar = "NUMBER"
-        "--mid-sensitive"
-            help = "Run DIAMOND in mid-sensitive mode"
-            arg_type = Bool
-            action = :store_true
-        "--sensitive"
-            help = "Run DIAMOND in sensitive mode"
-            arg_type = Bool
-            action = :store_true
-        "--more-sensitive"
-            help = "Run DIAMOND in more sensitive mode"
-            arg_type = Bool
-            action = :store_true
-        "--very-sensitive"
-            help = "Run DIAMOND in very sensitive mode"
-            arg_type = Bool
-            action = :store_true
-        "--ultra-sensitive"
-            help = "Run DIAMOND in ultra-sensitive mode"
-            arg_type = Bool
-            action = :store_true
         "--seq-type"
             help = "Type of input alignments (nucleotide/aminoacid; default: autodetect)"
             default = "autodetect"
@@ -116,11 +121,12 @@ function parse_parameters()
         "--threads"
             help = "Number of threads to utilize (default: all available)"
             default = Sys.CPU_THREADS
-            arg_type = UInt
+            arg_type = Int64
             metavar = "NUMBER"
         "--wrap-column"
             help = "Wrap output sequences at this column number (default: no wrap)"
-            arg_type = UInt
+            default = 0
+            arg_type = Int64
             metavar = "NUMBER"
     end
 
@@ -128,26 +134,23 @@ function parse_parameters()
 end
 
 function main()
-    # args = parse_parameters()
-    println("Patchwork")
-    if commandexists("blastx")
-        blastengine = "blastx"
-    else
-        error("\'diamond\' not found in current path and is required")
+    args = parse_parameters()
+    printinfo()
+    if !min_diamondversion(MIN_DIAMONDVERSION)
+        error("Patchwork requires \'diamond\' with a version number above
+               $MIN_DIAMONDVERSION to run")
     end
 
-    matrix = "BLOSUM62"
-    gapopen = 11
-    gapextend = 1
+
     speciesdelimiter = '@'
     subject = "test/07673_Alitta_succinea.fa"
     query = "/media/feli/Storage/phylogenomics/1st_wo_nextera/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
-    # subject_db = Patchwork.diamond_makeblastdb(subject, ["--threads", Sys.CPU_THREADS])
-    diamondresults = Patchwork.diamond_blastx(query, subject_db, ["--threads", Sys.CPU_THREADS])
-    # blastresults = Patchwork.readblastTSV(diamondresults)
-    hits = Patchwork.readblastTSV("test/c_australis_x_07673.tsv")
+    subject_db = Patchwork.diamond_makeblastdb(subject, MAKEBLASTDB_FLAGS)
+    # diamondresults = Patchwork.diamond_blastx(query, subject_db, DIAMONDFLAGS)
+    diamondresults = "test/c_australis_x_07673.tsv"
+    hits = Patchwork.readblastTSV(diamondresults)
     # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
-    referenceseq = Patchwork.readmsa(subject, speciesdelimiter)
+    # referenceseq = Patchwork.readmsa(subject, speciesdelimiter)
     regions = Patchwork.AlignedRegionCollection(hits)
     uniqueregions = Patchwork.uniquesequences(regions)
 end

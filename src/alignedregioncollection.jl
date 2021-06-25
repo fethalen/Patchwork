@@ -17,30 +17,13 @@ function AlignedRegionCollection()
     return AlignedRegionCollection([])
 end
 
-function Base.length(regions::AlignedRegionCollection)
-    return length(regions.records)
-end
-
-function Base.push!(regions::AlignedRegionCollection, region::AlignedRegion)
-    return push!(regions.records, region)
-end
-
-function Base.getindex(regions::AlignedRegionCollection, index::Integer)
-    return getindex(regions.records, index)
-end
-
-Base.isempty(regions::AlignedRegionCollection) = length(regions) >= 1
-Base.firstindex(regions::AlignedRegionCollection) = 1
-Base.lastindex(regions::AlignedRegionCollection) = length(regions)
-Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
-
 function AlignedRegionCollection(results::Vector{DiamondSearchResult})
     regions = AlignedRegionCollection()
     for result in results
-        record = SequenceRecord(result.queryotu, result.queryid, result.querysequence)
-        region = AlignedRegion(record, result.subjectstart, result.subjectend,
-                               result.queryframe, result.percentidentical)
-        push!(regions, region)
+        # record = SequenceRecord(result.queryid, result.querysequence)
+        # region = AlignedRegion(record, result.subjectstart, result.subjectend,
+        #                        result.queryframe, result.percentidentical)
+        push!(regions, AlignedRegion(result))
     end
     return regions
 end
@@ -70,6 +53,23 @@ function AlignedRegionCollection(msa::MultipleSequenceAlignment,
     end
     return regions
 end
+
+function Base.length(regions::AlignedRegionCollection)
+    return length(regions.records)
+end
+
+function Base.push!(regions::AlignedRegionCollection, region::AlignedRegion)
+    return push!(regions.records, region)
+end
+
+function Base.getindex(regions::AlignedRegionCollection, index::Integer)
+    return getindex(regions.records, index)
+end
+
+Base.isempty(regions::AlignedRegionCollection) = length(regions) >= 1
+Base.firstindex(regions::AlignedRegionCollection) = 1
+Base.lastindex(regions::AlignedRegionCollection) = length(regions)
+Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
 
 @inline function Base.iterate(regions::AlignedRegionCollection, i::Int = firstindex(regions))
     if i > lastindex(regions)
