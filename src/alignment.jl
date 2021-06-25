@@ -19,7 +19,7 @@ end
 Construct a `PairwiseAlignment` from two sequences, `seq` and `ref`, and a `cigar` string.
 """
 function BioAlignments.PairwiseAlignment(
-    seq::BioSequences.LongSequence, ref::BioSequences.LongSequence, cigar::AbstractString)
+    seq::BioSequences.LongSequence, ref::BioSequences.LongSequence, cigar::String)
     alignment = BioAlignments.Alignment(cigar)
     alignedseq = BioAlignments.AlignedSequence(seq, alignment)
     return BioAlignments.PairwiseAlignment(alignedseq, ref)
