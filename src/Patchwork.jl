@@ -1,9 +1,10 @@
 module Patchwork
 
-using Base: Bool, Int64, func_for_method_checked
+using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS
 using ArgParse
 using DataFrames
 
+include("alignment.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
 include("diamond.jl")
@@ -13,7 +14,8 @@ include("multiplesequencealignment.jl")
 
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
 const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
-const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads", Sys.CPU_THREADS]
+const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
+                      "--ultra-sensitive", Sys.CPU_THREADS]
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
 const GAPOPEN = 11
@@ -140,7 +142,6 @@ function main()
         error("Patchwork requires \'diamond\' with a version number above
                $MIN_DIAMONDVERSION to run")
     end
-
 
     speciesdelimiter = '@'
     subject = "test/07673_Alitta_succinea.fa"
