@@ -14,16 +14,17 @@ Datastructure that holds one or more `GFF3Record`s read from a GFF3-file or ente
 - `records::Vector{GFF3Record}`
 
 
-    GFF3RecordCollection(records::AbstractVector{GFF3Record})
+    GFF3RecordCollection(records::AbstractVector{GFF3Record}; extendedchecks::Bool=false)
 
 Construct a new collection from a vector of `GFF3Record`s.
-The function verifies the validity of the records in `records`.
+The function verifies the validity of the records in `records`. By default, this includes only start, end and phase.
+If `extendedchecks=true` is set, run all available tests. This may take some time.
 """
 mutable struct GFF3RecordCollection
     records::Vector{GFF3Record}
 
-    function GFF3RecordCollection(records::AbstractVector{GFF3Record})
-        checkgff3input(records)
+    function GFF3RecordCollection(records::AbstractVector{GFF3Record}; extendedchecks::Bool=false)
+        checkgff3input(records; extended=extendedchecks)
         return new(records)
     end
 end
@@ -39,42 +40,43 @@ end
 
 # read an entire gff3 file, omitting any non-feature records: 
 """
-    GFF3RecordCollection(reader::GFF3.Reader)
+    GFF3RecordCollection(reader::GFF3.Reader; extendedchecks::Bool=false)
 
 Read a GFF3-file and save all non-empty feature records to a new `GFF3RecordCollection`.
-The function verifies the validity of the input data.
+The function verifies the validity of the input data. By default, this includes only start, end and phase.
+If `extendedchecks=true` is set, run all available tests. This may take some time.
 """
-function GFF3RecordCollection(reader::GFF3.Reader)
+function GFF3RecordCollection(reader::GFF3.Reader; extendedchecks::Bool=false)
     result = []
     for record in reader
         if BioCore.isfilled(record) && GFF3.isfeature(record) # omit other record types
             push!(result, GFF3Record(record))
         end
     end
-    checkgff3input(Vector{GFF3Record}(result))
-    return GFF3RecordCollection(Vector{GFF3Record}(result))
+    return GFF3RecordCollection(Vector{GFF3Record}(result); extendedchecks=extendedchecks)
 end
 
 """
-    GFF3RecordCollection(file::AbstractString; index=:auto)
+    GFF3RecordCollection(file::AbstractString; index=:auto, extendedchecks::Bool=false)
 
-    GFF3RecordCollection(input::IO; index=nothing)
+    GFF3RecordCollection(input::IO; index=nothing, extendedchecks::Bool=false)
 
 Create a GFF3.Reader for a GFF3-file with the provided data source. 
 If the file path ends with ".bgz", the function will try to find a tabix index file ".tbi" and read it.
 Save all non-empty feature records to a new `GFF3RecordCollection`.
-The function verifies the validity of the input data.
+The function verifies the validity of the input data. By default, this includes only start, end and phase.
+If `extendedchecks=true` is set, run all available tests. This may take some time.
 """
-function GFF3RecordCollection(file::AbstractString; index=:auto)
+function GFF3RecordCollection(file::AbstractString; index=:auto, extendedchecks::Bool=false)
     reader = GFF3.Reader(file; index=index)
-    result = GFF3RecordCollection(reader)
+    result = GFF3RecordCollection(reader; extendedchecks=extendedchecks)
     close(reader)
     return result
 end
 
-function GFF3RecordCollection(input::IO; index=nothing)
+function GFF3RecordCollection(input::IO; index=nothing, extendedchecks::Bool=false)
     reader = GFF3.Reader(input; index=index)
-    result = GFF3RecordCollection(reader)
+    result = GFF3RecordCollection(reader; extendedchecks=extendedchecks)
     close(reader)
     return result
 end
@@ -133,11 +135,13 @@ function Base.pop!(records::GFF3RecordCollection)
 end
 
 function Base.filter(f, records::GFF3RecordCollection)
-    return filter(f, records.records)
+    filteredrecords = filter(f, records.records)
+    return GFF3RecordCollection(filteredrecords)
 end
 
 function Base.filter!(f, records::GFF3RecordCollection)
-    return filter!(f, records.records)
+    filter!(f, records.records)
+    return records
 end
 
 function Base.convert(::Type{DataFrames.DataFrame}, records::GFF3RecordCollection)
@@ -219,10 +223,14 @@ function allids(records::GFF3RecordCollection)
     return allids(records.records)
 end
 
-function allparents(records::AbstractVector{GFF3Record})
+function allparents(records::AbstractVector{GFF3Record}; onlyunique::Bool=true) # HERE!!
     parents = []
     for record in records
-        if !ismissing(record.attributes) && !ismissing(record.attributes.parent) && !(record.attributes.parent in parents)
+        if onlyunique
+            if !ismissing(record.attributes) && !ismissing(record.attributes.parent) && !(record.attributes.parent in parents)
+                push!(parents, record.attributes.parent...)
+            end
+        else
             push!(parents, record.attributes.parent...)
         end
     end
@@ -334,17 +342,21 @@ end
 
 ######### the whole check-up: ##################################################################################
 """
-    checkgff3input(records::AbstractVector{GFF3Record})
+    checkgff3input(records::AbstractVector{GFF3Record}; extended::Bool=false)
 
-Run all available tests on the records in `records`.
+Check start, end and phase for each record.
+If `extended=true` is set, run all available tests on the records in `records`.
+This may take some time.
 """
-function checkgff3input(records::AbstractVector{GFF3Record})
-    checkstartend(records)
-    checkcdsphase(records)
-    checkparents(records)
-    checktargets(records)
-    checkgaps(records)
-    checkderivesfrom(records)
+function checkgff3input(records::AbstractVector{GFF3Record}; extended::Bool=false)
+    for record in records
+        checkstartend(record)
+        checkcdsphase(record)
+    end
+    if extended
+        checkparents(records)
+        checktargets(records)
+        checkgaps(records)
+        checkderivesfrom(records)
+    end
 end
-
-
