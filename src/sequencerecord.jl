@@ -36,17 +36,6 @@ mutable struct SequenceRecord
     end
 end
 
-function SequenceRecord(otuid::String, sequencedata::LongSequence, separator::Char)
-    if count(separator in otuid) > 1
-        error(*("multiple separators (", separator, ") found in ", otuid))
-    elseif count(separator in otuid) == 0
-        error(*("couldn't find separator (", separator, ") in ", otuid))
-    end
-
-    otu, identifier = split(otuid, separator)
-    return SequenceRecord(otu, identifier, sequencedata)
-end
-
 Base.length(alignment::SequenceRecord) = length(alignment.sequencedata)
 
 function BioSequences.ungap(alignment::SequenceRecord)::SequenceRecord

@@ -75,6 +75,7 @@ function parse_parameters()
             required = true
             arg_type = String
             metavar = "PATH"
+        # TODO: Doesn't have to be a flag, check filetype extension instead
         "--database"
             help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
             arg_type = Bool
@@ -151,8 +152,12 @@ function main()
     diamondresults = "test/c_australis_x_07673.tsv"
     hits = Patchwork.readblastTSV(diamondresults)
     # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
-    # referenceseq = Patchwork.readmsa(subject, speciesdelimiter)
-    regions = Patchwork.AlignedRegionCollection(hits)
+    # referenceseq = Patchwork.readmsa(subject)
+    full_subjectseq = Patchwork.get_fullseq(subject)
+    regions = Patchwork.AlignedRegionCollection(full_subjectseq, hits)
+    a = regions[12]
+    b = regions[13]
+    Patchwork.slice(b, Patchwork.afteroverlap(a, b))
     uniqueregions = Patchwork.uniquesequences(regions)
 end
 
