@@ -1,24 +1,26 @@
 # Utilities and types for working with multiple sequence alignments (MSAs)
 
+include("sequencerecord.jl")
+
 """
 Datastructures which holds a collection of `SequenceRecord`s.
 """
 mutable struct MultipleSequenceAlignment
     name::AbstractString
     sequences::Vector{SequenceRecord}
-end
 
-function MultipleSequenceAlignment()::MultipleSequenceAlignment
-    return MultipleSequenceAlignment("", Vector{SequenceRecord}())
-end
+    function MultipleSequenceAlignment()::MultipleSequenceAlignment
+        return new("", Vector{SequenceRecord}())
+    end
 
-function MultipleSequenceAlignment(name::String)::MultipleSequenceAlignment
-    return MultipleSequenceAlignment(name, Vector{SequenceRecord}())
-end
+    function MultipleSequenceAlignment(name::String)::MultipleSequenceAlignment
+        return new(name, Vector{SequenceRecord}())
+    end
 
-function MultipleSequenceAlignment(alignments::Vector{SequenceRecord}
-    )::MultipleSequenceAlignment
-    return MultipleSequenceAlignment("", alignments)
+    function MultipleSequenceAlignment(alignments::Vector{SequenceRecord}
+        )::MultipleSequenceAlignment
+        return new("", alignments)
+    end
 end
 
 function addalignment!(msa::MultipleSequenceAlignment,
@@ -194,7 +196,7 @@ function mktemp_fasta(alignment::MultipleSequenceAlignment;
     removehyphens && ungap!(alignment)
 
     for record in alignment.sequences
-        write(io, *('>', record.otu, '@', record.identifier, 
+        write(io, *('>', record.otu, '@', record.identifier,
                     '\n', String(record.sequencedata), '\n'))
     end
     close(io)
@@ -208,7 +210,7 @@ function mktemp_fasta(alignment::AbstractString;
     removehyphens && ungap!(msa)
 
     for record in msa.sequences
-        write(io, *('>', record.otu, '@', record.identifier, 
+        write(io, *('>', record.otu, '@', record.identifier,
                     '\n', String(record.sequencedata), '\n'))
     end
     close(io)

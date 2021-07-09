@@ -1,7 +1,7 @@
 Patchwork
 ---------
 
-> **Note:** Patchwork is an unfinished product currently under development.
+> **Note:** Patchwork is an unfinished product, currently under development.
 
 ## Overview
 

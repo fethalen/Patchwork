@@ -1,6 +1,6 @@
 # Collection of zero or more AlignedRegions
 
-include("blast.jl")
+include("diamond.jl")
 include("mafft.jl")
 
 """
@@ -17,35 +17,19 @@ function AlignedRegionCollection()
     return AlignedRegionCollection([])
 end
 
-function Base.length(regions::AlignedRegionCollection)
-    return length(regions.records)
-end
-
-function Base.push!(regions::AlignedRegionCollection, region::AlignedRegion)
-    return push!(regions.records, region)
-end
-
-function Base.getindex(regions::AlignedRegionCollection, index::Integer)
-    return Base.getindex(regions.records, index)
-end
-
-Base.firstindex(regions::AlignedRegionCollection) = 1
-Base.lastindex(regions::AlignedRegionCollection) = length(regions)
-Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
-
-function AlignedRegionCollection(results::Vector{BLASTSearchResult})
+function AlignedRegionCollection(results::Vector{DiamondSearchResult})
     regions = AlignedRegionCollection()
     for result in results
-        record = SequenceRecord(result.queryotu, result.queryid, result.querysequence)
-        region = AlignedRegion(record, result.querystart, result.queryend, 
-                               result.queryframe, result.percentidentical)
-        push!(regions, region)
+        # record = SequenceRecord(result.queryid, result.querysequence)
+        # region = AlignedRegion(record, result.subjectstart, result.subjectend,
+        #                        result.queryframe, result.percentidentical)
+        push!(regions, AlignedRegion(result))
     end
     return regions
 end
 
 function AlignedRegionCollection(msa::MultipleSequenceAlignment,
-                                 searchresults::Array{BLASTSearchResult})
+                                 searchresults::Array{DiamondSearchResult})
     querycount = length(msa)
     merge!(msa, searchresults)
     hitcount = length(msa) - querycount
@@ -59,8 +43,8 @@ function AlignedRegionCollection(msa::MultipleSequenceAlignment,
 
         for compoundregion in compoundregions(record)
             (leftmost, rightmost) = nongap_range(compoundregion)
-            compound_seqrecord = SequenceRecord(record.otu, 
-                *(record.identifier, '_', string(leftmost), '-', 
+            compound_seqrecord = SequenceRecord(record.otu,
+                *(record.identifier, '_', string(leftmost), '-',
                     string(rightmost)), compoundregion)
             region = AlignedRegion(compound_seqrecord, leftmost, rightmost,
                 result.subjectframe, result.percentidentical)
@@ -70,7 +54,24 @@ function AlignedRegionCollection(msa::MultipleSequenceAlignment,
     return regions
 end
 
-@inline function iterate(regions::AlignedRegionCollection, i::Int = firstindex(regions))
+function Base.length(regions::AlignedRegionCollection)
+    return length(regions.records)
+end
+
+function Base.push!(regions::AlignedRegionCollection, region::AlignedRegion)
+    return push!(regions.records, region)
+end
+
+function Base.getindex(regions::AlignedRegionCollection, index::Integer)
+    return getindex(regions.records, index)
+end
+
+Base.isempty(regions::AlignedRegionCollection) = length(regions) >= 1
+Base.firstindex(regions::AlignedRegionCollection) = 1
+Base.lastindex(regions::AlignedRegionCollection) = length(regions)
+Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
+
+@inline function Base.iterate(regions::AlignedRegionCollection, i::Int = firstindex(regions))
     if i > lastindex(regions)
         return nothing
     else
@@ -79,13 +80,13 @@ end
 end
 
 """
-    sameid(regions)
+    sameids(regions)
 
 Returns a dictionary where (unique) sequence identifiers of each region
 contained within `regions` are key(s) and the value is a vector with elements
 of the type `AlignedRegion`.
 """
-function sameid(regions::AlignedRegionCollection)
+function sameids(regions::AlignedRegionCollection)
     idgroups = Dict()
     for region in regions
         id = identifier(region)
@@ -168,28 +169,41 @@ function hasoverlaps(regions::AlignedRegionCollection)
     return length(eachoverlap(regions)) > 0
 end
 
-"""
-    mergeoverlapping(regions)
-
-Returns an `AlignedRegionCollection` which is a subset of `regions` where
-overlapping sequences has been merged into longer stretches.
-"""
-function mergeoverlapping(regions::AlignedRegionCollection)
-    order = sortperm(
-        map(region -> (leftposition(region), rightposition(region)), regions))
-    for i in order
-        if rightposition(i)
-        end
+# """
+#     mergeoverlapping(regions)
+#
+# Returns an `AlignedRegionCollection` which is a subset of `regions` where
+# overlapping sequences has been merged into longer stretches.
+# """
+function mergeoverlapping(regions::AlignedRegionCollection, sorted=false)
+    if !sorted
+        regions = sort(regions)
     end
 
-    tovisit = collect(1:lastindex(regions))
-    nonoverlapping_regions = AlignedRegionCollection()
-    while hasoverlaps(regions)
-        popfirst!(tovisit)
-        for overlap in eachoverlap(regions)
-            
+    length(regions) < 2 && return regions
+    mergedregions = AlignedRegionCollection()
+    push!(mergedregions, first(regions))
+
+    for i in 2:lastindex(regions)
+        if isoverlapping(regions[i], last(mergedregions))
+            println("A IS overlapping with B")
+            showinterval(regions[i])
+            showinterval(last(mergedregions))
+            println()
+        else
+            println("A is NOT overlapping with B")
+            showinterval(regions[i])
+            showinterval(last(mergedregions))
+            println()
         end
+        # if last(mergedregions).first < regions[i].last
+        #     println(last(mergedregions).first, ' ', regions[i].first)
+        # else
+        #     # TODO: Merge overlapping regions...
+        # end
     end
+
+    return mergedregions
 end
 
 """
@@ -200,8 +214,7 @@ with the leftmost region and ending with the rightmost region.
 """
 function Base.sort(regions::AlignedRegionCollection)
     sortedregions = AlignedRegionCollection()
-    order = sortperm(
-        map(region -> (leftposition(region), rightposition(region)), regions))
+    order = sortperm(map(region -> (leftposition(region), rightposition(region)), regions))
     for i in order
         push!(sortedregions, regions[i])
     end
@@ -211,26 +224,26 @@ end
 """
     removeredundant(regions)
 
-Delete 
+Delete
 """
-function removeredundant(regions::AlignedRegionCollection)
-end
+# function removeredundant(regions::AlignedRegionCollection)
+# end
 
 # TODO: function layout
-function layout(regions::AlignedRegionCollection)
-end
+# function layout(regions::AlignedRegionCollection)
+# end
 
 # TODO: function consensus
-function consensus(regions::AlignedRegionCollection)
-    order = sortperm(map(region -> (leftposition(region), rightposition(region)), uniqueregions))
-    for i in order
-        println(count)
-        regiona = uniqueregions[i]
-        regionb = uniqueregions[i + 1]
-        println((leftposition(regiona), rightposition(regiona)))
-        println(precedes(regiona, regionb))
-    end
-end
+# function consensus(regions::AlignedRegionCollection)
+#     order = sortperm(map(region -> (leftposition(region), rightposition(region)), uniqueregions))
+#     for i in order
+#         println(count)
+#         regiona = uniqueregions[i]
+#         regionb = uniqueregions[i + 1]
+#         println((leftposition(regiona), rightposition(regiona)))
+#         println(precedes(regiona, regionb))
+#     end
+# end
 
 """
     isnucleotide(region)
@@ -238,7 +251,7 @@ end
 Returns true if this region collection's first `record` consists of nucleotides.
 """
 function isnucleotide(regions::AlignedRegionCollection)
-    return isnucleotide(regions[1]) 
+    return isnucleotide(regions[1])
 end
 
 """
@@ -248,4 +261,12 @@ Returns true if this region collection's first `record` consists of amino acids.
 """
 function isaminoacid(regions::AlignedRegionCollection)
     return isaminoacid(regions[1])
+end
+
+function BioSequences.translate(regions::AlignedRegionCollection)
+    translatedregions = []
+    for region in regions
+        push!(translatedregions, translate(region))
+    end
+    return translatedregions
 end
