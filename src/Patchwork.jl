@@ -1,91 +1,134 @@
 module Patchwork
 
+using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS
 using ArgParse
 using DataFrames
 
+include("alignment.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
-include("blast.jl")
+include("diamond.jl")
 include("fasta.jl")
 include("sequencerecord.jl")
 include("multiplesequencealignment.jl")
 
-"""
-    commandexists(command)
+const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
+const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
+const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
+                      "--ultra-sensitive", Sys.CPU_THREADS]
+const MIN_DIAMONDVERSION = "2.0.3"
+const MATRIX = "BLOSUM62"
+const GAPOPEN = 11
+const GAPEXTEND = 1
 
-Returns `true` if the provided command exists within the current path and throw an error
-otherwise.
 """
-function commandexists(command::AbstractString)
-    cmdexists = `which $command`
+    printinfo()
+
+Print basic information about this program.
+"""
+function printinfo()
+    about = """
+    P A T C H W O R K
+    Developed by: Felix Thalen and Clara Köhne
+    Dept. for Animal Evolution and Biodiversity, University of Göttingen
+
+    """
+    println(about)
+    return
+end
+
+"""
+    min_diamondversion(version)
+
+Returns `true` if DIAMOND is installed with a version number equal to or higher than the
+provided `minversion`. Returns false if the version number is lower or DIAMOND is not found at
+all.
+"""
+function min_diamondversion(minversion::AbstractString)
     try
-        run(cmdexists)
+        run(`diamond --version`)
     catch
         return false
     end
-    return true
+    versioncmd = read(`diamond --version`, String)
+    diamondversion = last(split(versioncmd))
+    return diamondversion >= minversion
 end
 
 function parse_parameters()
     overview = """
-    Concatenates two or more sequence alignments into a single supermatrix
-    and provides detailed information about that supermatrix.
+    Alignment-based Exon Retrieval and Concatenation with Phylogenomic
+    Applications
     """
     settings = ArgParseSettings(description=overview,
                                 version = "0.1.0",
                                 add_version = true)
     @add_arg_table! settings begin
-        "--query-alignments"
-            help = "Path to one or more query alignments in FASTA format"
+        "--contigs"
+            help = "Path to one or more sequences in FASTA format"
             required = true
+            arg_type = String
             metavar = "PATH"
-        "--subject"
-            help = "Path to one or more subject sequences or a subject database"
+        "--reference"
+            help = "Either (1) a path to one or more sequences in FASTA format or (2) a
+                    subject database (set --database)"
             required = true
-            metavar = "PATH"
-        "--output"
-            help = "Store outputs in this folder"
-            default = "patchworks_output"
-            metavar = "PATH"
-        "--blast-engine"
-            help = "Which program to use for performing the BLAST search (diamond/blast;
-                    default: try diamond, fall back to blast)"
-            default = "diamond"
+            arg_type = String
             metavar = "PATH"
         "--database"
-            help = "When true, subject holds a path to a BLAST database"
+            help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
+            arg_type = Bool
             action = :store_true
-        "--extensions"
-            help = "Filetype extensions used to detect alignment FASTA files (default:
-                    [\"aln\", \"fa\", \"fn\", \"fna\", \"faa\", \"fasta\", \"FASTA\"])"
-            arg_type = Array{String, 1}
-            default = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
+        "--output-dir"
+            help = "Write output files to this directory"
+            arg_type = String
+            default = "patchwork_output"
+            metavar = "PATH"
+        "--diamond-flags"
+            help = "Flags sent to DIAMOND"
+            arg_type = Vector
+            default = DIAMONDFLAGS
             metavar = "LIST"
+        "--matrix"
+            help = "Set scoring matrix"
+            arg_type = String
+            default = "BLOSUM62"
+            metavar = "NAME"
+        "--custom-matrix"
+            help = "Use a custom scoring matrix"
+            arg_type = String
+            default = "BLOSUM62"
+            metavar = "PATH"
+        "--gapopen"
+            help = "Set gap open penalty (positive integer)"
+            arg_type = Int64
+            default = 11
+            metavar = "NUMBER"
+        "--gapextend"
+            help = "Set gap extension penalty (positive integer)"
+            arg_type = Int64
+            default = 1
+            metavar = "NUMBER"
         "--seq-type"
-            help = "Type of input alignments (default: auto-detect; valid types:
-                    nucleotide, aminoacid, and auto)"
-            default = "auto"
+            help = "Type of input alignments (nucleotide/aminoacid; default: autodetect)"
+            default = "autodetect"
             arg_type = String
             metavar = "NAME"
-        "--translate"
-            help = "Translate nucleotide sequence into amino acid sequences"
-            action = :store_true
-        "--reverse-translate"
-            help = "Reverse translate amino acid sequences into nucleotide sequences"
-            action = :store_true
         "--species-delimiter"
-            help = "Used to separate species names from sequence identifiers in FASTA records
-                    (default: species@identifier)"
-            default = "@"
+            help = "Used to separate the species name from the rest of the identifier in
+                    FASTA records (default: @)"
+            default = '@'
             arg_type = Char
             metavar = "CHARACTER"
         "--threads"
-            help = "Number of threads that will be utilized (default: all available)"
+            help = "Number of threads to utilize (default: all available)"
             default = Sys.CPU_THREADS
-            arg_type = Int
+            arg_type = Int64
+            metavar = "NUMBER"
         "--wrap-column"
-            help = "Wrap output sequences at the provided column number"
-            arg_type = UInt
+            help = "Wrap output sequences at this column number (default: no wrap)"
+            default = 0
+            arg_type = Int64
             metavar = "NUMBER"
     end
 
@@ -93,34 +136,24 @@ function parse_parameters()
 end
 
 function main()
-    # args = parse_parameters()
-    println("Patchwork")
-    if ! commandexists("mafft")
-        error("Cannot find command \'mafft\' in current path")
+    args = parse_parameters()
+    printinfo()
+    if !min_diamondversion(MIN_DIAMONDVERSION)
+        error("Patchwork requires \'diamond\' with a version number above
+               $MIN_DIAMONDVERSION to run")
     end
-    if commandexists("diamond")
-        blastengine = "diamond"
-    elseif commandexists("blastx")
-        blastengine = "blastx"
-    else
-        error("\'diamond\' or \'blastx\' must be in the current path to run Patchwork")
-    end
-    println("BLAST-engine: $blastengine")
 
     speciesdelimiter = '@'
+    subject = "test/07673_Alitta_succinea.fa"
     query = "/media/feli/Storage/phylogenomics/1st_wo_nextera/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
-    subject = "/home/feli/ownCloud/projects/Patchwork/test/07673_Alitta_succinea.fa"
-    # subject_db = Patchwork.diamond_makeblastdb(subject, ["--threads", Sys.CPU_THREADS])
-    # diamondresults = Patchwork.diamond_blastx(query, subject_db, ["--threads", Sys.CPU_THREADS])
-    # blastresults = Patchwork.readblastTSV(diamondresults)
-    hits = Patchwork.readblastTSV("test/c_australis_x_07673.tsv")
-    querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
+    subject_db = Patchwork.diamond_makeblastdb(subject, MAKEBLASTDB_FLAGS)
+    # diamondresults = Patchwork.diamond_blastx(query, subject_db, DIAMONDFLAGS)
+    diamondresults = "test/c_australis_x_07673.tsv"
+    hits = Patchwork.readblastTSV(diamondresults)
+    # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
+    # referenceseq = Patchwork.readmsa(subject, speciesdelimiter)
     regions = Patchwork.AlignedRegionCollection(hits)
-
-    # merge!(queryalignment, results)
-    # querysubject_aln = mafft_linsi(queryalignment, ["--thread", Sys.CPU_THREADS])
-    # regions = AlignedRegionCollection(querymsa,hits)
-    # uniqueregions = uniquesequences(regions)
+    uniqueregions = Patchwork.uniquesequences(regions)
 end
 
 end # module
