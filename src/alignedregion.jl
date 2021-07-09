@@ -28,8 +28,13 @@ struct AlignedRegion
     queryframe::Int64
 
     function AlignedRegion(result::DiamondSearchResult)
-        alignment = BioAlignments.PairwiseAlignment(BioSequences.translate(result.querysequence),
-            result.subjectsequence, result.cigar)
+        if result.queryframe > 0
+            alignment = BioAlignments.PairwiseAlignment(BioSequences.translate(result.querysequence),
+                result.subjectsequence, result.cigar)
+        else
+            alignment = BioAlignments.PairwiseAlignment(BioSequences.translate(BioSequences.reverse_complement(result.querysequence)),
+                result.subjectsequence, result.cigar)
+        end
         return new(alignment, result.subjectstart, result.subjectend, result.queryid,
                    result.querystart, result.queryend, result.queryframe)
     end
@@ -39,38 +44,49 @@ function Base.show(io::IO, region::AlignedRegion)
     compact = get(io, :compact, false)
 
     if compact
-        print(io, "query name: ", region.queryid)
+        print(io, "query name: ", region.queryid.id)
     else
-        println(io, "query name: ", *(otupart(region.queryid), '@', sequencepart(region.queryid)))
+        println(io, "query name: ", region.queryid.id)
         println(io, "length: ", length(region))
         println(io, "subject interval: ", region.subjectfirst, " -> ", region.subjectlast)
         println(io, "query interval: ", region.queryfirst, " -> ", region.querylast)
-        println(io, "queryframe: ", region.queryframe)
+        println(io, "query frame: ", region.queryframe)
         println(io, "alignment: \n", region.pairwisealignment)
     end
 end
 
 function Base.show(io::IO, ::MIME"text/plain", region::AlignedRegion)
-    println(io, typeof(region))
+    println(io, length(region), "aa long Aligned Region:")
+    print(io, "query name: ", region.queryid.id)
 end
 
-showrange(region::AlignedRegion) = println(region.subjectfirst, ' ', region.subjectlast)
+query2subject(region::AlignedRegion, i::Integer)::Integer = first(seq2ref(region.pairwisealignment, i))
+subject2query(region::AlignedRegion, i::Integer)::Integer = first(ref2seq(region.pairwisealignment, i))
+query2fullsubject(region::AlignedRegion, i::Integer)::Integer = first(interval) - region.
 
 """
-    compare(a:AlignedRegion, b:AlignedRegion)
+    fullsubject2fullquery(region::AlignedRegion, interval::UnitRange)
 
-Display the (translated) regions side-by-side.
-TODO: Complete unfinished comparison function.
+Provided an `interval` in the full reference sequence, return the corresponding interval
+in the full query sequence in the given `region`.
 """
-function compare(a::AlignedRegion, b::AlignedRegion)
-    subjectfirst = min(a.subjectfirst, b.subjectfirst)
-    subjectlast = max(a.subjectlast, b.subjectlast)
-    aprefix = repeat('-', a.subjectfirst - subjectfirst)
-    bprefix = repeat('-', b.subjectfirst - subjectfirst)
-    apostfix = repeat('-', subjectlast - a.subjectlast)
-    bpostfix = repeat('-', subjectlast - b.subjectlast)
-    println(aprefix, translate(a.record.sequencedata), apostfix)
-    println(bprefix, translate(b.record.sequencedata), bpostfix)
+function fullsubject2fullquery(region::Patchwork.AlignedRegion, interval::UnitRange)
+    # TODO: remove the Patchwork. ...
+    leftmost = first(interval) - region.queryfirst
+    rightmost = last(interval) - region.queryfirst
+    return leftmost:rightmost
+end
+
+"""
+    fullsubject2query(region::AlignedRegion, interval::UnitRange)
+
+Provided an `interval` in the full reference sequence, return the corresponding interval
+for the aligned part of the query sequence in the given `region`.
+"""
+function fullsubject2query(region::AlignedRegion, interval::UnitRange)
+    leftmost = first(interval) - region.subjectfirst + 1
+    rightmost = last(interval) - region.subjectfirst + 1
+    return leftmost:rightmost
 end
 
 """
@@ -82,21 +98,57 @@ function Base.length(region::AlignedRegion)
     return 1 + region.subjectlast - region.subjectfirst
 end
 
-"""
-    leftposition(region::AlignedRegion)
+Base.isempty(region::AlignedRegion) = length(region) < 1
+Base.firstindex(region::AlignedRegion) = 1
+Base.lastindex(region::AlignedRegion) = length(region)
+Base.eachindex(region::AlignedRegion) = Base.OneTo(lastindex(region))
 
-Return the leftmost position of `region`.
+# TODO: Finish slicing functions
+function Base.getindex(region::AlignedRegion, index::Integer)
+    return getindex(region.records, index)
+end
+
+@inline function Base.iterate(region::AlignedRegion, i::Int = firstindex(regions))
+    if i > lastindex(region)
+        return nothing
+    else
+        return getindex(regions, i), i + 1
+    end
+end
+
 """
-function leftposition(region::AlignedRegion)
+    query_leftposition(region::AlignedRegion)::Integer
+
+Return the leftmost position of the query sequence in the provided `region`.
+"""
+function query_leftposition(region::AlignedRegion)::Integer
     return region.subjectfirst
 end
 
 """
-    rightposition(region::AlignedRegion)
+    query_rightposition(region::AlignedRegion)::Integer
 
 Return the rightmost position of `region`.
 """
-function rightposition(region::AlignedRegion)
+function query_rightposition(region::AlignedRegion)::Integer
+    return region.subjectlast
+end
+
+"""
+    subject_leftposition(region::AlignedRegion)::Integer
+
+Return the leftmost position of the subject sequence in the provided `region`.
+"""
+function subject_leftposition(region::AlignedRegion)::Integer
+    return region.subjectfirst
+end
+
+"""
+    subject_rightposition(region::AlignedRegion)::Integer
+
+Return the rightmost position of the subject sequence in the provided `region`.
+"""
+function subject_rightposition(region::AlignedRegion)::Integer
     return region.subjectlast
 end
 
@@ -106,7 +158,7 @@ end
 Return the subjectfirst and subjectlast positions of `region` as a tuple (`(subjectfirst, subjectlast)`).
 """
 function interval(region::AlignedRegion)::Tuple
-    return (leftposition(region), rightposition(region))
+    return (subject_leftposition(region), subject_rightposition(region))
 end
 
 """
@@ -115,7 +167,7 @@ end
 Print the subjectfirst and subjectlast positions of `region` (like so: subjectfirst -> subjectlast).
 """
 function showinterval(region::AlignedRegion)
-    println(leftposition(region), " -> ", rightposition(region))
+    println(subject_leftposition(region), " -> ", subject_rightposition(region))
 end
 
 """
@@ -134,7 +186,7 @@ Check if two aligned regions are well-ordered. Two regions, `a` and `b` are
 considered well-ordered if `leftposition(a) <= leftposition(b)`.
 """
 function isordered(a::AlignedRegion, b::AlignedRegion)
-    return leftposition(a) <= leftposition(b)
+    return subject_leftposition(a) <= subject_leftposition(b)
 end
 
 """
@@ -143,7 +195,7 @@ end
 Check whether the interval in `a` entirely precedes that of `b`.
 """
 function precedes(a::AlignedRegion, b::AlignedRegion)
-    return rightposition(a) < leftposition(b)
+    return subject_rightposition(a) < subject_leftposition(b)
 end
 
 """
@@ -152,8 +204,8 @@ end
 Returns `true` if the interval of `a` overlaps that of `b`.
 """
 function isoverlapping(a::AlignedRegion, b::AlignedRegion)
-    return leftposition(a) <= rightposition(b) &&
-           leftposition(b) <= rightposition(a)
+    return subject_leftposition(a) <= subject_rightposition(b) &&
+           subject_leftposition(b) <= subject_rightposition(a)
 end
 
 """
@@ -162,8 +214,8 @@ end
 Returns `true` if the interval of `a` is the same as that of `b`.
 """
 function samerange(a::AlignedRegion, b::AlignedRegion)
-    return leftposition(a) == rightposition(b) &&
-           leftposition(b) == rightposition(a)
+    return subject_leftposition(a) == subject_rightposition(b) &&
+           subject_leftposition(b) == subject_rightposition(a)
 end
 
 """
@@ -217,11 +269,11 @@ function consensus(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
     afteroverlap = afteroverlap(a,b)
     # A sequence that doesn't "shadow" another sequence cannot start and end
     # at an earlier and a later position than that of the other sequence.
-    if leftposition(a) < leftposition(b)
+    if subject_leftposition(a) < subject_leftposition(b)
         sequence = *(a.record.sequencedata[beforeoverlap(a, b)],
                      bestpick(a, b).record.sequencedata[overlap(a, b)],
                      b.record.sequencedata[afteroverlap(a, b)])
-    elseif leftposition(b) < leftposition(a)
+    elseif subject_leftposition(b) < subject_leftposition(a)
         sequence = *(a.record.sequencedata[beforeoverlap(a, b)],
                      bestpick(a, b).record.sequencedata[overlap(a, b)],
                      b.record.sequencedata[afteroverlap(a, b)])
@@ -237,7 +289,7 @@ end
 Returns the leftmost position at which the two regions `a` and `b` meet.
 """
 function leftintersection(a::AlignedRegion, b::AlignedRegion)
-    return max(leftposition(a), leftposition(b))
+    return max(subject_leftposition(a), subject_leftposition(b))
 end
 
 """
@@ -246,7 +298,7 @@ end
 Returns the rightmost position at which the two regions `a` and `b` meet.
 """
 function rightintersection(a::AlignedRegion, b::AlignedRegion)
-    return min(rightposition(a), rightposition(b))
+    return min(subject_rightposition(a), subject_rightposition(b))
 end
 
 """
@@ -261,8 +313,8 @@ b:      [-------]
     |...|....|....|
     1   5    10   15
 """
-function overlap(a::AlignedRegion, b::AlignedRegion)
-    return (leftintersection(a, b), rightintersection(a, b))
+function overlap(a::AlignedRegion, b::AlignedRegion)::UnitRange
+    return leftintersection(a, b):rightintersection(a, b)
 end
 
 """
@@ -278,12 +330,12 @@ b:      [-------]
     1   5    10   15
 """
 function beforeoverlap(a::AlignedRegion, b::AlignedRegion)
-    if leftposition(a) == leftposition(b)
+    if subject_leftposition(a) == subject_leftposition(b)
         error("Region $a and $b starts at the same position")
-    elseif leftposition(a) < leftposition(b)
-        return (leftposition(a), leftintersection(a,b) - 1)
+    elseif subject_leftposition(a) < subject_leftposition(b)
+        return (subject_leftposition(a):leftintersection(a,b) - 1)
     else
-        return (leftposition(b), leftintersection(a,b) - 1)
+        return (subject_leftposition(b):leftintersection(a,b) - 1)
     end
 end
 
@@ -300,12 +352,12 @@ b:      [-------]
     1   5    10   15
 """
 function afteroverlap(a::AlignedRegion, b::AlignedRegion)
-    if rightposition(a) == rightposition(b)
+    if subject_rightposition(a) == subject_rightposition(b)
         error("Region $a and $b end at the same position")
-    elseif rightposition(a) > rightposition(b)
-        return (rightintersection(a,b) + 1, rightposition(a))
-    elseif rightposition(b) > rightposition(a)
-        return (rightintersection(a,b) + 1, rightposition(b))
+    elseif subject_rightposition(a) > subject_rightposition(b)
+        return (rightintersection(a,b) + 1:subject_rightposition(a))
+    elseif subject_rightposition(b) > subject_rightposition(a)
+        return (rightintersection(a,b) + 1:subject_rightposition(b))
     end
 end
 
@@ -334,8 +386,8 @@ b: [--------------]
 """
 function shadows(a::AlignedRegion, b::AlignedRegion)
     return length(a) > length(b) &&
-           leftposition(a) <= leftposition(b) &&
-           rightposition(a) >= rightposition(b)
+           subject_leftposition(a) <= subject_leftposition(b) &&
+           subject_rightposition(a) >= subject_rightposition(b)
 end
 
 """
@@ -356,8 +408,8 @@ b:    [-----]
     1   5    10   15
 """
 function equalrange(a::AlignedRegion, b::AlignedRegion)
-    return leftposition(a) == leftposition(b) &&
-           rightposition(a) == rightposition(b)
+    return subject_leftposition(a) == subject_leftposition(b) &&
+           subject_rightposition(a) == subject_rightposition(b)
 end
 
 """
@@ -376,14 +428,14 @@ function totalrange(a::AlignedRegion, b::AlignedRegion)
     if !isoverlapping(a, b)
         error("Cannot do total range of non-overlapping regions, $a and $b")
     elseif equalrange(a, b)
-        return (leftposition(a), rightposition(a))
+        return (subject_leftposition(a), subject_rightposition(a))
     elseif shadows(a, b)
-        return (leftposition(a), rightposition(a))
+        return (subject_leftposition(a), subject_rightposition(a))
     elseif shadows(b, a)
-        return (leftposition(b), rightposition(b))
+        return (subject_leftposition(b), subject_rightposition(b))
     else
-        return (min(leftposition(a), leftposition(b)),
-                max(rightposition(a), rightposition(b)))
+        return (min(subject_leftposition(a), subject_leftposition(b)),
+                max(subject_rightposition(a), subject_rightposition(b)))
     end
 end
 
@@ -407,25 +459,6 @@ function longest(a::AlignedRegion, b::AlignedRegion)
         return a
     else
         return b
-    end
-end
-
-"""
-    bestpick(a, b)
-
-Choose between two `AlignedRegion`s, `a` and `b`, and retain the region with
-the longest region. Or, if both regions cover the same region, return the
-region with the highest amount of percent identity from the Bsubjectlast results.
-"""
-function bestpick(a::AlignedRegion, b::AlignedRegion)
-    if equalrange(a, b)
-        if a.percentidentity >= b.percentidentical
-            return a
-        else
-            return b
-        end
-    else
-        return longest(a, b)
     end
 end
 
