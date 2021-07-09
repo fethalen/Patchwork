@@ -33,7 +33,7 @@ end
 Takes the path to a multiple sequence alignment (MSA) as an input and returns a
 MultipleSequenceAlignment object
 """
-function readmsa(fastafile::String, delimiter='@'::Char)::MultipleSequenceAlignment
+function readmsa(fastafile::String)::MultipleSequenceAlignment
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
     record = FASTA.Record()
@@ -42,12 +42,32 @@ function readmsa(fastafile::String, delimiter='@'::Char)::MultipleSequenceAlignm
     open(FASTA.Reader, fastafile) do reader
         while !eof(reader)
             read!(reader, record)
-            alignment = SequenceRecord(FASTA.identifier(record), FASTA.sequence(record),
-                                        delimiter)
+            alignment = SequenceRecord(FASTA.identifier(record), FASTA.sequence(record))
             addalignment!(msa, alignment)
         end
     end
     return msa
+end
+
+"""
+    get_fullseq(fastafile::String)::SequenceRecord
+
+Returns the first and only the first sequence within the provided FASTA file as a
+`SequenceRecord`.
+"""
+function get_fullseq(fastafile::String)::SequenceRecord
+    abs_fastafile = abspath(fastafile)
+    isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
+    record = FASTA.Record()
+    msa = MultipleSequenceAlignment(abs_fastafile)
+
+    open(FASTA.Reader, fastafile) do reader
+        while !eof(reader)
+            read!(reader, record)
+            firstrecord = SequenceRecord(FASTA.identifier(record), FASTA.sequence(record))
+            return firstrecord
+        end
+    end
 end
 
 """

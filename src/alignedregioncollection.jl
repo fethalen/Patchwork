@@ -1,5 +1,6 @@
 # Collection of zero or more AlignedRegions
 
+include("alignedregion.jl")
 include("diamond.jl")
 include("mafft.jl")
 
@@ -9,23 +10,33 @@ include("mafft.jl")
 - `records::Vector{AlignedRegion}`: the sequence record associated with the interval.
 """
 mutable struct AlignedRegionCollection
+    referencesequence::SequenceRecord
     records::Vector{AlignedRegion}
-end
 
-"Empty initialization."
-function AlignedRegionCollection()
-    return AlignedRegionCollection([])
-end
-
-function AlignedRegionCollection(results::Vector{DiamondSearchResult})
-    regions = AlignedRegionCollection()
-    for result in results
-        # record = SequenceRecord(result.queryid, result.querysequence)
-        # region = AlignedRegion(record, result.subjectstart, result.subjectend,
-        #                        result.queryframe, result.percentidentical)
-        push!(regions, AlignedRegion(result))
+    "Empty initialization."
+    function AlignedRegionCollection()
+        return new(SequenceRecord(), [])
     end
-    return regions
+
+    function AlignedRegionCollection(reference::SequenceRecord)
+        return new(reference, [])
+    end
+
+    function AlignedRegionCollection(records::Vector{AlignedRegion})
+        return new(SequenceRecord(), records)
+    end
+
+    function AlignedRegionCollection(reference::SequenceRecord, records::Vector{AlignedRegion})
+        return new(reference, records)
+    end
+
+    function AlignedRegionCollection(reference::SequenceRecord, results::Vector{DiamondSearchResult})
+        regions = []
+        for result in results
+            push!(regions, AlignedRegion(result))
+        end
+        return new(reference, regions)
+    end
 end
 
 function AlignedRegionCollection(msa::MultipleSequenceAlignment,
@@ -66,7 +77,7 @@ function Base.getindex(regions::AlignedRegionCollection, index::Integer)
     return getindex(regions.records, index)
 end
 
-Base.isempty(regions::AlignedRegionCollection) = length(regions) >= 1
+Base.isempty(regions::AlignedRegionCollection) = length(regions) < 1
 Base.firstindex(regions::AlignedRegionCollection) = 1
 Base.lastindex(regions::AlignedRegionCollection) = length(regions)
 Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
@@ -169,12 +180,12 @@ function hasoverlaps(regions::AlignedRegionCollection)
     return length(eachoverlap(regions)) > 0
 end
 
-# """
-#     mergeoverlapping(regions)
-#
-# Returns an `AlignedRegionCollection` which is a subset of `regions` where
-# overlapping sequences has been merged into longer stretches.
-# """
+"""
+    mergeoverlapping(regions)
+
+Returns an `AlignedRegionCollection` which is a subset of `regions` where
+overlapping sequences has been merged into longer stretches.
+"""
 function mergeoverlapping(regions::AlignedRegionCollection, sorted=false)
     if !sorted
         regions = sort(regions)
@@ -195,12 +206,8 @@ function mergeoverlapping(regions::AlignedRegionCollection, sorted=false)
             showinterval(regions[i])
             showinterval(last(mergedregions))
             println()
+            push!(mergedregions, regions[i])
         end
-        # if last(mergedregions).first < regions[i].last
-        #     println(last(mergedregions).first, ' ', regions[i].first)
-        # else
-        #     # TODO: Merge overlapping regions...
-        # end
     end
 
     return mergedregions
