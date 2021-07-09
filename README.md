@@ -1,39 +1,37 @@
 Patchwork
 ---------
 
-> **Note:** Patchwork is an unfinished product, currently under development.
+> **Note:** Patchwork is an unfinished product, currently under construction 🚧.
 
-## Overview
+### Overview
 
-Fragmented assemblies—generated from low-coverage sequence data or similar
-technologies—can prove problematic in downstream analyses when used in a
-phylogenomic context. Patchwork employs BLAST searches to "stitch" such
-fragments into longer pieces. Once the orientation of the fragments has been
-established, each fragment is also annotated, with the annotation possibly
-being guided by a previously annotated genome.
+Fragmented genome assemblies—resulting from low-coverage sequencing or similar
+technologies—can prove problematic in downstream analyses, when used in a
+phylogenomic context. Patchwork employs local alignment searches to retrieve
+homologous regions from a set of contigs and "stitch" them together. The
+resulting homologs are directly suitable for use in phylogenomic studies.
 
-## Installation
+### Features
 
-The following external programs must be installed:
+* Align nucleotide sequences to one or more protein sequences
+* Stitch overlapping or gappy sequences together based on a reference
+* Find homologs, even in distantly-related taxa
+* Written in [Julia](https://julialang.org/) and utilizing [DIAMOND](https://github.com/bbuchfink/diamond) for maximum speed 🐇
 
-* [DIAMOND](https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/informatik/lehrstuehle/algorithms-in-bioinformatics/software/diamond/) (preferred) or [BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download)
-* [MAFFT](https://mafft.cbrc.jp/alignment/software/)
+### Installation
 
-Unless you already have a preferred method of installation, we recommend using
-[Anaconda](https://www.anaconda.com/products/individual) in order to install
-these programs. After Anaconda has been installed, the programs can be
-installed by typing the following commands:
+The sequence aligner [DIAMOND](https://github.com/bbuchfink/diamond) is required
+to run Patchwork. We recommend using
+[Anaconda](https://www.anaconda.com/products/individual) for installing this
+program. After installing Anaconda, install DIAMOND by entering:
 
-```
-conda install -c bioconda mafft
+```bash
 conda install -c bioconda diamond
-# Note that BLAST is not required if DIAMOND is installed
-conda install -c bioconda blast
 ```
 
-## Cite
+### Cite
 
 Our manuscript is still in preparation, it will be posted here once a preprint
 of the article is available.
 
-© Animal Evolution and Biodiversity 2020
+© [Dept. for Animal Evolution and Biodiversity](https://www.uni-goettingen.de/en/80149.html) 2020
