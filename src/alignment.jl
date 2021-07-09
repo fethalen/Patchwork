@@ -4,7 +4,7 @@ import BioSequences
 include("sequencerecord.jl")
 
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
-DEFAULT_SCOREMODEL = AffineGapScoreModel(BioAlignments.BLOSUM62, gap_open=-11,
+DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62, gap_open=-11,
                                          gap_extend=-1)
 
 function pairalign_local(seq::SequenceRecord, ref::SequenceRecord,
