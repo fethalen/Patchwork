@@ -60,33 +60,113 @@ function Base.show(io::IO, ::MIME"text/plain", region::AlignedRegion)
     print(io, "query name: ", region.queryid.id)
 end
 
-query2subject(region::AlignedRegion, i::Integer)::Integer = first(seq2ref(region.pairwisealignment, i))
-subject2query(region::AlignedRegion, i::Integer)::Integer = first(ref2seq(region.pairwisealignment, i))
-query2fullsubject(region::AlignedRegion, i::Integer)::Integer = first(interval) - region.
+"""
+    query_isreverse(region::AlignedRegion)::Bool
+
+Returns `true` if the first query position is larger than the last query position.
+"""
+function query_isreverse(region::AlignedRegion)::Bool
+    return region.queryfirst > region.querylast
+end
+
+query2subject(region::AlignedRegion, i::Integer)::Integer = first(BioAlignments.seq2ref(region.pairwisealignment, i))
+subject2query(region::AlignedRegion, i::Integer)::Integer = first(BioAlignments.ref2seq(region.pairwisealignment, i))
 
 """
-    fullsubject2fullquery(region::AlignedRegion, interval::UnitRange)
+    subject2fullquery(region::AlignedRegion, i::Integer)::UnitRange
 
-Provided an `interval` in the full reference sequence, return the corresponding interval
-in the full query sequence in the given `region`.
+Given a position, `i`, in the aligned part of the provided reference sequence,
+return the corresponding _positions_ in the full query sequence.
 """
-function fullsubject2fullquery(region::Patchwork.AlignedRegion, interval::UnitRange)
-    # TODO: remove the Patchwork. ...
-    leftmost = first(interval) - region.queryfirst
-    rightmost = last(interval) - region.queryfirst
-    return leftmost:rightmost
+function subject2fullquery(region::AlignedRegion, i::Integer)::UnitRange
+    querypos = subject2query(region, i)
+    return query2fullquery(region, querypos)
 end
 
 """
-    fullsubject2query(region::AlignedRegion, interval::UnitRange)
+    fullsubject2subject(region::AlignedRegion, i::Integer)::Integer
 
-Provided an `interval` in the full reference sequence, return the corresponding interval
-for the aligned part of the query sequence in the given `region`.
+Given a position, `i`, in the full reference sequence, return the corresponding position in
+the aligned part of the subject sequence.
 """
-function fullsubject2query(region::AlignedRegion, interval::UnitRange)
-    leftmost = first(interval) - region.subjectfirst + 1
-    rightmost = last(interval) - region.subjectfirst + 1
-    return leftmost:rightmost
+function fullsubject2subject(region::AlignedRegion, i::Integer)::Integer
+    region.subjectfirst <= i <= region.subjectlast || error("the provided integer, ", i,
+    ", is outside the range of the provided region, ", region)
+    return i - region.subjectfirst + 1
+end
+
+"""
+    fullsubject2fullquery(region::AlignedRegion, i::Integer)::Integer
+
+Given a position, `i`, in the full reference sequence, return the corresponding position in
+the aligned part of the query sequence.
+"""
+function fullsubject2query(region::AlignedRegion, i::Integer)::Integer
+    subjectpos = fullsubject2subject(region, i)
+    return subject2query(region, subjectpos)
+end
+
+"""
+    fullsubject2fullquery(region::AlignedRegion, i::Integer)::UnitRange
+
+Given a position, `i`, in the full reference sequence, return the corresponding _positions_
+in the full query sequence.
+"""
+function fullsubject2fullquery(region::AlignedRegion, i::Integer)::UnitRange
+    querypos = fullsubject2query(region, i)
+    return query2fullquery(region, querypos)
+end
+
+"""
+    query2fullquery(region::AlignedRegion, i::Integer)::Integer
+
+Given a position, `i`, in the aligned part of the query sequence, return the corresponding
+_positions_ in the full part of the query sequence.
+"""
+function query2fullquery(region::AlignedRegion, i::Integer)::UnitRange
+    if query_isreverse(region)
+        full_querypos = query_rightposition(region) - ((i - 1) * 3)
+        return full_querypos - 2:full_querypos
+    else
+        full_querypos = query_leftposition(region) + ((i - 1) * 3)
+        return full_querypos:full_querypos + 2
+    end
+end
+
+"""
+    fullsubject_queryboundaries(region::AlignedRegion, range::UnitRange)::Tuple
+
+Given a `range` in the full reference sequence, return the first and last positions in the
+full query sequence, which correspond to the provided range. Because the query sequence
+consist of nucleotide sequences, each position in the reference (subject) sequence
+correspond to a range of positions. This function's _raison d'etre_ is thus to calculate
+the first and the last position of the ranges, given the provided range. The results are
+returned as a tuple. Note that the returned range may be inverted.
+"""
+function fullsubject_queryboundaries(region::AlignedRegion, range::UnitRange)::Tuple
+    if query_isreverse(region)
+        return (last(fullsubject2fullquery(region, first(range))),
+                first(fullsubject2fullquery(region, last(range))))
+    else
+        return (first(fullsubject2fullquery(region, first(range))),
+                last(fullsubject2fullquery(region, last(range))))
+    end
+end
+
+"""
+    subject_queryboundaries(region::AlignedRegion, range::UnitRange)::Tuple
+
+Given a `range` in the aligned part of the reference sequence, return the first and last positions in the
+full query sequence, which correspond to the provided range.
+"""
+function subject_queryboundaries(region::AlignedRegion, range::UnitRange)::Tuple
+    if query_isreverse(region)
+        return (last(subject2fullquery(region, first(range))),
+                first(subject2fullquery(region, last(range))))
+    else
+        return (first(subject2fullquery(region, first(range))),
+                last(subject2fullquery(region, last(range))))
+    end
 end
 
 """
@@ -95,7 +175,7 @@ end
 Returns the length of this sequence region (without gaps).
 """
 function Base.length(region::AlignedRegion)
-    return 1 + region.subjectlast - region.subjectfirst
+    return 1 + region.subjectlast - region.subjectfirst - 1
 end
 
 Base.isempty(region::AlignedRegion) = length(region) < 1
@@ -122,7 +202,7 @@ end
 Return the leftmost position of the query sequence in the provided `region`.
 """
 function query_leftposition(region::AlignedRegion)::Integer
-    return region.subjectfirst
+    return min(region.queryfirst, region.querylast)
 end
 
 """
@@ -131,7 +211,7 @@ end
 Return the rightmost position of `region`.
 """
 function query_rightposition(region::AlignedRegion)::Integer
-    return region.subjectlast
+    return max(region.queryfirst, region.querylast)
 end
 
 """
@@ -153,21 +233,22 @@ function subject_rightposition(region::AlignedRegion)::Integer
 end
 
 """
-    interval(region::AlignedRegion)
+    subjectinterval(region::AlignedRegion)::UnitRange
 
 Return the subjectfirst and subjectlast positions of `region` as a tuple (`(subjectfirst, subjectlast)`).
 """
-function interval(region::AlignedRegion)::Tuple
-    return (subject_leftposition(region), subject_rightposition(region))
+function subjectinterval(region::AlignedRegion)::UnitRange
+    return subject_leftposition(region):subject_rightposition(region)
 end
 
 """
-    interval(region::AlignedRegion)
+    queryinterval(region::AlignedRegion)::UnitRange
 
-Print the subjectfirst and subjectlast positions of `region` (like so: subjectfirst -> subjectlast).
+Returns the range of the query sequence in the provided `region`. Note that this returns
+the leftmost to the rightmost position in the query sequence, i.e., the direction is lost.
 """
-function showinterval(region::AlignedRegion)
-    println(subject_leftposition(region), " -> ", subject_rightposition(region))
+function queryinterval(region::AlignedRegion)::UnitRange
+    return query_leftposition(region):query_rightposition(region)
 end
 
 """

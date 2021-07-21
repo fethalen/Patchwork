@@ -1,3 +1,9 @@
+name = "Patchwork"
+uuid = "5568df11-beb6-4e3e-8878-8f1e5127fa36"
+authors = ["Felix Thalen <felix.thalen@uni-goettingen.de>",
+           "Clara Köhne <claragisela.koehne@stud.uni-goettingen.de>"]
+version = "0.1.2"
+
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
