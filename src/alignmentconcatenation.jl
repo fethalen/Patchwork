@@ -80,22 +80,35 @@ function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignmen
 	return BioAlignments.PairwiseAlignment(joinedquery, joinedreference, cigar)
 end
 
-# make this 2 alignedregions
-function concatenate(regions::Vector{AlignedRegion})
+# first comes before second!
+function concatenate(first::AlignedRegion, second::AlignedRegion)
 	# regions is sorted, no overlaps remaining.
-	if isempty(regions)
+	if isempty(first) && isempty(second)
 		empty = BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
 		return AlignedRegion(empty, 0, -1, SequenceIdentifier(), 0, -1, 0) # empty AlignedRegion
-		#return nothing
-	elseif length(regions) == 1
-		return regions[1]
+	elseif isempty(first)
+		return second
+	elseif isempty(second)
+		return first
 	end
 
 	# make sure that the entire subject sequence is covered? 
 	# or insert gaps in reference and query for missing reference positions?
 	# this should happen in the concatenate method for AlignedRegionCollections...
-	superalignment = concatenate([region.pairwisealignment for region in regions])
-	
+
+	@assert first.subjectlast == second.subjectfirst - 1
+	@assert first.querylast == second.queryfirst - 1 # Else you would have to add gaps in between...
+	# But that's supposed to happen in the concatenate(AligńedRegionCollection)
+	@assert first.queryid == second.queryid # Is that so?
+	# What about the frame?
+	# It's hard to concatenate 2 regions if the queries are in different frames but the 
+	# reference is in amino acids...
+
+	joinedalignments = concatenate(first.pairwisealignment, second.pairwisealignment)
+	# TODO: Think about this, what about the frame?
+	return AlignedRegion(joinedalignments, first.subjectfirst, second.subjectlast, 
+						 first.queryid, first.queryfirst, second.querylast, 
+						 first.queryframe)	
 end
 
 function concatenate(regions::AlignedRegionCollection)
@@ -118,13 +131,21 @@ end
 # working with the anchors
 function occupancy(alignment::BioAlignments.PairwiseAlignment)
 	# relative amount of nucleotides in the query aligning to nucleotides in the reference 
+	return countmatches(alignment) / length(alignment.b)
+end
+
+function(region::AlignedRegion)
+	return occupancy(region.pairwisealignment)
+end
+
+# number of positions where query residues align to reference residues
+function countmatches(alignment::BioAlignments.PairwiseAlignment)
 	if isempty(alignment)
 		return 0
 	end
 
-	anchors = alignment.a.aln.anchors
-	referencelength = length(alignment.b)
 	covered = 0
+	anchors = alignment.a.aln.anchors
 
 	@assert anchors[1].op == BioAlignments.OP_START
 
@@ -133,24 +154,33 @@ function occupancy(alignment::BioAlignments.PairwiseAlignment)
 			covered += anchors[i].seqpos - anchors[i-1].seqpos
 		end
 	end
-
-	return covered / referencelength
+	
+	return covered
 end
 
-# working with the cigar string
+# REDUNDANT
+# working with the sequences (== working with the gap anchors instead of matches)
 function occupancy(alignment::BioAlignments.PairwiseAlignment)
+	return (length(alignment.b) - countgaps(alignment)) / length(alignment.b)
+end
+
+# count gaps in query
+function countgaps(alignment::BioAlignments.PairwiseAlignment)
 	if isempty(alignment)
 		return 0
 	end
 
-	cigarstring = BioAlignments.cigar(alignment)
+	anchors = alignment.a.aln.anchors
+	gaps = 0
 
-end
+	@assert anchors[1].op == BioAlignments.OP_START
 
-# working with the sequences
-function occupancy(alignment::BioAlignments.PairwiseAlignment)
-	referencelength = length(alignment.b)
-	covered = length(ungap(alignment.a.seq)) - (length(alignment.a.seq) - length(alignment.b))
-	println(string(covered) * " " * string(referencelength))
-	return covered / referencelength
+	#gaps = sum([anchors[i].refpos - anchors[i-1].refpos 
+	#			for i in 2:length(anchors) if anchors[i].op == BioAlignments.OP_DELETE])
+	for i in 2:length(anchors)
+		if anchors[i].op == BioAlignments.OP_DELETE
+			gaps += (anchors[i].refpos - anchors[i-1].refpos)
+		end
+	end
+	return gaps
 end
