@@ -4,7 +4,7 @@ import BioSequences
 include("alignedregion.jl")
 include("alignedregioncollection.jl") 
 
-# FUNCTIONS #############################################################################################################################################
+#########################################################################################################################################################
 
 function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)
 	anchors = alignment.a.aln.anchors
@@ -20,6 +20,20 @@ function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)
 	end
 	return String(take!(out))
 end
+
+"""
+	createbridgealignment(reference::LongSequence)
+
+Create a `PairwiseAlignment` object with an empty (gap-only) query and the provided 
+`reference`.
+"""
+function createbridgealignment(reference::LongSequence)
+	gapquery = typeof(reference)()
+	gapcigar = string(length(reference)) * "D"
+	return BioAlignments.PairwiseAlignment(gapquery, reference, gapcigar)
+end
+
+# CONCATENTATION ########################################################################################################################################
 
 # PairwiseAlignment #####################################################################################################################################
 
@@ -130,39 +144,7 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
 	return concatenate(alignments)
 end
 
-"""
-	createbridgealignment(reference::LongSequence)
-
-Create a `PairwiseAlignment` object with an empty (gap-only) query and the provided 
-`reference`.
-"""
-function createbridgealignment(reference::LongSequence)
-	gapquery = typeof(reference)()
-	gapcigar = string(length(reference)) * "D"
-	return BioAlignments.PairwiseAlignment(gapquery, reference, gapcigar)
-end
-
 # OCCUPANCY #############################################################################################################################################
-
-"""
-	occupancy(alignment::PairwiseAlignment)
-
-Compute the relative amount of residues in the query sequence that align to residues in the 
-reference sequence.
-"""
-function occupancy(alignment::BioAlignments.PairwiseAlignment)
-	return countmatches(alignment) / length(alignment.b)
-end
-
-"""
-	occupancy(region::AlignedRegion)
-
-Compute the relative amount of residues in the query sequence that align to residues in the 
-reference sequence.
-"""
-function occupancy(region::AlignedRegion)
-	return occupancy(region.pairwisealignment)
-end
 
 """
 	countmatches(alignment::PairwiseAlignment)
@@ -223,11 +205,31 @@ function countgaps(alignment::BioAlignments.PairwiseAlignment)
 end
 
 """
-	countmatches(alignment::AlignedRegion)
+	countgaps(region::AlignedRegion)
 
-Compute the absolute number of residues in the query sequence that align to residues in the 
+Compute the absolute number of gaps in the query sequence that align to residues in the 
 reference sequence.
 """
 function countgaps(region::AlignedRegion)
 	return countgaps(region.pairwisealignment)
+end
+
+"""
+	occupancy(alignment::PairwiseAlignment)
+
+Compute the relative amount of residues in the query sequence that align to residues in the 
+reference sequence.
+"""
+function occupancy(alignment::BioAlignments.PairwiseAlignment)
+	return countmatches(alignment) / length(alignment.b)
+end
+
+"""
+	occupancy(region::AlignedRegion)
+
+Compute the relative amount of residues in the query sequence that align to residues in the 
+reference sequence.
+"""
+function occupancy(region::AlignedRegion)
+	return occupancy(region.pairwisealignment)
 end
