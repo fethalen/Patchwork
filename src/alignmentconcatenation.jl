@@ -12,20 +12,34 @@ diamondresults = "../test/c_australis_x_07673.tsv"
 hits = Patchwork.readblastTSV(diamondresults)
 full_subjectseq = Patchwork.get_fullseq(subject)
 regions = Patchwork.AlignedRegionCollection(full_subjectseq, hits)
-reg1 = regions[12]
-reg2 = regions[13]
-
-show(reg1)
-show(reg1.pairwisealignment.a)
-show(reg1.pairwisealignment.a.aln)
-show(reg1.pairwisealignment.a.seq)
-show(reg1.pairwisealignment.b)
+regions = sort(regions)
+nonoverlapping = Patchwork.AlignedRegionCollection(regions.referencesequence, [regions[1]])
 alignments = [region.pairwisealignment for region in regions]
 
-# Get the PairwiseAlignment object's cigar string.
+for i in 2:length(regions)
+	overlapping = false
+	for j in 1:length(nonoverlapping)
+		if Patchwork.isoverlapping(nonoverlapping[j], regions[i])
+			overlapping = true
+		end
+	end
+	if !overlapping && regions[i].subjectfirst <= 354 && regions[i].subjectlast <= 354
+		push!(nonoverlapping, regions[i])
+	end
+end
+
+sortedregions = Patchwork.AlignedRegionCollection(nonoverlapping.referencesequence)
+order = sortperm(map(region -> (subject_leftposition(region), subject_rightposition(region)), nonoverlapping))
+for i in order
+    push!(sortedregions, regions[i])
+end
+sortedregions
+
+superalignment = concatenate(sortedregions)
+
 function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)
 	anchors = alignment.a.aln.anchors
-	cigar = repeat([""], 2 * length(anchors) - 2)
+	out = IOBuffer()
 	if isempty(anchors)
 		return ""
 	end
@@ -33,11 +47,9 @@ function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)
 	for i in 1:length(anchors)-1
 		positions = max(anchors[i+1].seqpos - anchors[i].seqpos,
 						anchors[i+1].refpos - anchors[i].refpos)
-		#cigar = join([cigar, string(n), string(anchors[i].op)], "")
-		cigar[2*i-1] = string(positions)
-		cigar[2*i] = string(anchors[i+1].op)
+		print(out, positions, anchors[i+1].op)
 	end
-	return join(cigar, "")
+	return String(take!(out))
 end
 
 # Concatenating 2 PairwiseAlignment objects: 
@@ -67,7 +79,7 @@ function concatenate(first::BioAlignments.PairwiseAlignment,
 end
 
 function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignment})
-	if ismepty(alignments) == 0
+	if isempty(alignments)
 		return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
 	elseif length(alignments) == 1
 		return alignments[1]
@@ -80,16 +92,20 @@ function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignmen
 
 	joinedquery = typeof(queries[1])(queries...)
 	joinedreference = typeof(queries[1])(references...)
-	cigar = join([BioAlignments.cigar(alignment) for alignment in alignments], "")
+	#cigar = join([BioAlignments.cigar(alignment) for alignment in alignments], "")
+	out = IOBuffer()
+	for alignment in alignments
+		print(out, BioAlignments.cigar(alignment))
+	end
 	
-	return BioAlignments.PairwiseAlignment(joinedquery, joinedreference, cigar)
+	return BioAlignments.PairwiseAlignment(joinedquery, joinedreference, String(take!(out)))
 end
 
 # AlignedRegionCollection ###############################################################################################################################
 
 # TODO: Benchmark!
 
-function concatenate(regions::AlignedRegionCollection)
+function concatenate(regions::Patchwork.AlignedRegionCollection)
 	# regions is sorted, no overlaps remaining.
 	if isempty(regions)
 		return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
@@ -103,13 +119,15 @@ function concatenate(regions::AlignedRegionCollection)
 	# would it be better to reallocate memory every time for the concatenation step 
 	# and omit the vector by incrementally building the alignmnent? 
 	for i in 2:length(regions)
-		@assert !(regions[i-1].subjectlast < regions[i].subjectfirst - 1) 	# check sorted
-		@assert regions[i-1].queryid == regions[i].queryid 					# Is that so?
+		@assert regions[i-1].subjectlast < regions[i].subjectfirst		 	# check sorted
+		#firstotu = splitdescription(regions[i-1].queryid)
+		#secondotu = splitdescription(regions[i].queryid)
+		#@assert firstotu == secondotu 										# Is that so?
 		if regions[i].subjectfirst > regions[1].subjectlast + 1
-			gapquery = repeat("-", regions[i].subjectfirst - regions[i-1].subjectlast)
+			#gapquery = repeat("-", regions[i].subjectfirst - regions[i-1].subjectlast)
 			gapcigar = string(regions[i].subjectfirst - regions[i-1].subjectlast) * "D"
-			reference = regions.referencesequence[regions[i-1].subjectlast + 1
-												  : regions[i].subjectfirst]
+			reference = regions.referencesequence.sequencedata[(regions[i-1].subjectlast + 1):(regions[i].subjectfirst)]
+			gapquery = typeof(reference)()
 			bridgealignment = BioAlignments.PairwiseAlignment(gapquery, reference, gapcigar)
 			push!(alignments, bridgealignment, regions[i].pairwisealignment)
 		else
@@ -119,7 +137,7 @@ function concatenate(regions::AlignedRegionCollection)
 	return concatenate(alignments)
 end
 
-function concatenate(regions::AlignedRegionCollection)
+function concatenate(regions::Patchwork.AlignedRegionCollection)
 	# regions is sorted, no overlaps remaining.
 	if isempty(regions)
 		return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
@@ -132,12 +150,14 @@ function concatenate(regions::AlignedRegionCollection)
 	# this requires reallocating memory every time for the superalignment
 	for i in 2:length(regions)
 		@assert !(regions[i-1].subjectlast < regions[i].subjectfirst - 1) 	# check sorted
-		@assert regions[i-1].queryid == regions[i].queryid 					# Is that so?
+		firstotu = splitdescription(regions[i-1].queryid)
+		secondotu = splitdescription(regions[i].queryid)
+		@assert firstotu == secondotu 										# Is that so?
 		if regions[i].subjectfirst > regions[1].subjectlast + 1
 			gapquery = repeat("-", regions[i].subjectfirst - regions[i-1].subjectlast)
 			gapcigar = string(regions[i].subjectfirst - regions[i-1].subjectlast) * "D"
-			reference = regions.referencesequence[regions[i-1].subjectlast + 1
-												  : regions[i].subjectfirst]
+			reference = regions.referencesequence[(regions[i-1].subjectlast + 1)
+												   :regions[i].subjectfirst]
 			bridgealignment = BioAlignments.PairwiseAlignment(gapquery, reference, gapcigar)
 			superalignment = concatenate([superalignment, bridgealignment, 
 										  regions[i].pairwisealignment])
@@ -151,7 +171,8 @@ end
 # UNUSED RIGHT NOW ######################################################################################################################################
 
 # first comes before second!
-function concatenate(first::AlignedRegion, second::AlignedRegion)
+function concatenate(first::Main.Patchwork.AlignedRegion, 
+					 second::Main.Patchwork.AlignedRegion)
 	# regions is sorted, no overlaps remaining.
 	if isempty(first) && isempty(second)
 		return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
@@ -168,12 +189,14 @@ function concatenate(first::AlignedRegion, second::AlignedRegion)
 	@assert first.querylast == second.queryfirst - 1 
 	# Else you would have to add gaps in between...
 	# But that's supposed to happen in the concatenate(AligńedRegionCollection)
-	@assert first.queryid == second.queryid 								# Is that so?
+	firstotu = splitdescription(regions[i-1].queryid)
+	secondotu = splitdescription(regions[i].queryid)
+	@assert firstotu == secondotu 										# Is that so?
 
 	return concatenate(first.pairwisealignment, second.pairwisealignment)
 end
 
-function concatenate(regions::AbstractVector{AlignedRegion})
+function concatenate(regions::AbstractVector{Main.Patchwork.AlignedRegion})
 	if isempty(regions)
 		return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
 		#return nothing
@@ -182,9 +205,11 @@ function concatenate(regions::AbstractVector{AlignedRegion})
 	end
 
 	for i in 2:length(regions)
-		@assert regions[i-1].subjectlast == regions[i].subjectfirst - 1
-		@assert regions[i-1].querylast == regions[i].queryfirst - 1 
-		@assert regions[i-1].queryid == regions[i].queryid 					# Is that so?
+		#@assert regions[i-1].subjectlast == regions[i].subjectfirst - 1
+		#@assert regions[i-1].querylast == regions[i].queryfirst - 1 
+		firstotu = splitdescription(regions[i-1].queryid)
+		secondotu = splitdescription(regions[i].queryid)
+		@assert firstotu == secondotu 										# Is that so?
 	end
 	alignments = [region.pairwisealignment for region in regions]
 
