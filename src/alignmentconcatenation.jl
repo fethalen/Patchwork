@@ -85,9 +85,6 @@ end
 
 # AlignedRegionCollection ###############################################################################################################################
 
-# TODO: Benchmark!
-# FOR THE TOY EXAMPLE, THE FOLLOWING FUNCTION OUTPERFORMED THE ONE UNDERNEATH IT (as expected).
-
 """
 	concatenate(regions::AlignedRegionCollection)
 
@@ -133,57 +130,16 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
 	return concatenate(alignments)
 end
 
+"""
+	createbridgealignment(reference::LongSequence)
+
+Create a `PairwiseAlignment` object with an empty (gap-only) query and the provided 
+`reference`.
+"""
 function createbridgealignment(reference::LongSequence)
 	gapquery = typeof(reference)()
 	gapcigar = string(length(reference)) * "D"
 	return BioAlignments.PairwiseAlignment(gapquery, reference, gapcigar)
-end
-
-# UNUSED RIGHT NOW ######################################################################################################################################
-
-# first comes before second!
-function concatenate(first::Main.Patchwork.AlignedRegion, 
-					 second::Main.Patchwork.AlignedRegion)
-	# regions is sorted, no overlaps remaining.
-	if isempty(first) && isempty(second)
-		return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
-	elseif isempty(first)
-		return second
-	elseif isempty(second)
-		return first
-	end
-
-	# make sure that the entire subject sequence is covered? 
-	# or insert gaps in reference and query for missing reference positions?
-	# this should happen in the concatenate method for AlignedRegionCollections...
-	@assert first.subjectlast == second.subjectfirst - 1
-	@assert first.querylast == second.queryfirst - 1 
-	# Else you would have to add gaps in between...
-	# But that's supposed to happen in the concatenate(AligńedRegionCollection)
-	firstotu = splitdescription(regions[i-1].queryid)[1]
-	secondotu = splitdescription(regions[i].queryid)[1]
-	@assert firstotu == secondotu 										# Is that so?
-
-	return concatenate(first.pairwisealignment, second.pairwisealignment)
-end
-
-function concatenate(regions::AbstractVector{Main.Patchwork.AlignedRegion})
-	if isempty(regions)
-		return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
-	elseif length(regions) == 1
-		return regions[1].pairwisealignment
-	end
-
-	for i in 2:length(regions)
-		@assert regions[i-1].subjectlast == regions[i].subjectfirst - 1
-		@assert regions[i-1].querylast == regions[i].queryfirst - 1 
-		firstotu = splitdescription(regions[i-1].queryid)[1]
-		secondotu = splitdescription(regions[i].queryid)[1]
-		@assert firstotu == secondotu 										# Is that so?
-	end
-	alignments = [region.pairwisealignment for region in regions]
-
-	return concatenate(alignments)
 end
 
 # OCCUPANCY #############################################################################################################################################
@@ -206,12 +162,6 @@ reference sequence.
 """
 function occupancy(region::AlignedRegion)
 	return occupancy(region.pairwisealignment)
-end
-
-# REDUNDANT
-# working with the sequences (== working with the gap anchors instead of matches)
-function occupancy(alignment::BioAlignments.PairwiseAlignment)
-	return (length(alignment.b) - countgaps(alignment)) / length(alignment.b)
 end
 
 """
