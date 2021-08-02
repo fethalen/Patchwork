@@ -2,7 +2,7 @@ import BioAlignments
 using BioSequences
 
 include("alignedregion.jl")
-include("alignedregioncollection.jl") 
+include("alignedregioncollection.jl")
 
 #########################################################################################################################################################
 
@@ -24,7 +24,7 @@ end
 """
     createbridgealignment(reference::LongSequence)
 
-Create a `PairwiseAlignment` object with an empty (gap-only) query and the provided 
+Create a `PairwiseAlignment` object with an empty (gap-only) query and the provided
 `reference`.
 """
 function createbridgealignment(reference::LongSequence)
@@ -40,10 +40,10 @@ end
 """
     concatenate(first::PairwiseAlignment, second::PairwiseAlignment)
 
-Construct a new `PairwiseAlignment` object by joining the first and second alignment object 
+Construct a new `PairwiseAlignment` object by joining the first and second alignment object
 in the order in which they where provided. The sequences will not be realigned.
 """
-function concatenate(first::BioAlignments.PairwiseAlignment, 
+function concatenate(first::BioAlignments.PairwiseAlignment,
                      second::BioAlignments.PairwiseAlignment)
     if isempty(first) && isempty(second)
         return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
@@ -56,20 +56,20 @@ function concatenate(first::BioAlignments.PairwiseAlignment,
     firstquery = first.a.seq
     secondquery = second.a.seq
     firstreference = first.b
-    secondreference = second.b 
+    secondreference = second.b
 
     @assert Alphabet(firstquery) == Alphabet(secondquery)
 
     joinedquery = typeof(firstquery)(firstquery, secondquery)
     joinedreference = typeof(firstquery)(firstreference, secondreference)
-    cigar = BioAlignments.cigar(first.a.aln) * BioAlignments.cigar(second.a.aln)]
+    cigar = BioAlignments.cigar(first.a.aln) * BioAlignments.cigar(second.a.aln)
     return BioAlignments.PairwiseAlignment(joinedquery, joinedreference, cigar)
 end
 
 """
     concatenate(alignments::AbstractVector{PairwiseAlignment})
 
-Construct a new `PairwiseAlignment` object by joining the vector of alignment objects in 
+Construct a new `PairwiseAlignment` object by joining the vector of alignment objects in
 the order in which they where provided. The sequences will not be realigned.
 """
 function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignment})
@@ -78,10 +78,10 @@ function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignmen
     elseif length(alignments) == 1
         return alignments[1]
     end
-    
+
     queries = [alignment.a.seq for alignment in alignments]
     references = [alignment.b for alignment in alignments]
-    
+
     @assert eltype(queries) == typeof(queries[1])
 
     joinedquery = typeof(queries[1])(queries...)
@@ -90,7 +90,7 @@ function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignmen
     for alignment in alignments
         print(out, BioAlignments.cigar(alignment))
     end
-    
+
     return BioAlignments.PairwiseAlignment(joinedquery, joinedreference, String(take!(out)))
 end
 
@@ -99,10 +99,10 @@ end
 """
     concatenate(regions::AlignedRegionCollection)
 
-Construct a new `PairwiseAlignment` object by joining the collection of alignment objects 
-in the order in which they where provided. The sequences will not be realigned. 
-This function expects `regions` to be sorted and free of aligned region overlaps. 
-The `referencesequence` of the collection may not be empty. Regions in the reference that 
+Construct a new `PairwiseAlignment` object by joining the collection of alignment objects
+in the order in which they where provided. The sequences will not be realigned.
+This function expects `regions` to be sorted and free of aligned region overlaps.
+The `referencesequence` of the collection may not be empty. Regions in the reference that
 are not covered by alignments to query sequences will be aligned to gaps (empty queries).
 """
 function concatenate(regions::Patchwork.AlignedRegionCollection)
@@ -112,7 +112,7 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
         return regions[1].pairwisealignment
     end
     @assert !isempty(regions.referencesequence)
-    
+
     if regions[1].subjectfirst > 1
         reference = regions.referencesequence.sequencedata[1:regions[1].subjectfirst - 1]
         alignments = [createbridgealignment(reference), regions[1].pairwisealignment]
@@ -132,8 +132,8 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
         else
             push!(alignments, regions[i].pairwisealignment)
         end
-        if i == lastindex(regions) 
-           && regions[i].subjectlast < lastindex(regions.referencesequence)
+        if (i == lastindex(regions)
+            && regions[i].subjectlast < lastindex(regions.referencesequence))
             reference = regions.referencesequence.sequencedata[
                         regions[i].subjectlast + 1:lastindex(regions.referencesequence)]
             push!(alignments, createbridgealignment(reference))
@@ -147,7 +147,7 @@ end
 """
     countmatches(alignment::PairwiseAlignment)
 
-Compute the absolute number of residues in the query sequence that align to residues in the 
+Compute the absolute number of residues in the query sequence that align to residues in the
 reference sequence.
 """
 function countmatches(alignment::BioAlignments.PairwiseAlignment)
@@ -171,7 +171,7 @@ end
 """
     countmatches(alignment::AlignedRegion)
 
-Compute the absolute number of residues in the query sequence that align to residues in the 
+Compute the absolute number of residues in the query sequence that align to residues in the
 reference sequence.
 """
 function countmatches(region::AlignedRegion)
@@ -181,7 +181,7 @@ end
 """
     countgaps(alignment::PairwiseAlignment)
 
-Compute the absolute number of gaps in the query sequence that align to residues in the 
+Compute the absolute number of gaps in the query sequence that align to residues in the
 reference sequence.
 """
 function countgaps(alignment::BioAlignments.PairwiseAlignment)
@@ -205,7 +205,7 @@ end
 """
     countgaps(region::AlignedRegion)
 
-Compute the absolute number of gaps in the query sequence that align to residues in the 
+Compute the absolute number of gaps in the query sequence that align to residues in the
 reference sequence.
 """
 function countgaps(region::AlignedRegion)
@@ -215,7 +215,7 @@ end
 """
     occupancy(alignment::PairwiseAlignment)
 
-Compute the relative amount of residues in the query sequence that align to residues in the 
+Compute the relative amount of residues in the query sequence that align to residues in the
 reference sequence.
 """
 function occupancy(alignment::BioAlignments.PairwiseAlignment)
@@ -225,7 +225,7 @@ end
 """
     occupancy(region::AlignedRegion)
 
-Compute the relative amount of residues in the query sequence that align to residues in the 
+Compute the relative amount of residues in the query sequence that align to residues in the
 reference sequence.
 """
 function occupancy(region::AlignedRegion)
