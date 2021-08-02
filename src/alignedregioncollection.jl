@@ -73,6 +73,10 @@ function Base.push!(regions::AlignedRegionCollection, region::AlignedRegion)
     return push!(regions.records, region)
 end
 
+function Base.pop!(regions::AlignedRegionCollection)
+    return pop!(regions.records)
+end
+
 function Base.getindex(regions::AlignedRegionCollection, index::Integer)
     return getindex(regions.records, index)
 end
@@ -161,11 +165,17 @@ end
 
 Returns a `Tuple` of each pairs of `regions` which sequence's are overlapping.
 """
-function eachoverlap(regions::AlignedRegionCollection)
+function eachoverlap(regions::AlignedRegionCollection, sorted=false)
+    if !sorted
+        regions = sort(regions)
+    end
+
     overlaps = []
-    for (regiona, regionb) in Iterators.product(regions, regions)
-        if isoverlapping(regiona, regionb)
-            push!(overlaps, (regiona, regionb))
+    for i in 2:lastindex(regions)
+        currentregion = regions[i]
+        lastregion = regions[i - 1]
+        if isoverlapping(currentregion, lastregion)
+            push!(overlaps, (currentregion, lastregion))
         end
     end
     return overlaps
@@ -196,20 +206,27 @@ function mergeoverlapping(regions::AlignedRegionCollection, sorted=false)
     push!(mergedregions, first(regions))
 
     for i in 2:lastindex(regions)
-        if isoverlapping(regions[i], last(mergedregions))
-            println("A IS overlapping with B")
-            showinterval(regions[i])
-            showinterval(last(mergedregions))
-            println()
+        currentregion = regions[i]
+        lastregion = last(mergedregions)
+        if isoverlapping(currentregion, lastregion)
+            # println("A IS overlapping with B:")
+            # println("  last: ", last(mergedregions).subjectfirst, " -> ", last(mergedregions).subjectlast)
+            # println("  i:    ", regions[i].subjectfirst, " -> ", regions[i].subjectlast)
+            pop!(mergedregions)
+            for region in merge(currentregion, lastregion)
+                push!(mergedregions, region)
+            end
         else
-            println("A is NOT overlapping with B")
-            showinterval(regions[i])
-            showinterval(last(mergedregions))
-            println()
-            push!(mergedregions, regions[i])
+            # println("A is NOT overlapping with B:")
+            # println("  last: ", last(mergedregions).subjectfirst, " -> ", last(mergedregions).subjectlast)
+            # println("  i:    ", regions[i].subjectfirst, " -> ", regions[i].subjectlast)
+            push!(mergedregions, currentregion)
         end
     end
-
+    # for region in mergedregions
+    #     println(region.subjectfirst, " -> ", region.subjectlast)
+    # end
+    # TODO: Not all overlaps are controlled ATM
     return mergedregions
 end
 
@@ -221,7 +238,8 @@ with the leftmost region and ending with the rightmost region.
 """
 function Base.sort(regions::AlignedRegionCollection)
     sortedregions = AlignedRegionCollection()
-    order = sortperm(map(region -> (leftposition(region), rightposition(region)), regions))
+    order = sortperm(map(region -> (region.subjectfirst, region.subjectlast), regions))
+    # order = sortperm(map(region -> region.subjectlast, regions))
     for i in order
         push!(sortedregions, regions[i])
     end

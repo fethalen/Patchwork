@@ -144,7 +144,6 @@ function main()
                $MIN_DIAMONDVERSION to run")
     end
 
-    speciesdelimiter = '@'
     subject = "test/07673_Alitta_succinea.fa"
     query = "/media/feli/Storage/nereidid_data/2020-01-02_allgenetics/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
     subject_db = Patchwork.diamond_makeblastdb(subject, MAKEBLASTDB_FLAGS)
@@ -156,12 +155,13 @@ function main()
     # The full sequences are required for evaluating the subject <-> query methods
     full_subjectseq = Patchwork.get_fullseq(subject)
     regions = Patchwork.AlignedRegionCollection(full_subjectseq, hits)
-    a = regions[12]
-    b = regions[13]
-    aqueryseq = Patchwork.selectsequence(query, a.queryid.id)
-    bqueryseq = Patchwork.selectsequence(query, b.queryid.id)
-    Patchwork.slice(b, Patchwork.afteroverlap(a, b))
-    uniqueregions = Patchwork.uniquesequences(regions)
+    while Patchwork.hasoverlaps(regions)
+        regions = Patchwork.mergeoverlapping(regions)
+    end
+    # a = regions[12]
+    # b = regions[13]
+    # aqueryseq = Patchwork.selectsequence(query, a.queryid.id)
+    # bqueryseq = Patchwork.selectsequence(query, b.queryid.id)
 end
 
 end # module
