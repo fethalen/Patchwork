@@ -7,6 +7,7 @@ using DataFrames
 include("alignment.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
+include("alignmentconcatenation.jl")
 include("diamond.jl")
 include("fasta.jl")
 include("sequencerecord.jl")
