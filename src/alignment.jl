@@ -45,41 +45,20 @@ function pairalign_local(seq::BioSequences.LongSequence, ref::BioSequences.LongS
 end
 
 """
-    slice(region::AlignedRegion, interval::UnitRange)
-
-Return the subpart of the provided `region` as given by the `interval`.
-"""
-function slice(region::AlignedRegion, interval::UnitRange)
-    alignment = region.pairwisealignment
-    queryinterval = BioAlignments.ref2seq(alignment, ref2reg(region, interval))
-    subjectinterval = BioAlignments.seq2ref(alignment, queryinterval)
-    queryportion = region.pairwisealignment.a.seq[queryinterval]
-    subjectportion = region.pairwisealignment.b[subjectinterval]
-    println(region)
-    println("new subject interval: ", interval)
-    # println("new query interval: ", BioAlignments.ref2seq(alignment, interval))
-    println("sequence queryinterval: ", queryinterval)
-    println("sequence subjectinterval: ", subjectinterval)
-    slicedaln = pairalign_global(queryportion, subjectportion, DEFAULT_SCOREMODEL)
-end
-
-"""
     bestscore(a, b, interval)
 
-Realign the provided `AlignedRegion` objects at the provided interval and return the
-name of the best-scoring sequence. If the alignment scores are equal, select a region by
-random.
+Realign the provided `AlignedRegion` objects at the provided interval and a tuple with the
+best-scoring alignment first and the other alignment second.
 """
-function bestscore(a::AlignedRegion, b::AlignedRegion, interval::UnitRange)
-    scorea = realign(a, ref2reg(a, interval)).value
-    scoreb = realign(b, ref2reg(b, interval)).value
-
+function order(a::AlignedRegion, b::AlignedRegion, interval::UnitRange)::Tuple
+    scorea = realign(a, fullsubject2subject(a, interval)).value
+    scoreb = realign(b, fullsubject2subject(b, interval)).value
     if scorea > scoreb
-        return a
+        return (a, b)
     elseif scorea == scoreb && Random.rand(0:1) == 1
-        return a
+        return (a, b)
     else
-        return b
+        return (b, a)
     end
 end
 
@@ -121,16 +100,6 @@ function BioAlignments.PairwiseAlignment(
     return BioAlignments.PairwiseAlignment(alignedseq, ref)
 end
 
-function BioAlignments.PairwiseAlignment(aln::BioAlignments.PairwiseAlignment,
-                                         interval::UnitRange)
-    queryinterval = BioAlignments.ref2seq(aln, interval)
-    queryseq = aln.a.seq[queryinterval]
-    subjectseq = aln.b[interval]
-    println(length(interval))
-    println(queryseq)
-    println(subjectseq)
-end
-
 function BioAlignments.seq2ref(aln::BioAlignments.PairwiseAlignment, interval::UnitRange)
     # for "negative" frames, the first < stop, so we grab the leftmost and rightmost
     # positions
@@ -152,3 +121,27 @@ function BioAlignments.ref2seq(aln::BioAlignments.PairwiseAlignment, interval::U
     return UnitRange(first(BioAlignments.ref2seq(aln, leftmost)),
                      first(BioAlignments.ref2seq(aln, rightmost)))
 end
+
+Base.firstindex(aln::BioAlignments.PairwiseAlignment) = 1
+Base.lastindex(aln::BioAlignments.PairwiseAlignment) = length(aln)
+Base.eachindex(aln::BioAlignments.PairwiseAlignment) = Base.OneTo(lastindex(aln))
+
+function Base.getindex(aln::BioAlignments.PairwiseAlignment, index::Integer)
+    return aln[index:index]
+end
+
+# TODO: Lose global alignment dependency, retrieve alignment without realigning
+function Base.getindex(aln::BioAlignments.PairwiseAlignment, indices::UnitRange)
+    queryinterval = BioAlignments.ref2seq(aln, indices)
+    queryseq = aln.a.seq[queryinterval]
+    subjectseq = aln.b[indices]
+    return pairalign_global(queryseq, subjectseq)
+end
+
+# @inline function Base.iterate(aln::BioAlignments.PairwiseAlignment, i::Int = firstindex(aln))
+#     if i > lastindex(aln)
+#         return nothing
+#     else
+#         return getindex(aln, i), i + 1
+#     end
+# end
