@@ -37,6 +37,7 @@ end
 
 # PairwiseAlignment #####################################################################################################################################
 
+
 """
     concatenate(first::PairwiseAlignment, second::PairwiseAlignment)
 
@@ -133,9 +134,9 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
             push!(alignments, regions[i].pairwisealignment)
         end
         if (i == lastindex(regions)
-            && regions[i].subjectlast < lastindex(regions.referencesequence))
+            && regions[i].subjectlast < length(regions.referencesequence))
             reference = regions.referencesequence.sequencedata[
-                        regions[i].subjectlast + 1:lastindex(regions.referencesequence)]
+                        regions[i].subjectlast + 1:length(regions.referencesequence)]
             push!(alignments, createbridgealignment(reference))
         end
     end
@@ -161,7 +162,7 @@ function countmatches(alignment::BioAlignments.PairwiseAlignment)
     @assert anchors[1].op == BioAlignments.OP_START
 
     for i in 2:lastindex(anchors)
-        if anchors[i].op == BioAlignments.OP_MATCH
+        if BioAlignments.ismatchop(anchors[i].op)
             covered += (anchors[i].seqpos - anchors[i-1].seqpos)
         end
     end
@@ -195,7 +196,7 @@ function countgaps(alignment::BioAlignments.PairwiseAlignment)
     @assert anchors[1].op == BioAlignments.OP_START
 
     for i in 2:lastindex(anchors)
-        if anchors[i].op == BioAlignments.OP_DELETE
+        if BioAlignments.isdeleteop(anchors[i].op)
             gaps += (anchors[i].refpos - anchors[i-1].refpos)
         end
     end
@@ -230,4 +231,15 @@ reference sequence.
 """
 function occupancy(region::AlignedRegion)
     return occupancy(region.pairwisealignment)
+end
+
+"""
+    occupancy(regions::AlignedRegionCollection)
+
+Compute the relative amount of residues in the query sequence that align to residues in the
+reference sequence. This function concatenates `regions` before computing occupancy, returning 
+the occupancy score based on the entire reference sequence of the collection.
+"""
+function occupancy(regions::AlignedRegionCollection)
+	return occupancy(concatenate(regions))
 end
