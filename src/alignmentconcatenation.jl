@@ -1,5 +1,5 @@
 import BioAlignments
-import BioSequences
+using BioSequences
 
 include("alignedregion.jl")
 include("alignedregioncollection.jl") 
@@ -13,10 +13,10 @@ function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)
 		return ""
 	end
 	@assert anchors[1].op == BioAlignments.OP_START
-	for i in 1:length(anchors)-1
-		positions = max(anchors[i+1].seqpos - anchors[i].seqpos,
-						anchors[i+1].refpos - anchors[i].refpos)
-		print(out, positions, anchors[i+1].op)
+	for i in 2:lastindex(anchors)
+		positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
+						anchors[i].refpos - anchors[i-1].refpos)
+		print(out, positions, anchors[i].op)
 	end
 	return String(take!(out))
 end
@@ -62,8 +62,7 @@ function concatenate(first::BioAlignments.PairwiseAlignment,
 
 	joinedquery = typeof(firstquery)(firstquery, secondquery)
 	joinedreference = typeof(firstquery)(firstreference, secondreference)
-	cigar = join([BioAlignments.cigar(first.a.aln), BioAlignments.cigar(second.a.aln)], 
-				 "")
+	cigar = BioAlignments.cigar(first.a.aln) * BioAlignments.cigar(second.a.aln)]
 	return BioAlignments.PairwiseAlignment(joinedquery, joinedreference, cigar)
 end
 
@@ -87,8 +86,6 @@ function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignmen
 
 	joinedquery = typeof(queries[1])(queries...)
 	joinedreference = typeof(queries[1])(references...)
-	#cigar = join([BioAlignments.cigar(alignment) for alignment in alignments], 
-	#			  "")
 	out = IOBuffer()
 	for alignment in alignments
 		print(out, BioAlignments.cigar(alignment))
@@ -123,11 +120,11 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
 		alignments = [regions[1].pairwisealignment]
 	end
 	# fill the gaps between end and next start
-	for i in 2:length(regions)
-		@assert regions[i-1].subjectlast < regions[i].subjectfirst		 	# check sorted
+	for i in 2:lastindex(regions)
 		firstotu = Patchwork.splitdescription(regions[i-1].queryid)[1]
 		secondotu = Patchwork.splitdescription(regions[i].queryid)[1]
 		@assert firstotu == secondotu
+		@assert regions[i-1].subjectlast < regions[i].subjectfirst		 	# check sorted
 		if regions[i].subjectfirst > regions[i-1].subjectlast + 1
 			reference = regions.referencesequence.sequencedata[
 								regions[i-1].subjectlast + 1:regions[i].subjectfirst - 1]
@@ -135,9 +132,10 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
 		else
 			push!(alignments, regions[i].pairwisealignment)
 		end
-		if i == length(regions) && regions[i].subjectlast < length(regions.referencesequence)
+		if i == lastindex(regions) 
+		   && regions[i].subjectlast < lastindex(regions.referencesequence)
 			reference = regions.referencesequence.sequencedata[
-							regions[i].subjectlast + 1:length(regions.referencesequence)]
+						regions[i].subjectlast + 1:lastindex(regions.referencesequence)]
 			push!(alignments, createbridgealignment(reference))
 		end
 	end
@@ -162,7 +160,7 @@ function countmatches(alignment::BioAlignments.PairwiseAlignment)
 
 	@assert anchors[1].op == BioAlignments.OP_START
 
-	for i in 2:length(anchors)
+	for i in 2:lastindex(anchors)
 		if anchors[i].op == BioAlignments.OP_MATCH
 			covered += (anchors[i].seqpos - anchors[i-1].seqpos)
 		end
@@ -196,7 +194,7 @@ function countgaps(alignment::BioAlignments.PairwiseAlignment)
 
 	@assert anchors[1].op == BioAlignments.OP_START
 
-	for i in 2:length(anchors)
+	for i in 2:lastindex(anchors)
 		if anchors[i].op == BioAlignments.OP_DELETE
 			gaps += (anchors[i].refpos - anchors[i-1].refpos)
 		end
