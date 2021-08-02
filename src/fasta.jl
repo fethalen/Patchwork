@@ -71,15 +71,35 @@ function get_fullseq(fastafile::String)::SequenceRecord
 end
 
 """
-    selectsequences(fastafile, identifiers; delimiter)
+    selectsequence(fastafile, identifier)
+
+Searches within a `fastafile` for a sequence record that matches the
+provided `identifier`. `nothing` is return if no matching records were found.
+"""
+function selectsequence(fastafile::AbstractString,
+                        identifier::String)
+    abs_fastafile = abspath(fastafile)
+    isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
+    record = FASTA.Record()
+    open(FASTA.Reader, fastafile) do reader
+        while !eof(reader)
+            read!(reader, record)
+            currentid = FASTA.identifier(record)
+            if currentid == identifier
+                return SequenceRecord(currentid, FASTA.sequence(record))
+            end
+        end
+    end
+end
+
+"""
+    selectsequences(fastafile, identifiers)
 
 Searches within a `fastafile` for sequence records with identifiers that matches the
-provided `identifiers`. The provided `delimiter` separates the OTU from the sequence
-name (set to '@' by default).
+provided `identifiers`.
 """
 function selectsequences(fastafile::AbstractString,
-                         identifiers::Array{String};
-                         delimiter='@'::Char)::MultipleSequenceAlignment
+                         identifiers::Array{String})::MultipleSequenceAlignment
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
     record = FASTA.Record()
@@ -90,8 +110,7 @@ function selectsequences(fastafile::AbstractString,
             read!(reader, record)
             identifier = FASTA.identifier(record)
             if identifier in identifiers
-                alignment = SequenceRecord(identifier, FASTA.sequence(record),
-                                           delimiter)
+                alignment = SequenceRecord(identifier, FASTA.sequence(record))
                 addalignment!(msa, alignment)
             end
         end
