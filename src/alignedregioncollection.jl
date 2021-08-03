@@ -161,72 +161,65 @@ function has_uniquesequences(regions::AlignedRegionCollection)
 end
 
 """
-    eachoverlap(regions)
-
-Returns a `Tuple` of each pairs of `regions` which sequence's are overlapping.
-"""
-function eachoverlap(regions::AlignedRegionCollection, sorted=false)
-    if !sorted
-        regions = sort(regions)
-    end
-
-    overlaps = []
-    for i in 2:lastindex(regions)
-        currentregion = regions[i]
-        lastregion = regions[i - 1]
-        if isoverlapping(currentregion, lastregion)
-            push!(overlaps, (currentregion, lastregion))
-        end
-    end
-    return overlaps
-end
-
-"""
     hasoverlaps(regions)
 
 Returns `true` if there are overlapping sequences within `regions`.
 """
-function hasoverlaps(regions::AlignedRegionCollection)
-    return length(eachoverlap(regions)) > 0
+function hasoverlaps(regions::AlignedRegionCollection, sorted=false)
+    if !sorted
+        regions = sort(regions)
+    end
+
+    for i in 2:lastindex(regions)
+        if isoverlapping(regions[i], regions[i - 1])
+            println(regions[i], regions[i - 1])
+            return true
+        end
+    end
+    return false
+end
+
+function show_subjectintervals(regions::AlignedRegionCollection)
+    for region in regions
+        println(region.subjectfirst, " -> ", region.subjectlast)
+    end
+    return
 end
 
 """
-    mergeoverlapping(regions)
+    mergeoverlaps(regions::AlignedRegionCollection, sorted::Bool=false,
+                  iteration::Int64=1, maxiterate::Int64=100)
 
-Returns an `AlignedRegionCollection` which is a subset of `regions` where
-overlapping sequences has been merged into longer stretches.
+Returns an `AlignedRegionCollection` where overlapping regions have been merged into
+their non-overlapping subset and are selected based on how well they align to the reference
+sequence. Because sometimes multiple rounds of merging are needed, there is a limit to
+how many times the function can run before stopping.
 """
-function mergeoverlapping(regions::AlignedRegionCollection, sorted=false)
+function mergeoverlaps(regions::AlignedRegionCollection, sorted::Bool=false,
+                       iteration::Int64=1, maxiterate::Int64=100)
     if !sorted
         regions = sort(regions)
     end
 
     length(regions) < 2 && return regions
-    mergedregions = AlignedRegionCollection()
+    mergedregions = AlignedRegionCollection(regions.referencesequence)
     push!(mergedregions, first(regions))
 
     for i in 2:lastindex(regions)
         currentregion = regions[i]
         lastregion = last(mergedregions)
         if isoverlapping(currentregion, lastregion)
-            # println("A IS overlapping with B:")
-            # println("  last: ", last(mergedregions).subjectfirst, " -> ", last(mergedregions).subjectlast)
-            # println("  i:    ", regions[i].subjectfirst, " -> ", regions[i].subjectlast)
             pop!(mergedregions)
             for region in merge(currentregion, lastregion)
                 push!(mergedregions, region)
             end
         else
-            # println("A is NOT overlapping with B:")
-            # println("  last: ", last(mergedregions).subjectfirst, " -> ", last(mergedregions).subjectlast)
-            # println("  i:    ", regions[i].subjectfirst, " -> ", regions[i].subjectlast)
             push!(mergedregions, currentregion)
         end
     end
-    # for region in mergedregions
-    #     println(region.subjectfirst, " -> ", region.subjectlast)
-    # end
-    # TODO: Not all overlaps are controlled ATM
+    if hasoverlaps(mergedregions, false) && iteration <= maxiterate
+        return mergeoverlaps(mergedregions, false, iteration + 1)
+    end
     return mergedregions
 end
 
@@ -237,7 +230,7 @@ Sort all `AlignedRegion`s within `regions` based on their position, starting
 with the leftmost region and ending with the rightmost region.
 """
 function Base.sort(regions::AlignedRegionCollection)
-    sortedregions = AlignedRegionCollection()
+    sortedregions = AlignedRegionCollection(regions.referencesequence)
     order = sortperm(map(region -> (region.subjectfirst, region.subjectlast), regions))
     # order = sortperm(map(region -> region.subjectlast, regions))
     for i in order

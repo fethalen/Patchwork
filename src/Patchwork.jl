@@ -152,17 +152,12 @@ function main()
     diamondresults = "test/c_australis_x_07673.tsv"
     hits = Patchwork.readblastTSV(diamondresults)
     # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
-    # referenceseq = Patchwork.readmsa(subject)
-    # The full sequences are required for evaluating the subject <-> query methods
     full_subjectseq = Patchwork.get_fullseq(subject)
     regions = Patchwork.AlignedRegionCollection(full_subjectseq, hits)
-    while Patchwork.hasoverlaps(regions)
-        regions = Patchwork.mergeoverlapping(regions)
-    end
-    # a = regions[12]
-    # b = regions[13]
-    # aqueryseq = Patchwork.selectsequence(query, a.queryid.id)
-    # bqueryseq = Patchwork.selectsequence(query, b.queryid.id)
+    mergedregions = Patchwork.mergeoverlaps(regions)
+    mergedregions.referencesequence
+    Patchwork.concatenate(mergedregions)
+    Patchwork.occupancy(mergedregions)
 end
 
 end # module
