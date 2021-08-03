@@ -22,7 +22,7 @@ const GAPS = Dict("BLOSUM45"=>[(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13,
                   "PAM70"=>[(6, 2), (7, 2), (8, 2), (9, 1), (10, 1), (11, 1)], 
                   "PAM250"=>[(11, 3), (12, 3), (13, 3), (14, 3), (15, 3), (13, 2), (14, 2), 
                              (15, 2), (16, 2), (17, 2), (17, 1), (18, 1), (19, 1), (20, 1), 
-                             (21, 1)]
+                             (21, 1)])
 const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(11, 1), 
                          "BLOSUM80"=>(10, 1), "BLOSUM90"=>(10, 1), "PAM30"=>(9, 1), 
                          "PAM70"=>(10, 1), "PAM250"=>(14, 2))
@@ -111,7 +111,7 @@ function set_diamondframeshift!(args::Dict{String, Any})
     end
 end
 
-function set_diamondmode!(args::Dicts{String, Any})
+function set_diamondmode!(args::Dict{String, Any})
     if !("--fast" in args["diamond-flags"] 
          || "--sensitive" in args["diamond-flags"] 
          || "--more-sensitive" in args["diamond-flags"] 
