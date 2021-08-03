@@ -15,8 +15,10 @@ include("multiplesequencealignment.jl")
 
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
 const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
-const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
-                      "--ultra-sensitive", Sys.CPU_THREADS]
+# --evalue defaults to 0.001 in DIAMOND
+# --threads defaults to autodetect in DIAMOND
+#const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
+#                      "--ultra-sensitive", Sys.CPU_THREADS]
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
 const GAPOPEN = 11
@@ -89,27 +91,27 @@ function parse_parameters()
         "--diamond-flags"
             help = "Flags sent to DIAMOND"
             arg_type = Vector
-            default = DIAMONDFLAGS
+            #default = DIAMONDFLAGS
             metavar = "LIST"
         "--matrix"
             help = "Set scoring matrix"
             arg_type = String
-            default = "BLOSUM62"
+            default = MATRIX
             metavar = "NAME"
         "--custom-matrix"
             help = "Use a custom scoring matrix"
             arg_type = String
-            default = "BLOSUM62"
+            #default = "BLOSUM62"
             metavar = "PATH"
         "--gapopen"
             help = "Set gap open penalty (positive integer)"
             arg_type = Int64
-            default = 11
+            #default = 11
             metavar = "NUMBER"
         "--gapextend"
             help = "Set gap extension penalty (positive integer)"
             arg_type = Int64
-            default = 1
+            #default = 1
             metavar = "NUMBER"
         "--seq-type"
             help = "Type of input alignments (nucleotide/aminoacid; default: autodetect)"
