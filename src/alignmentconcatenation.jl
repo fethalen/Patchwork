@@ -13,7 +13,7 @@ function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)
     if isempty(anchors)
         return ""
     end
-    @assert anchors[1].op == BioAlignments.OP_START
+    @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
     for i in 2:lastindex(anchors)
         positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
                         anchors[i].refpos - anchors[i-1].refpos)
@@ -60,7 +60,8 @@ function concatenate(first::BioAlignments.PairwiseAlignment,
     firstreference = first.b
     secondreference = second.b
 
-    @assert Alphabet(firstquery) == Alphabet(secondquery)
+    @assert Alphabet(firstquery) == Alphabet(secondquery) """Can only concatenate 
+    alignments of same type (i.e. protein-protein alignments)."""
 
     joinedquery = typeof(firstquery)(firstquery, secondquery)
     joinedreference = typeof(firstquery)(firstreference, secondreference)
@@ -84,7 +85,8 @@ function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignmen
     queries = [alignment.a.seq for alignment in alignments]
     references = [alignment.b for alignment in alignments]
 
-    @assert eltype(queries) == typeof(queries[1])
+    @assert eltype(queries) == typeof(queries[1]) """Can only concatenate alignments of 
+    same type (i.e. protein-protein alignments)."""
 
     joinedquery = typeof(queries[1])(queries...)
     joinedreference = typeof(queries[1])(references...)
@@ -113,7 +115,7 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
     elseif length(regions) == 1
         return regions[1].pairwisealignment
     end
-    @assert !isempty(regions.referencesequence)
+    @assert !isempty(regions.referencesequence) "Reference sequence may not be empty."
 
     if regions[1].subjectfirst > 1
         reference = regions.referencesequence.sequencedata[1:regions[1].subjectfirst - 1]
@@ -125,8 +127,8 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)
     for i in 2:lastindex(regions)
         firstotu = Patchwork.splitdescription(regions[i-1].queryid)[1]
         secondotu = Patchwork.splitdescription(regions[i].queryid)[1]
-        @assert firstotu == secondotu
-        @assert regions[i-1].subjectlast < regions[i].subjectfirst             # check sorted
+        @assert firstotu == secondotu "Can only concatenate sequences from one OTU."
+        @assert regions[i-1].subjectlast < regions[i].subjectfirst "Sequences not sorted."
         if regions[i].subjectfirst > regions[i-1].subjectlast + 1
             reference = regions.referencesequence.sequencedata[
                                 regions[i-1].subjectlast + 1:regions[i].subjectfirst - 1]
@@ -160,7 +162,7 @@ function countmatches(alignment::BioAlignments.PairwiseAlignment)
     covered = 0
     anchors = alignment.a.aln.anchors
 
-    @assert anchors[1].op == BioAlignments.OP_START
+    @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
 
     for i in 2:lastindex(anchors)
         if BioAlignments.ismatchop(anchors[i].op)
@@ -194,7 +196,7 @@ function countgaps(alignment::BioAlignments.PairwiseAlignment)
     gaps = 0
     anchors = alignment.a.aln.anchors
 
-    @assert anchors[1].op == BioAlignments.OP_START
+    @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
 
     for i in 2:lastindex(anchors)
         if BioAlignments.isdeleteop(anchors[i].op)
