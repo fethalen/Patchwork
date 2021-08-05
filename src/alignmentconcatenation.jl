@@ -1,6 +1,7 @@
 import BioAlignments
 using BioSequences
 
+include("alignment.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
 
@@ -237,9 +238,35 @@ end
     occupancy(regions::AlignedRegionCollection)
 
 Compute the relative amount of residues in the query sequence that align to residues in the
-reference sequence. This function concatenates `regions` before computing occupancy, returning 
+reference sequence. This function concatenates `regions` before computing occupancy, returning
 the occupancy score based on the entire reference sequence of the collection.
 """
 function occupancy(regions::AlignedRegionCollection)
 	return occupancy(concatenate(regions))
+end
+
+"""
+    maskgaps(alignment::BioAlignments.PairwiseAlignment)
+
+Remove unaligned columns (i.e., insertions in the reference sequence) _in the query
+sequence_.
+"""
+function maskgaps(alignment::BioAlignments.PairwiseAlignment)
+    # Iterate backwards, since we're deleting things.
+    # a is query, b is reference sequence
+    anchors = alignment.a.aln.anchors
+    maskedseq = BioSequences.LongAminoAcidSeq()
+    from = 1
+    gapcount = 0
+    for i in 2:lastindex(anchors)
+        if anchors[i].op === BioAlignments.OP_INSERT
+            firstinsertion = anchors[i - 1].seqpos + 1
+            lastinsertion = anchors[i].seqpos
+            to = anchors[i - 1].seqpos
+            gapcount += lastinsertion - firstinsertion + 1
+            maskedseq *= alignment.a.seq[from:to]
+            from = anchors[i].seqpos + 1
+        end
+    end
+    return pairalign_global(maskedseq, alignment.b)
 end

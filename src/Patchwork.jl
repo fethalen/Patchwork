@@ -156,8 +156,9 @@ function main()
     regions = Patchwork.AlignedRegionCollection(full_subjectseq, hits)
     mergedregions = Patchwork.mergeoverlaps(regions)
     mergedregions.referencesequence
-    Patchwork.concatenate(mergedregions)
-    Patchwork.occupancy(mergedregions)
+    concatenation = Patchwork.concatenate(mergedregions)
+    finalalignment = Patchwork.maskgaps(concatenation).aln
+    Patchwork.occupancy(finalalignment)
 end
 
 end # module
