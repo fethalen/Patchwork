@@ -130,8 +130,15 @@ Runs `diamond makedb` on the provided `reference` FASTA sequence. May include
 optional `flags` such as `["--taxonnodes"]`.
 """
 function diamond_makeblastdb(reference::AbstractString, flags=[])
+    if isdiamonddatabase(reference)
+        return 
+    end
     db_file, db_io = mktemp()
-    makedb_cmd = pipeline(`diamond makedb --in $reference -d $db_file $flags`)
+    if isfastafile(reference)
+        makedb_cmd = pipeline(`diamond makedb --in $reference -d $db_file $flags`)
+    else # BLAST DB
+        makedb_cmd = pipeline(`diamond prepdb -d $reference`)
+    end
     run(makedb_cmd)
     close(db_io)
     return db_file
@@ -151,4 +158,24 @@ end
 
 function subjectids(results::Vector{DiamondSearchResult}, speciesdelimiter='@')::Vector{String}
     return map(result -> subjectid(result), results)
+end
+
+function isfastafile(path::AbstractString)::Bool
+    splits = split(path, ".")
+    if length(splits) > 1
+        extension = last(splits)
+        if extension in FASTAEXTENSIONS
+            return true
+        end
+    end
+    return false
+end
+
+function isdiamonddatabase(path::AbstractString)::Bool
+    splits = split(path, ".")
+    if length(splits) > 1 && isequal(last(splits), DIAMONDDB)
+            return true
+        end
+    end
+    return false
 end
