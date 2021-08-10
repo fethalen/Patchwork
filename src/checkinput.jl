@@ -26,6 +26,30 @@ const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(
 
 # FUNCTIONS ###############################################################################
 
+# if isfastafile(args["reference"]), build DIAMOND database before running DIAMOND
+# NOW ALSO FOUND IN DIAMOND.JL
+function isfastafile(path::AbstractString)::Bool
+    splits = split(path, ".")
+    if length(splits) > 1
+        extension = last(splits)
+        if extension in FASTAEXTENSIONS
+            return true
+        end
+    end
+    return false
+end
+
+function isdiamonddatabase(path::AbstractString)::Bool
+    splits = split(path, ".")
+    if length(splits) > 1
+        extension = last(splits)
+        if isequal(extension, DIAMONDDB)
+            return true
+        end
+    end
+    return false
+end
+
 # Matrix ##################################################################################
 
 """
@@ -89,7 +113,7 @@ Parse the file provided in `--custom-matrix` as an amino acid substitution matri
 creating a new `BioAlignments.SubstitutionMatrix` object from the data. 
 """
 function read_custommatrix(path::AbstractString)::SubstitutionMatrix
-    return parse_ncbi_submat(AminoAcid, path)
+    return BioAlignments.parse_ncbi_submat(BioSymbols.AminoAcid, path)
 end
 
 # matrixname = getmatrixname(args) and matrixtype = getmatrixtype(args)
@@ -179,6 +203,8 @@ to the default value.
 function set_diamondframeshift!(args::Dict{String, Any})
     if !("--frameshift" in args["diamond-flags"])
         push!(args["diamond-flags"], "--frameshift", 15)
+    else
+        args["diamond-flags"] = ["--frameshift", 15]
     end
 end
 
@@ -194,6 +220,8 @@ function set_diamondmode!(args::Dict{String, Any})
          || "--more-sensitive" in args["diamond-flags"] 
          || "--ultra-sensitive" in args["diamond-flags"])   
         push!(args["diamond-flags"], "--ultra-sensitive")
+    else
+        args["diamond-flags"] = ["--ultra-sensitive"]
     end
 end
 
@@ -206,7 +234,8 @@ separate place.
 """
 function checkdiamondflags(args::Dict{String, Any})
     flags = args["diamond-flags"]
-    patchworkflags = ["--matrix", "--custom-matrix", "--gapopen", "--gapextend"]
+    patchworkflags = ["--matrix", "--custom-matrix", "--gapopen", "--gapextend", 
+                      "--threads"]
     for flag in patchworkflags
         if flag in flags
             error("Please use Patchwork's own $flag option instead.")
@@ -226,6 +255,17 @@ function checkdiamondflags(args::Dict{String, Any})
     end
     if "--out" in flags || "-o" in flags
         error("The DIAMOND results file is built into Patchwork and cannot be changed.")
+    end
+end
+
+# makedb flags can't include threads bc handled by patchwork
+function checkmakedbflags(args::Dict{String, Any})
+    flags = args["makedb-flags"]
+    if "--db" in flags || "-d" in flags
+        error("The creation of your DIAMOND database will be internally handled.", 
+              "You should not explicitly provide a DIAMOND database filename.")
+    if "--threads"  in flags
+        error("Please use Patchwork's own --threads option instead.")
     end
 end
 
@@ -256,6 +296,10 @@ function setdiamondflags!(args::Dict{String, Any})      # Run this fct. before t
     checkdiamondflags(args)
     set_diamondframeshift!(args)
     set_diamondmode!(args)
+    if isequal(getmatrixtype(args), "custom-matrix")
+        checkmakedbflags(args)
+        push!(args["makedb-flags"], "--threads", args["threads"])
+    end
 end
 
 """
@@ -264,6 +308,9 @@ end
 Build the complete vector of parameters for running `DIAMOND`. 
 """
 function collectdiamondflags(args::Dict{String, Any})::Vector{String}
+    @assert "gapopen" in keys(args) && "gapextend" in keys(args) """set gap penalties with 
+    setpatchworkflags!(args) before calling this function"""
     return [args["diamond-flags"]..., "--" * getmatrixtype(args), getmatrixname(args), 
-            "--gapopen", args["gapopen"], "--gapextend", args["gapextend"]]
+            "--gapopen", args["gapopen"], "--gapextend", args["gapextend"], "--threads", 
+            args["--threads"]]
 end
