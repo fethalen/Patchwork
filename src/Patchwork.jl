@@ -5,24 +5,29 @@ using ArgParse
 using DataFrames
 
 include("alignment.jl")
+include("alignmentconcatenation.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
 include("alignmentconcatenation.jl")
 include("diamond.jl")
 include("fasta.jl")
+include("checkinput.jl")
 include("sequencerecord.jl")
 include("multiplesequencealignment.jl")
 
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
+const DIAMONDDB = "dmnd"
+const EMTPY = []
+# handled by PATCHWORK --threads option?
+#const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
 # --evalue defaults to 0.001 in DIAMOND
 # --threads defaults to autodetect in DIAMOND
 #const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
 #                      "--ultra-sensitive", Sys.CPU_THREADS]
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
-const GAPOPEN = 11
-const GAPEXTEND = 1
+#const GAPOPEN = 11
+#const GAPEXTEND = 1
 
 """
     printinfo()
@@ -79,10 +84,10 @@ function parse_parameters()
             arg_type = String
             metavar = "PATH"
         # TODO: Doesn't have to be a flag, check filetype extension instead
-        "--database"
-            help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
-            arg_type = Bool
-            action = :store_true
+        #"--database"
+        #    help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
+        #    arg_type = Bool
+        #    action = :store_true
         "--output-dir"
             help = "Write output files to this directory"
             arg_type = String
@@ -91,7 +96,12 @@ function parse_parameters()
         "--diamond-flags"
             help = "Flags sent to DIAMOND"
             arg_type = Vector
-            #default = DIAMONDFLAGS
+            default = EMPTY
+            metavar = "LIST"
+        "--makedb-flags"
+            help = "Flags sent to DIAMOND makedb"
+            arg_type = Vector
+            default = EMPTY
             metavar = "LIST"
         "--matrix"
             help = "Set scoring matrix"
@@ -147,12 +157,30 @@ function main()
                $MIN_DIAMONDVERSION to run")
     end
 
-    subject = "test/07673_Alitta_succinea.fa"
-    query = "/media/feli/Storage/nereidid_data/2020-01-02_allgenetics/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
-    subject_db = Patchwork.diamond_makeblastdb(subject, MAKEBLASTDB_FLAGS)
+    setpatchworkflags!(args)
+    setdiamondflags!(args)
+    reference = args["reference"]
+    query = args["query"]
+
+    # do BLAST DB also require makedb?
+    if !isdiamonddatabase(reference)
+        reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
+    else
+        reference_db = reference
+    end
+
+    diamondparams = collectdiamondflags(args)
+    diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
+    full_subjectseq = get_fullseq(subject)
+    regions = mergeoverlaps(AlignedRegionCollection(full_subjectseq, diamondhits))
+    concatenatedregions = concatenate(regions)
+
+    #subject = "test/07673_Alitta_succinea.fa"
+    #query = "/media/feli/Storage/nereidid_data/2020-01-02_allgenetics/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
+    #subject_db = Patchwork.diamond_makeblastdb(subject, MAKEBLASTDB_FLAGS)
     # diamondresults = Patchwork.diamond_blastx(query, subject_db, DIAMONDFLAGS)
-    diamondresults = "test/c_australis_x_07673.tsv"
-    hits = Patchwork.readblastTSV(diamondresults)
+    #diamondresults = "test/c_australis_x_07673.tsv"
+    #hits = Patchwork.readblastTSV(diamondresults)
     # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
     full_subjectseq = Patchwork.get_fullseq(subject)
     regions = Patchwork.AlignedRegionCollection(full_subjectseq, hits)
