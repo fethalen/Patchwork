@@ -1,4 +1,10 @@
+# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_dna.fa" --reference "../test/07673_Alitta_succinea.fa" 
+
 module Patchwork
+
+import Pkg
+Pkg.add("ArgParse")
+Pkg.add("BioSymbols")
 
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS
 using ArgParse
@@ -17,13 +23,15 @@ include("multiplesequencealignment.jl")
 
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
 const DIAMONDDB = "dmnd"
-const EMTPY = []
+const EMPTY = String[]
 # handled by PATCHWORK --threads option?
 #const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
 # --evalue defaults to 0.001 in DIAMOND
 # --threads defaults to autodetect in DIAMOND
 #const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
 #                      "--ultra-sensitive", Sys.CPU_THREADS]
+const FRAMESHIFT = "15"
+const DIAMONDMODE = "--ultra-sensitive"
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
 #const GAPOPEN = 11
@@ -59,8 +67,15 @@ function min_diamondversion(minversion::AbstractString)
         return false
     end
     versioncmd = read(`diamond --version`, String)
-    diamondversion = last(split(versioncmd))
-    return diamondversion >= minversion
+    diamondversion_vector = split(last(split(versioncmd)), ".")
+    minversion_vector = split(minversion, ".")
+    for (v, r) in zip(diamondversion_vector, minversion_vector)
+        version = parse(Int64, v)
+        required = parse(Int64, r)
+        version < required && return false
+        version > required && return true
+    end
+    return true
 end
 
 function parse_parameters()
@@ -79,7 +94,7 @@ function parse_parameters()
             metavar = "PATH"
         "--reference"
             help = "Either (1) a path to one or more sequences in FASTA format or (2) a
-                    subject database (set --database)"
+                    subject database (DIAMOND or BLAST database)."
             required = true
             arg_type = String
             metavar = "PATH"
@@ -106,7 +121,7 @@ function parse_parameters()
         "--matrix"
             help = "Set scoring matrix"
             arg_type = String
-            default = MATRIX
+            #default = MATRIX
             metavar = "NAME"
         "--custom-matrix"
             help = "Use a custom scoring matrix"
@@ -160,35 +175,39 @@ function main()
     setpatchworkflags!(args)
     setdiamondflags!(args)
     reference = args["reference"]
-    query = args["query"]
+    query = args["contigs"]
 
-    # do BLAST DB also require makedb?
-    if !isdiamonddatabase(reference)
-        reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
-    else
-        reference_db = reference
-    end
+    # for FASTA files: diamond makedb
+    # for BLAST databases: diamond prepdb
+    #if !isdiamonddatabase(reference)
+    #    reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
+    #else
+    #    reference_db = reference
+    #end
+    reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
 
     diamondparams = collectdiamondflags(args)
     diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
-    full_subjectseq = get_fullseq(subject)
-    regions = mergeoverlaps(AlignedRegionCollection(full_subjectseq, diamondhits))
-    concatenatedregions = concatenate(regions)
-
-    #subject = "test/07673_Alitta_succinea.fa"
-    #query = "/media/feli/Storage/nereidid_data/2020-01-02_allgenetics/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
-    #subject_db = Patchwork.diamond_makeblastdb(subject, MAKEBLASTDB_FLAGS)
-    # diamondresults = Patchwork.diamond_blastx(query, subject_db, DIAMONDFLAGS)
-    #diamondresults = "test/c_australis_x_07673.tsv"
-    #hits = Patchwork.readblastTSV(diamondresults)
-    # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
-    full_subjectseq = Patchwork.get_fullseq(subject)
-    regions = Patchwork.AlignedRegionCollection(full_subjectseq, hits)
-    mergedregions = Patchwork.mergeoverlaps(regions)
-    mergedregions.referencesequence
-    concatenation = Patchwork.concatenate(mergedregions)
-    finalalignment = Patchwork.maskgaps(concatenation).aln
-    Patchwork.occupancy(finalalignment)
+    println(diamondhits)
+    println(divrem(length(diamondhits[1].querysequence), 3))
+    println(isequal(diamondhits[1].querysequence, diamondhits[1].full_querysequence))
+    println(diamondhits[1].queryframe)
+    println(divrem(length(diamondhits[2].querysequence), 3))
+    println(diamondhits[2].queryframe)
+    println(divrem(length(diamondhits[3].querysequence), 3))
+    println(diamondhits[3].queryframe)
+    # AlignedRegion(DiamondSearchResult) gives the following error: 
+    # LongRNASeq length is not divisible by three. Cannot translate. 
+    # It's the frameshifts in the CIGAR String, indicated by / (+1) and \ (-1).
+    regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
+    mergedregions = mergeoverlaps(regions)
+    concatenation = concatenate(mergedregions)
+    finalalignment = maskgaps(concatenation).aln
+    alignmentoccupancy = occupancy(finalalignment)
+    println(finalalignment)
+    println(alignmentoccupancy)
 end
+
+main()
 
 end # module
