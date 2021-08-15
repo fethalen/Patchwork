@@ -3,7 +3,7 @@ Patchwork
 
 > **Note:** Patchwork is an unfinished product, currently under construction 🚧.
 
-### Overview
+### Introduction
 
 Fragmented genome assemblies—resulting from low-coverage sequencing or similar
 technologies—can prove problematic in downstream analyses, when used in a
@@ -17,6 +17,10 @@ resulting homologs are directly suitable for use in phylogenomic studies.
 * Stitch overlapping or gappy sequences together based on a reference
 * Find homologs, even in distantly-related taxa
 * Written in [Julia](https://julialang.org/) and utilizing [DIAMOND](https://github.com/bbuchfink/diamond) for maximum speed 🐇
+
+### Graphical Overview
+
+![Graphical Overview](https://github.com/fethalen/patchwork/blob/main/overview.png?raw=true)
 
 ### Installation
 
