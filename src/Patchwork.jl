@@ -188,14 +188,6 @@ function main()
 
     diamondparams = collectdiamondflags(args)
     diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
-    println(diamondhits)
-    println(divrem(length(diamondhits[1].querysequence), 3))
-    println(isequal(diamondhits[1].querysequence, diamondhits[1].full_querysequence))
-    println(diamondhits[1].queryframe)
-    println(divrem(length(diamondhits[2].querysequence), 3))
-    println(diamondhits[2].queryframe)
-    println(divrem(length(diamondhits[3].querysequence), 3))
-    println(diamondhits[3].queryframe)
     # AlignedRegion(DiamondSearchResult) gives the following error: 
     # LongRNASeq length is not divisible by three. Cannot translate. 
     # It's the frameshifts in the CIGAR String, indicated by / (+1) and \ (-1).
