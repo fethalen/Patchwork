@@ -41,7 +41,6 @@ Filters non-unique results and results with less percent identity than
 function readblastTSV(path::AbstractString; delimiter='@')::Array{DiamondSearchResult,1}
     results = CSV.File(path; header=FIELDS, delim='\t') |> DataFrame
     unique!(results)
-    println(results) # TODO: DELETE
 
     # qsplits = [(qotu=first, qid=last)
     #     for (first, last) in splitdescription(Vector{String}(results.qseqid); delimiter)] |>
