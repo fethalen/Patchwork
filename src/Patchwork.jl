@@ -1,4 +1,5 @@
 # julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_dna.fa" --reference "../test/07673_Alitta_succinea.fa" 
+# diamond blastx --query 07673_dna.fa --db 07673_ASUC.dmnd --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
 
@@ -24,18 +25,16 @@ include("multiplesequencealignment.jl")
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
 const DIAMONDDB = "dmnd"
 const EMPTY = String[]
-# handled by PATCHWORK --threads option?
+const FRAMESHIFT = "15"
+const DIAMONDMODE = "--ultra-sensitive"
+const MIN_DIAMONDVERSION = "2.0.3"
+const MATRIX = "BLOSUM62"
+# --threads option handled by PATCHWORK
 #const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
 # --evalue defaults to 0.001 in DIAMOND
 # --threads defaults to autodetect in DIAMOND
 #const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
 #                      "--ultra-sensitive", Sys.CPU_THREADS]
-const FRAMESHIFT = "15"
-const DIAMONDMODE = "--ultra-sensitive"
-const MIN_DIAMONDVERSION = "2.0.3"
-const MATRIX = "BLOSUM62"
-#const GAPOPEN = 11
-#const GAPEXTEND = 1
 
 """
     printinfo()
@@ -98,7 +97,6 @@ function parse_parameters()
             required = true
             arg_type = String
             metavar = "PATH"
-        # TODO: Doesn't have to be a flag, check filetype extension instead
         #"--database"
         #    help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
         #    arg_type = Bool
@@ -121,22 +119,18 @@ function parse_parameters()
         "--matrix"
             help = "Set scoring matrix"
             arg_type = String
-            #default = MATRIX
             metavar = "NAME"
         "--custom-matrix"
             help = "Use a custom scoring matrix"
             arg_type = String
-            #default = "BLOSUM62"
             metavar = "PATH"
         "--gapopen"
             help = "Set gap open penalty (positive integer)"
             arg_type = Int64
-            #default = 11
             metavar = "NUMBER"
         "--gapextend"
             help = "Set gap extension penalty (positive integer)"
             arg_type = Int64
-            #default = 1
             metavar = "NUMBER"
         "--seq-type"
             help = "Type of input alignments (nucleotide/aminoacid; default: autodetect)"
@@ -177,25 +171,16 @@ function main()
     reference = args["reference"]
     query = args["contigs"]
 
-    # for FASTA files: diamond makedb
-    # for BLAST databases: diamond prepdb
-    #if !isdiamonddatabase(reference)
-    #    reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
-    #else
-    #    reference_db = reference
-    #end
     reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
-
     diamondparams = collectdiamondflags(args)
     diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
-    # AlignedRegion(DiamondSearchResult) gives the following error: 
-    # LongRNASeq length is not divisible by three. Cannot translate. 
-    # It's the frameshifts in the CIGAR String, indicated by / (+1) and \ (-1).
+
     regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
     mergedregions = mergeoverlaps(regions)
     concatenation = concatenate(mergedregions)
     finalalignment = maskgaps(concatenation).aln
     alignmentoccupancy = occupancy(finalalignment)
+
     println(finalalignment)
     println(alignmentoccupancy)
 end
