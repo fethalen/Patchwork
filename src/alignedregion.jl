@@ -39,15 +39,55 @@ struct AlignedRegion
 
     function AlignedRegion(result::DiamondSearchResult)
         if result.queryframe > 0
-            alignment = BioAlignments.PairwiseAlignment(BioSequences.translate(result.querysequence),
-                result.subjectsequence, result.cigar)
+            alignment = BioAlignments.PairwiseAlignment(BioSequences.translate(result.querysequence, 
+                result.cigar), result.subjectsequence, cleancigar(result.cigar))
         else
-            alignment = BioAlignments.PairwiseAlignment(BioSequences.translate(BioSequences.reverse_complement(result.querysequence)),
-                result.subjectsequence, result.cigar)
+            alignment = BioAlignments.PairwiseAlignment(BioSequences.translate(BioSequences.reverse_complement(
+                result.querysequence), result.cigar), result.subjectsequence, cleancigar(result.cigar))
         end
         return new(alignment, result.subjectstart, result.subjectend, result.queryid,
                    result.querystart, result.queryend, result.queryframe)
     end
+end
+
+"""
+    cleancigar(cigar::AbstractString)
+
+Clean a CIGAR String from any frameshiftig operations `/` and `\\`, to be used in a 
+`BioAlignments.PairwiseAlignment`.
+"""
+function cleancigar(cigar::AbstractString)::String
+    parts = collect(eachmatch(r"\d+[MIDNSHP=X]", cigar))
+    buffer = IOBuffer()
+
+    for part in parts
+        print(buffer, part.match)
+    end
+    
+    return String(take!(buffer))
+end
+
+function BioSequences.translate(sequence::BioSequences.LongDNASeq, cigar::AbstractString)::BioSequences.LongAminoAcidSeq
+    anchors = collect(eachmatch(r"[/\\MIDNSHP=X]", cigar))
+    positions = collect(eachmatch(r"\d+", cigar))
+    index = 1
+    buffer = IOBuffer()
+
+    for (p, anchor) in zip(positions, anchors)
+        pos = parse(Int64, p.match)
+        # anchor corresponding to pos * 1 nucleotide
+        if isequal(anchor.match, "\\") 
+            index += pos
+        elseif isequal(anchor.match, "/")
+            index -= pos
+        # anchor corresponding to pos * nucleotide triplet (if DELETE, don't change index):
+        elseif !BioAlignments.isdeleteop(BioAlignments.Operation(anchor.match[1]))
+            print(buffer, sequence[index:index + 3 * pos - 1])
+            index += 3 * pos
+        end
+    end
+
+    return BioSequences.translate(BioSequences.LongDNASeq(String(take!(buffer))))
 end
 
 function Base.show(io::IO, region::AlignedRegion)
