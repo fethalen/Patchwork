@@ -1,13 +1,13 @@
-# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_dna.fa" --reference "../test/07673_Alitta_succinea.fa" 
+# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" 
 # diamond blastx --query 07673_dna.fa --db 07673_ASUC.dmnd --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
 
-import Pkg
-Pkg.add("ArgParse")
-Pkg.add("BioSymbols")
+#import Pkg
+#Pkg.add("ArgParse")
+#Pkg.add("BioSymbols")
 
-using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS
+using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using ArgParse
 using DataFrames
 
@@ -185,6 +185,19 @@ function main()
     println(alignmentoccupancy)
 end
 
-main()
+function julia_main()::Cint # a C signed int (^= Int32 in Julia)
+    try
+        main()
+    catch
+        Base.invokelatest(Base.display_error, Base.catch_stack())
+        return 1
+    end
+
+    return 0
+end
+
+if length(ARGS) >= 2
+    julia_main()
+end
 
 end # module
