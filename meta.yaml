@@ -1,0 +1,25 @@
+{% set name = "Patchwork" %}
+{% set version = "0.1.2" %}
+
+package:
+ name: {{ name|lower }}
+ version: {{ version }}
+	
+source: 
+ git_url: https://github.com/fethalen/Patchwork.git
+ git_rev: main
+	
+build:
+ number: 0
+
+requirements:
+  build: 
+    - {{ compiler('c') }}
+    - julia>=1.0
+  host:
+  run:
+
+about:
+ summary: "Alignment-based exon retrieval and concatenation"
+
+		
