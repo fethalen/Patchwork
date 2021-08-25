@@ -6,8 +6,8 @@ package:
  version: {{ version }}
 	
 source: 
- git_url: https://github.com/fethalen/Patchwork.git
- git_rev: main
+ url: https://github.com/fethalen/Patchwork/tree/occupancy/archive
+ sha256: 0765a047b7b719f0a7fe520141cbda9e7691e516e05568cdf9e86c271ac3cd69
 	
 build:
  number: 0
