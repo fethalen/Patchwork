@@ -33,7 +33,7 @@ end
 
 Read the contents of a tabular BLAST output into an array of `DiamondSearchResult`s.
 Filters non-unique results and results with less percent identity than
-`min_percentidentity`. Adhear to the following BLAST `-outfmt`:
+`min_percentidentity`. Adhere to the following BLAST `-outfmt`:
 
 `6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore
  qframe sseq seq`
@@ -130,11 +130,18 @@ Runs `diamond makedb` on the provided `reference` FASTA sequence. May include
 optional `flags` such as `["--taxonnodes"]`.
 """
 function diamond_makeblastdb(reference::AbstractString, flags=[])
-    db_file, db_io = mktemp()
-    makedb_cmd = pipeline(`diamond makedb --in $reference -d $db_file $flags`)
-    run(makedb_cmd)
-    close(db_io)
-    return db_file
+    if isdiamonddatabase(reference)
+        return reference
+    elseif isfastafile(reference)
+        db_file, db_io = mktemp()
+        makedb_cmd = pipeline(`diamond makedb --in $reference -d $db_file $flags`)
+        run(makedb_cmd)
+        close(db_io)
+        return db_file
+    else # BLAST DB
+        makedb_cmd = pipeline(`diamond prepdb -d $reference`)
+        return reference
+    end
 end
 
 function queryid(result::DiamondSearchResult, speciesdelimiter='@')::String
@@ -151,4 +158,16 @@ end
 
 function subjectids(results::Vector{DiamondSearchResult}, speciesdelimiter='@')::Vector{String}
     return map(result -> subjectid(result), results)
+end
+
+function isfastafile(path::AbstractString)::Bool
+    splits = split(path, ".")
+    length(splits) > 1 && last(splits) in FASTAEXTENSIONS && return true
+    return false
+end
+
+function isdiamonddatabase(path::AbstractString)::Bool
+    splits = split(path, ".")
+    length(splits) > 1 && isequal(last(splits), DIAMONDDB) && return true
+    return false
 end

@@ -1,6 +1,6 @@
 # Provides basic types for working with the general feature format (GFF).
 
-import Base
+#import Base
 import GFF3
 import DataFrames
 using GenomicFeatures

@@ -1,26 +1,40 @@
+# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" 
+# diamond blastx --query 07673_dna.fa --db 07673_ASUC.dmnd --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
+
 module Patchwork
 
-using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS
+#import Pkg
+#Pkg.add("ArgParse")
+#Pkg.add("BioSymbols")
+
+using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using ArgParse
 using DataFrames
 
 include("alignment.jl")
+include("alignmentconcatenation.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
 include("alignmentconcatenation.jl")
 include("diamond.jl")
 include("fasta.jl")
+include("checkinput.jl")
 include("sequencerecord.jl")
 include("multiplesequencealignment.jl")
 
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
-const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
-                      "--ultra-sensitive", Sys.CPU_THREADS]
+const DIAMONDDB = "dmnd"
+const EMPTY = String[]
+const FRAMESHIFT = "15"
+const DIAMONDMODE = "--ultra-sensitive"
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
-const GAPOPEN = 11
-const GAPEXTEND = 1
+# --threads option handled by PATCHWORK
+#const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
+# --evalue defaults to 0.001 in DIAMOND
+# --threads defaults to autodetect in DIAMOND
+#const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
+#                      "--ultra-sensitive", Sys.CPU_THREADS]
 
 """
     printinfo()
@@ -52,8 +66,15 @@ function min_diamondversion(minversion::AbstractString)
         return false
     end
     versioncmd = read(`diamond --version`, String)
-    diamondversion = last(split(versioncmd))
-    return diamondversion >= minversion
+    diamondversion_vector = split(last(split(versioncmd)), ".")
+    minversion_vector = split(minversion, ".")
+    for (v, r) in zip(diamondversion_vector, minversion_vector)
+        version = parse(Int64, v)
+        required = parse(Int64, r)
+        version < required && return false
+        version > required && return true
+    end
+    return true
 end
 
 function parse_parameters()
@@ -72,15 +93,14 @@ function parse_parameters()
             metavar = "PATH"
         "--reference"
             help = "Either (1) a path to one or more sequences in FASTA format or (2) a
-                    subject database (set --database)"
+                    subject database (DIAMOND or BLAST database)."
             required = true
             arg_type = String
             metavar = "PATH"
-        # TODO: Doesn't have to be a flag, check filetype extension instead
-        "--database"
-            help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
-            arg_type = Bool
-            action = :store_true
+        #"--database"
+        #    help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
+        #    arg_type = Bool
+        #    action = :store_true
         "--output-dir"
             help = "Write output files to this directory"
             arg_type = String
@@ -89,27 +109,28 @@ function parse_parameters()
         "--diamond-flags"
             help = "Flags sent to DIAMOND"
             arg_type = Vector
-            default = DIAMONDFLAGS
+            default = EMPTY
+            metavar = "LIST"
+        "--makedb-flags"
+            help = "Flags sent to DIAMOND makedb"
+            arg_type = Vector
+            default = EMPTY
             metavar = "LIST"
         "--matrix"
             help = "Set scoring matrix"
             arg_type = String
-            default = "BLOSUM62"
             metavar = "NAME"
         "--custom-matrix"
             help = "Use a custom scoring matrix"
             arg_type = String
-            default = "BLOSUM62"
             metavar = "PATH"
         "--gapopen"
             help = "Set gap open penalty (positive integer)"
             arg_type = Int64
-            default = 11
             metavar = "NUMBER"
         "--gapextend"
             help = "Set gap extension penalty (positive integer)"
             arg_type = Int64
-            default = 1
             metavar = "NUMBER"
         "--seq-type"
             help = "Type of input alignments (nucleotide/aminoacid; default: autodetect)"
@@ -145,20 +166,38 @@ function main()
                $MIN_DIAMONDVERSION to run")
     end
 
-    subject = "test/07673_Alitta_succinea.fa"
-    query = "/media/feli/Storage/nereidid_data/2020-01-02_allgenetics/ceratonereis_australis/spades_assembly/K125/Ceratonereis_australis_k125_spades_assembly/final_contigs.fasta"
-    subject_db = Patchwork.diamond_makeblastdb(subject, MAKEBLASTDB_FLAGS)
-    # diamondresults = Patchwork.diamond_blastx(query, subject_db, DIAMONDFLAGS)
-    diamondresults = "test/c_australis_x_07673.tsv"
-    hits = Patchwork.readblastTSV(diamondresults)
-    # querymsa = Patchwork.selectsequences(query, Patchwork.queryids(hits, speciesdelimiter))
-    full_subjectseq = Patchwork.get_fullseq(subject)
-    regions = Patchwork.AlignedRegionCollection(full_subjectseq, hits)
-    mergedregions = Patchwork.mergeoverlaps(regions)
-    mergedregions.referencesequence
-    concatenation = Patchwork.concatenate(mergedregions)
-    finalalignment = Patchwork.maskgaps(concatenation).aln
-    Patchwork.occupancy(finalalignment)
+    setpatchworkflags!(args)
+    setdiamondflags!(args)
+    reference = args["reference"]
+    query = args["contigs"]
+
+    reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
+    diamondparams = collectdiamondflags(args)
+    diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
+
+    regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
+    mergedregions = mergeoverlaps(regions)
+    concatenation = concatenate(mergedregions)
+    finalalignment = maskgaps(concatenation).aln
+    alignmentoccupancy = occupancy(finalalignment)
+
+    println(finalalignment)
+    println(alignmentoccupancy)
+end
+
+function julia_main()::Cint # a C signed int (^= Int32 in Julia)
+    try
+        main()
+    catch
+        Base.invokelatest(Base.display_error, Base.catch_stack())
+        return 1
+    end
+
+    return 0
+end
+
+if length(ARGS) >= 2
+    julia_main()
 end
 
 end # module
