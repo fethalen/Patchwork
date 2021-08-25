@@ -1,4 +1,4 @@
-include("src/gffrecordcollection.jl")
+include("gffrecordcollection.jl")
 
 TESTDIR = "/home/clara/Desktop/SHK-Job_Bleidorn/Projects/BioFmtSpecimens/GFF3/"
 TESTFILES = [TESTDIR * "au9_scaffold_subset.gff3", TESTDIR * "directives.gff3", 
