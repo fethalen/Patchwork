@@ -2,6 +2,7 @@ println("#######################################################################
 println("START COMPILE ################################################################")
 println("##############################################################################")
 using Pkg
+Pkg.add("PackageCompiler")
 using PackageCompiler
 
 #projectenv = ARGS[1] #"/home/clara/Data/GAU/Work/Projects/Patchwork"
