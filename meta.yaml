@@ -6,9 +6,8 @@ package:
  version: {{ version }}
 	
 source: 
- path: "/home/clara/Patchwork/src"
- folder: "src"
-	
+ git_url: https://github.com/fethalen/Patchwork.git
+
 build:
  number: 0
 
@@ -19,7 +18,12 @@ requirements:
   host:
   run:
 
+test:
+  commmands: 
+    - patchwork --help
+
 about:
- summary: "Alignment-based exon retrieval and concatenation"
+  home: https://github.com/fethalen/Patchwork
+  summary: "Alignment-based exon retrieval and concatenation"
 
 		
