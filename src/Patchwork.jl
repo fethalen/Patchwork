@@ -2,6 +2,7 @@ module Patchwork
 
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS
 using ArgParse
+using BioAlignments
 using DataFrames
 
 include("alignment.jl")
@@ -16,7 +17,7 @@ include("multiplesequencealignment.jl")
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
 const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
 const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
-                      "--ultra-sensitive", Sys.CPU_THREADS]
+                      Sys.CPU_THREADS, "--ultra-sensitive"]
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
 const GAPOPEN = 11
@@ -76,7 +77,6 @@ function parse_parameters()
             required = true
             arg_type = String
             metavar = "PATH"
-        # TODO: Doesn't have to be a flag, check filetype extension instead
         "--database"
             help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
             arg_type = Bool
@@ -111,17 +111,6 @@ function parse_parameters()
             arg_type = Int64
             default = 1
             metavar = "NUMBER"
-        "--seq-type"
-            help = "Type of input alignments (nucleotide/aminoacid; default: autodetect)"
-            default = "autodetect"
-            arg_type = String
-            metavar = "NAME"
-        "--species-delimiter"
-            help = "Used to separate the species name from the rest of the identifier in
-                    FASTA records (default: @)"
-            default = '@'
-            arg_type = Char
-            metavar = "CHARACTER"
         "--threads"
             help = "Number of threads to utilize (default: all available)"
             default = Sys.CPU_THREADS
@@ -157,8 +146,31 @@ function main()
     mergedregions = Patchwork.mergeoverlaps(regions)
     mergedregions.referencesequence
     concatenation = Patchwork.concatenate(mergedregions)
-    finalalignment = Patchwork.maskgaps(concatenation).aln
-    Patchwork.occupancy(finalalignment)
+    finalalignment_result = Patchwork.maskgaps(concatenation)
+    finalalignment = finalalignment_result.aln
+
+    contigids = [record.queryid.id for record in mergedregions.records]
+
+    results = DataFrame(id = String[],
+                            length_reference = Int[],
+                            length_query = Int[],
+                            contigs = Int[],
+                            matches = Int[],
+                            mismatches = Int[],
+                            deletions = Int[],
+                            occupancy = Float64[])
+
+    result = [mergedregions.referencesequence.id.id,
+              length(mergedregions.referencesequence),
+              length(finalalignment.a.seq),
+              length(mergedregions),
+              BioAlignments.count_matches(finalalignment),
+              BioAlignments.count_mismatches(finalalignment),
+              BioAlignments.count_deletions(finalalignment),
+              round(Patchwork.occupancy(finalalignment), digits=2)]
+
+    push!(results, result)
+    print(results)
 end
 
 end # module
