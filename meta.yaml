@@ -2,24 +2,29 @@
 {% set version = "0.1.2" %}
 
 package:
- name: {{ name|lower }}
- version: {{ version }}
+  name: {{ name|lower }}
+  version: {{ version }}
 	
 source: 
- url: https://github.com/fethalen/Patchwork/tree/occupancy/archive/patchwork-0.1.2.tar.bz2
- sha256: 60199577ca6b37a4d837d6eeb256058901551fbe6d5b996fa58277ca4af9771c
-	
+ git_url: https://github.com/fethalen/Patchwork.git 
+
 build:
  number: 0
 
 requirements:
   build: 
     - {{ compiler('c') }}
-    - julia>=1.0
-  host:
-  run:
+    #- julia>=1.0
+
+test:
+  commmands: 
+    - patchwork --help
 
 about:
- summary: "Alignment-based exon retrieval and concatenation"
+  home: https://github.com/fethalen/Patchwork
+  doc_url: https://github.com/fethalen/Patchwork#readme
+  license: GPL3
+  license_file: LICENSE
+  summary: "Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
 
 		
