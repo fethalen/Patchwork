@@ -2,6 +2,7 @@ println("#######################################################################
 println("START COMPILE ################################################################")
 println("##############################################################################")
 using Pkg
+Pkg.add("PackageCompiler")
 using PackageCompiler
 
 #projectenv = ARGS[1] #"/home/clara/Data/GAU/Work/Projects/Patchwork"
@@ -37,7 +38,7 @@ println("#######################################################################
 println("##############################################################################")
 println("CREATE APP ###################################################################")
 println("##############################################################################")
-create_app(projectdirectory, outdirectory; precompile_statements_file = precompiled, 
+create_app(projectdirectory, outdirectory; precompile_statements_file = precompiled,
            force = true)
 println("##############################################################################")
 println("DONE ######## ################################################################")

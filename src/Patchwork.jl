@@ -170,9 +170,32 @@ function main()
     concatenation = concatenate(mergedregions)
     finalalignment = maskgaps(concatenation).aln
     alignmentoccupancy = occupancy(finalalignment)
+    concatenation = Patchwork.concatenate(mergedregions)
+    finalalignment_result = Patchwork.maskgaps(concatenation)
+    finalalignment = finalalignment_result.aln
 
-    println(finalalignment)
-    println(alignmentoccupancy)
+    contigids = [record.queryid.id for record in mergedregions.records]
+
+    results = DataFrame(id = String[],
+                            length_reference = Int[],
+                            length_query = Int[],
+                            contigs = Int[],
+                            matches = Int[],
+                            mismatches = Int[],
+                            deletions = Int[],
+                            occupancy = Float64[])
+
+    result = [mergedregions.referencesequence.id.id,
+              length(mergedregions.referencesequence),
+              length(finalalignment.a.seq),
+              length(mergedregions),
+              BioAlignments.count_matches(finalalignment),
+              BioAlignments.count_mismatches(finalalignment),
+              BioAlignments.count_deletions(finalalignment),
+              round(Patchwork.occupancy(finalalignment), digits=2)]
+
+    push!(results, result)
+    show(results)
 end
 
 function julia_main()::Cint # a C signed int (^= Int32 in Julia)
