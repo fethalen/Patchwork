@@ -45,8 +45,8 @@ Print basic information about this program.
 function printinfo()
     about = """
     P A T C H W O R K
-    Developed by: Felix Thalen and Clara Köhne
-    Dept. for Animal Evolution and Biodiversity, University of Göttingen
+    Developed by: Felix Thalén and Clara G. Köhne
+    © Dept. for Animal Evolution and Biodiversity, University of Göttingen
 
     """
     println(about)
@@ -171,7 +171,9 @@ function main()
     finalalignment = maskgaps(concatenation).aln
     alignmentoccupancy = occupancy(finalalignment)
     concatenation = Patchwork.concatenate(mergedregions)
-    finalalignment_result = Patchwork.maskgaps(concatenation)
+    maskedalignment = Patchwork.maskgaps(concatenation)
+    finalalignment = Patchwork.pairalign_global(maskedalignment.aln.a.seq,
+        mergedregions.referencesequence.sequencedata)
     finalalignment = finalalignment_result.aln
 
     contigids = [record.queryid.id for record in mergedregions.records]
