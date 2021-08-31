@@ -60,7 +60,7 @@ function concatenate(first::BioAlignments.PairwiseAlignment,
     firstreference = first.b
     secondreference = second.b
 
-    @assert Alphabet(firstquery) == Alphabet(secondquery) """Can only concatenate 
+    @assert Alphabet(firstquery) == Alphabet(secondquery) """Can only concatenate
     alignments of same type (i.e. protein-protein alignments)."""
 
     joinedquery = typeof(firstquery)(firstquery, secondquery)
@@ -85,7 +85,7 @@ function concatenate(alignments::AbstractVector{<:BioAlignments.PairwiseAlignmen
     queries = [alignment.a.seq for alignment in alignments]
     references = [alignment.b for alignment in alignments]
 
-    @assert eltype(queries) == typeof(queries[1]) """Can only concatenate alignments of 
+    @assert eltype(queries) == typeof(queries[1]) """Can only concatenate alignments of
     same type (i.e. protein-protein alignments)."""
 
     joinedquery = typeof(queries[1])(queries...)
@@ -268,6 +268,9 @@ function maskgaps(alignment::BioAlignments.PairwiseAlignment)::BioAlignments.Pai
             gapcount += lastinsertion - firstinsertion + 1
             maskedseq *= alignment.a.seq[from:to]
             from = anchors[i].seqpos + 1
+        elseif i == lastindex(anchors)
+            to = anchors[i].seqpos
+            maskedseq *= alignment.a.seq[from:to]
         end
     end
     return pairalign_global(maskedseq, alignment.b)
