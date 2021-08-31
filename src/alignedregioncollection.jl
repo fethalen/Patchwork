@@ -240,30 +240,6 @@ function Base.sort(regions::AlignedRegionCollection)
 end
 
 """
-    removeredundant(regions)
-
-Delete
-"""
-# function removeredundant(regions::AlignedRegionCollection)
-# end
-
-# TODO: function layout
-# function layout(regions::AlignedRegionCollection)
-# end
-
-# TODO: function consensus
-# function consensus(regions::AlignedRegionCollection)
-#     order = sortperm(map(region -> (leftposition(region), rightposition(region)), uniqueregions))
-#     for i in order
-#         println(count)
-#         regiona = uniqueregions[i]
-#         regionb = uniqueregions[i + 1]
-#         println((leftposition(regiona), rightposition(regiona)))
-#         println(precedes(regiona, regionb))
-#     end
-# end
-
-"""
     isnucleotide(region)
 
 Returns true if this region collection's first `record` consists of nucleotides.
