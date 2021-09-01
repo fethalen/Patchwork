@@ -21,6 +21,11 @@ mutable struct MultipleSequenceAlignment
         )::MultipleSequenceAlignment
         return new("", alignments)
     end
+
+    function MultipleSequenceAlignment(name::String, alignments::Vector{SequenceRecord}
+        )::MultipleSequenceAlignment
+        return new(name, alignments)
+    end
 end
 
 function addalignment!(msa::MultipleSequenceAlignment,
@@ -196,7 +201,7 @@ function mktemp_fasta(alignment::MultipleSequenceAlignment;
     removehyphens && ungap!(alignment)
 
     for record in alignment.sequences
-        write(io, *('>', record.otu, '@', record.identifier,
+        write(io, *('>', record.id.id,
                     '\n', String(record.sequencedata), '\n'))
     end
     close(io)
@@ -210,7 +215,7 @@ function mktemp_fasta(alignment::AbstractString;
     removehyphens && ungap!(msa)
 
     for record in msa.sequences
-        write(io, *('>', record.otu, '@', record.identifier,
+        write(io, *('>', record.id.id,
                     '\n', String(record.sequencedata), '\n'))
     end
     close(io)
