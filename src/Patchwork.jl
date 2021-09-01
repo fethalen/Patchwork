@@ -162,6 +162,11 @@ function main()
     reference = args["reference"]
     query = args["contigs"]
     outdir = args["output-dir"]
+    alignmentoutput = outdir * "/alignments.txt"
+    fastaoutput = outdir * "/queries_out.fa"
+    diamondoutput = outdir * "/diamond_results.txv"
+
+    cleanfiles(alignmentoutput, fastaoutput)
 
     reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
@@ -169,22 +174,17 @@ function main()
     # in case of multiple query files: pool first? else: 
     #for query in queries
     diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
-    writeblastTSV(outdir * "/diamond_results.tsv", diamondhits; header = true)
+    writeblastTSV(diamondoutput, diamondhits; header = true)
 
     regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
     referencename = regions.referencesequence.id
     mergedregions = mergeoverlaps(regions)
     concatenation = concatenate(mergedregions)
     finalalignment = maskgaps(concatenation).aln
-    alignmentoccupancy = occupancy(finalalignment)
-    write_alignmentfile(outdir * "/alignments.txt", referencename, length(regions), 
-                        finalalignment)
+    write_alignmentfile(alignmentoutput, referencename, length(regions), finalalignment)
     # only one query species allowed in regions!: 
-    write_fasta(outdir * "/queries_out.fa", regions.records[1].queryid, finalalignment)
+    write_fasta(fastaoutput, regions.records[1].queryid, finalalignment)
     #end
-
-    println(finalalignment)
-    println(alignmentoccupancy)
 end
 
 function julia_main()::Cint
