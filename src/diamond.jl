@@ -144,6 +144,19 @@ function diamond_makeblastdb(reference::AbstractString, flags=[])
     end
 end
 
+"""
+Runs `diamond makedb` on the provided `reference` FASTA sequence. May include
+optional `flags` such as `["--taxonnodes"]`.
+"""
+function diamond_makeblastdb(alignment::MultipleSequenceAlignment, flags=[])
+    db_file, db_io = mktemp()
+    reference = mktemp_fasta(alignment)
+    makedb_cmd = pipeline(`diamond makedb --in $reference -d $db_file $flags`)
+    run(makedb_cmd)
+    close(db_io)
+    return db_file
+end
+
 function queryid(result::DiamondSearchResult, speciesdelimiter='@')::String
     return *(result.queryotu, speciesdelimiter, result.queryid)
 end
