@@ -73,8 +73,9 @@ columns (default: `'\\t'`). No header is added when `header` is set to `false`.
 """
 function writeblastTSV(path::AbstractString, results::Array{DiamondSearchResult,1};
                        delimiter='\t', header=false)::AbstractString
-    CSV.write(path, select!(DataFrames.DataFrame(results), Not(subjectotu)),
-              delim=delimiter, writeheader=header)
+    dataframe = select!(DataFrames.DataFrame(results), Not(:subjectid))
+    dataframe[!, :queryid] = map(result -> result.queryid.id, results)
+    CSV.write(path, dataframe, delim=delimiter, writeheader=header)
     return path
 end
 
@@ -133,10 +134,11 @@ function diamond_makeblastdb(reference::AbstractString, flags=[])
     if isdiamonddatabase(reference)
         return reference
     elseif isfastafile(reference)
-        db_file, db_io = mktemp()
-        makedb_cmd = pipeline(`diamond makedb --in $reference -d $db_file $flags`)
+        #db_file, db_io = mktemp()
+        db_file = flags[nextind(flags, findfirst(isequal("-d"), flags))]
+        makedb_cmd = pipeline(`diamond makedb --in $reference $flags`)
         run(makedb_cmd)
-        close(db_io)
+        #close(db_io)
         return db_file
     else # BLAST DB
         makedb_cmd = pipeline(`diamond prepdb -d $reference`)
