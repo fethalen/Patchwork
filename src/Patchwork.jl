@@ -161,7 +161,7 @@ function main()
     reference = args["reference"]
     query = args["contigs"]
 
-    reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
+    reference_db = diamond_makeblastdb(ungap(readmsa(reference)), args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
     diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
 
