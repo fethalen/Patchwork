@@ -164,15 +164,21 @@ function main()
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/alignments.txt"
     fastaoutput = outdir * "/queries_out.fa"
-    diamondoutput = outdir * "/diamond_results.txv"
+    diamondoutput = outdir * "/diamond_results.tsv"
 
-    cleanfiles(alignmentoutput, fastaoutput)
+    mkpath(outdir)
+    if isfile(alignmentoutput) || isfile(fastaoutput)
+        answer = warn_overwrite()
+        isequal(answer, "n") && return
+        cleanfiles(alignmentoutput, fastaoutput) # if answer == 'y'
+    end
 
     reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
     
-    # in case of multiple query files: pool first? else: 
-    #for query in queries
+    index = 1 # dummy count for working with only one query file
+    # in case of multiple query files: pool first? else process each file separately: 
+    #for (index, query) in enumerate(queries)
     diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
     writeblastTSV(diamondoutput, diamondhits; header = true)
 
@@ -181,7 +187,7 @@ function main()
     mergedregions = mergeoverlaps(regions)
     concatenation = concatenate(mergedregions)
     finalalignment = maskgaps(concatenation).aln
-    write_alignmentfile(alignmentoutput, referencename, length(regions), finalalignment)
+    write_alignmentfile(alignmentoutput, referencename, length(regions), finalalignment, index)
     # only one query species allowed in regions!: 
     write_fasta(fastaoutput, regions.records[1].queryid, finalalignment)
     #end
