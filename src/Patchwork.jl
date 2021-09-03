@@ -46,8 +46,8 @@ Print basic information about this program.
 function printinfo()
     about = """
     P A T C H W O R K
-    Developed by: Felix Thalen and Clara Köhne
-    Dept. for Animal Evolution and Biodiversity, University of Göttingen
+    Developed by: Felix Thalén and Clara G. Köhne
+    © Dept. for Animal Evolution and Biodiversity, University of Göttingen
 
     """
     println(about)
@@ -186,11 +186,9 @@ function main()
         isequal(answer, "n") && return
         cleanfiles(alignmentoutput, fastaoutput)        # if answer == 'y'
     end
-
     println("Creating DIAMOND database...")
     reference_db = diamond_makeblastdb(reference, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
-    
     index = 1 # dummy count for working with only one query file
     # in case of multiple query files: pool first? else process each file separately: 
     #for (index, query) in enumerate(queries)
