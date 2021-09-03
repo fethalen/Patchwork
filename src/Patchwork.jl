@@ -203,17 +203,13 @@ function main()
     println("DIAMOND BLASTX search done.")
     println("Doing Patchwork Magic...")
     diamondhits = readblastTSV(diamondsearch)
-    println(diamondhits)
     writeblastTSV(diamondoutput, diamondhits; header = true)
     regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
-    println(regions)
     referencename = regions.referencesequence.id
     mergedregions = mergeoverlaps(regions)
-    println(mergedregions)
     concatenation = concatenate(mergedregions)
-    println(concatenation)
     finalalignment = maskgaps(concatenation).aln
-    println(finalalignment)
+    println("Patchwork Magic done.")
     println("Saving output...")
     write_alignmentfile(alignmentoutput, referencename, length(regions), finalalignment, index)
     # only one query species allowed in regions!: 
