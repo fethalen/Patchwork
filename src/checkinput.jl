@@ -273,8 +273,8 @@ function setdiamondflags!(args::Dict{String, Any})      # Run this fct. before t
     checkmakedbflags(args)
     if !isdiamonddatabase(args["reference"])
         push!(args["makedb-flags"], "--threads", string(args["threads"]))
-        isfastafile(args["reference"]) && push!(args["makedb-flags"], "-d", 
-                    args["output-dir"] * "/database.dmnd")
+        #isfastafile(args["reference"]) && push!(args["makedb-flags"], "-d", 
+        #            args["output-dir"] * DATABASE)
     end
 end
 
