@@ -39,8 +39,8 @@ end
 Base.length(alignment::SequenceRecord) = length(alignment.sequencedata)
 
 function BioSequences.ungap(alignment::SequenceRecord)::SequenceRecord
-    return SequenceRecord(alignment.otu, alignment.identifier,
-                           ungap(alignment.sequencedata))
+    return SequenceRecord(alignment.id,
+                          ungap(alignment.sequencedata))
 end
 
 function BioSequences.ungap!(alignment::SequenceRecord)::SequenceRecord
