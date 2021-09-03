@@ -107,9 +107,14 @@ automatically before the BLAST search.
 function diamond_blastx(query::AbstractString, subject::AbstractString,
                         flags=[])::AbstractString
     results_file, results_io = mktemp()
-    write(results_file, join(FIELDS, '\t') * '\n')
+    #results_file = outdir * "/" * DIAMONDOUTPUT
+    logfile = outdir * "/diamond_blastx.log"
+    #open(results_file, "w") do io                       # This doesn't work, DIAMOND overwrites it. 
+    #    write(io, join(FIELDS, '\t') * '\n')
+    #end
     diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
-                            --outfmt $OUTPUT_FORMAT --out $results_file`)
+                            --outfmt $OUTPUT_FORMAT --out $results_file`, stdout=logfile, 
+                            stderr=logfile, append=true)
     run(diamond_cmd)
     close(results_io)
     return results_file
@@ -130,18 +135,23 @@ end
 Runs `diamond makedb` on the provided `reference` FASTA sequence. May include
 optional `flags` such as `["--taxonnodes"]`.
 """
-function diamond_makeblastdb(reference::AbstractString, flags=[])
+function diamond_makeblastdb(reference::AbstractString,  outdir::AbstractString, flags=[])
     if isdiamonddatabase(reference)
         return reference
     elseif isfastafile(reference)
         #db_file, db_io = mktemp()
-        db_file = flags[nextind(flags, findfirst(isequal("-d"), flags))]
-        makedb_cmd = pipeline(`diamond makedb --in $reference $flags`)
+        #db_file = flags[flags, findfirst(isequal("-d"), flags) + 1]
+        db_file = outdir * "/" * DATABASE
+        logfile = outdir * "/diamond_makedb.log"
+        makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`, 
+                              stdout=logfile, stderr=logfile, append=true)
         run(makedb_cmd)
         #close(db_io)
         return db_file
     else # BLAST DB
-        makedb_cmd = pipeline(`diamond prepdb -d $reference`)
+        logfile = outdir * "/diamond_prepdb.log"
+        makedb_cmd = pipeline(`diamond prepdb -d $reference`, stdout=logfile, 
+                               stderr=logfile, append=true)
         return reference
     end
 end
