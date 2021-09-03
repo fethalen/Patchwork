@@ -5,7 +5,7 @@ const WIDTH = 80
 
 function cleanfiles(files::String...)
     for file in files
-        isfile(file) && run(pipeline(`rm $file`))
+        isfile(file) && rm(file)
     end
 end
 
