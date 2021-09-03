@@ -1,5 +1,5 @@
 # julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa"
-# diamond blastx --query 07673_dna.fa --db 07673_ASUC.dmnd --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
+# diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
 
@@ -37,6 +37,12 @@ const MATRIX = "BLOSUM62"
 # --threads defaults to autodetect in DIAMOND
 #const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
 #                      "--ultra-sensitive", Sys.CPU_THREADS]
+
+const ALIGNMENTOUTPUT = "alignments.txt"
+const FASTAOUTPUT = "queries_out.fa"
+const DIAMONDOUTPUT = "diamond_results.tsv"
+const DATABASE = "database.dmnd"
+const STATSOUTPUT = "stats.csv"
 
 """
     printinfo()
@@ -162,26 +168,31 @@ function main()
     reference = args["reference"]
     query = args["contigs"]
     outdir = args["output-dir"]
-    alignmentoutput = outdir * "/alignments.txt"
-    fastaoutput = outdir * "/queries_out.fa"
-    diamondoutput = outdir * "/diamond_results.tsv"
+    alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
+    fastaoutput = outdir * "/" * FASTAOUTPUT
+    diamondoutput = outdir * "/" * DIAMONDOUTPUT
 
     mkpath(outdir)
-    if isfile(alignmentoutput) || isfile(fastaoutput)
+    if isfile(alignmentoutput) || isfile(fastaoutput)   # !isempty(readdir(outdir))
         answer = warn_overwrite()
         isequal(answer, "n") && return
-        cleanfiles(alignmentoutput, fastaoutput) # if answer == 'y'
+        cleanfiles(alignmentoutput, fastaoutput)        # if answer == 'y'
     end
 
-    reference_db = diamond_makeblastdb(reference, args["makedb-flags"])
+    println("Creating DIAMOND database...")
+    reference_db = diamond_makeblastdb(reference, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
     
     index = 1 # dummy count for working with only one query file
     # in case of multiple query files: pool first? else process each file separately: 
     #for (index, query) in enumerate(queries)
-    diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
+    println("Performing DIAMOND BLASTX search...")
+    diamondsearch = diamond_blastx(query, reference_db, diamondparams)
+    println("DIAMOND BLASTX search done.")
+    diamondhits = readblastTSV(diamondsearch)
     writeblastTSV(diamondoutput, diamondhits; header = true)
 
+    println("Doing Patchwork Magic...")
     regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
     referencename = regions.referencesequence.id
     mergedregions = mergeoverlaps(regions)
