@@ -1,11 +1,7 @@
-# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa"
+# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultrasensitive"
 # diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
-
-#import Pkg
-#Pkg.add("ArgParse")
-#Pkg.add("BioSymbols")
 
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using ArgParse
@@ -28,13 +24,13 @@ include("sequencerecord.jl")
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
 const DIAMONDDB = "dmnd"
 const EMPTY = String[]
-const FRAMESHIFT = "15"
-const DIAMONDMODE = "--ultra-sensitive"
-const MIN_DIAMONDVERSION = "2.0.3"
-const MATRIX = "BLOSUM62"
 # --evalue defaults to 0.001 in DIAMOND
 # --threads defaults to autodetect in DIAMOND
 const DIAMONDFLAGS = ["--ultra-sensitive"]
+# const FRAMESHIFT = 15
+# const DIAMONDMODE = "--ultra-sensitive"
+const MIN_DIAMONDVERSION = "2.0.3"
+const MATRIX = "BLOSUM62"
 
 const ALIGNMENTOUTPUT = "alignments.txt"
 const FASTAOUTPUT = "queries_out.fa"
