@@ -10,6 +10,7 @@ module Patchwork
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using ArgParse
 using BioAlignments
+using CSV
 using FASTX
 using DataFrames
 
@@ -31,12 +32,9 @@ const FRAMESHIFT = "15"
 const DIAMONDMODE = "--ultra-sensitive"
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
-# --threads option handled by PATCHWORK
-#const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
 # --evalue defaults to 0.001 in DIAMOND
 # --threads defaults to autodetect in DIAMOND
-#const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
-#                      "--ultra-sensitive", Sys.CPU_THREADS]
+const DIAMONDFLAGS = ["--ultra-sensitive"]
 
 const ALIGNMENTOUTPUT = "alignments.txt"
 const FASTAOUTPUT = "queries_out.fa"
@@ -85,6 +83,10 @@ function min_diamondversion(minversion::AbstractString)
     return true
 end
 
+function ArgParse.parse_item(::Type{T}, argument::AbstractString) where T <: AbstractVector
+    convert(T, split(argument, " "))
+end
+
 function parse_parameters()
     overview = """
     Alignment-based Exon Retrieval and Concatenation with Phylogenomic
@@ -116,12 +118,12 @@ function parse_parameters()
             metavar = "PATH"
         "--diamond-flags"
             help = "Flags sent to DIAMOND"
-            arg_type = Vector
-            default = EMPTY
+            arg_type = Vector{String}
+            default = DIAMONDFLAGS
             metavar = "LIST"
         "--makedb-flags"
             help = "Flags sent to DIAMOND makedb"
-            arg_type = Vector
+            arg_type = Vector{String}
             default = EMPTY
             metavar = "LIST"
         "--matrix"
@@ -171,6 +173,16 @@ function main()
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT
     diamondoutput = outdir * "/" * DIAMONDOUTPUT
+    statsoutput = outdir * "/" * STATSOUTPUT
+    statistics = DataFrame(id = String[],
+                           length_reference = Int[],
+                           length_query = Int[],
+                           regions = Int[],
+                           contigs = Int[],
+                           matches = Int[],
+                           mismatches = Int[],
+                           deletions = Int[],
+                           occupancy = Float64[])
 
     mkpath(outdir)
     if isfile(alignmentoutput) || isfile(fastaoutput)   # !isempty(readdir(outdir))
@@ -187,20 +199,36 @@ function main()
     # in case of multiple query files: pool first? else process each file separately: 
     #for (index, query) in enumerate(queries)
     println("Performing DIAMOND BLASTX search...")
-    diamondsearch = diamond_blastx(query, reference_db, diamondparams)
+    diamondsearch = diamond_blastx(query, reference_db, outdir, diamondparams)
     println("DIAMOND BLASTX search done.")
-    diamondhits = readblastTSV(diamondsearch)
-    writeblastTSV(diamondoutput, diamondhits; header = true)
-
     println("Doing Patchwork Magic...")
+    diamondhits = readblastTSV(diamondsearch)
+    println(diamondhits)
+    writeblastTSV(diamondoutput, diamondhits; header = true)
     regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
+    println(regions)
     referencename = regions.referencesequence.id
     mergedregions = mergeoverlaps(regions)
+    println(mergedregions)
     concatenation = concatenate(mergedregions)
+    println(concatenation)
     finalalignment = maskgaps(concatenation).aln
+    println(finalalignment)
+    println("Saving output...")
     write_alignmentfile(alignmentoutput, referencename, length(regions), finalalignment, index)
     # only one query species allowed in regions!: 
     write_fasta(fastaoutput, regions.records[1].queryid, finalalignment)
+    stats_row = [mergedregions.referencesequence.id.id,
+                 length(mergedregions.referencesequence),
+                 length(finalalignment.a.seq),
+                 length(mergedregions),
+                 length(unique(map(region -> region.queryid.id, mergedregions))),
+                 BioAlignments.count_matches(finalalignment),
+                 BioAlignments.count_mismatches(finalalignment),
+                 BioAlignments.count_deletions(finalalignment),
+                 round(occupancy(finalalignment), digits=2)]
+    push!(statistics, stats_row)
+    CSV.write(statsoutput, statistics, delim = "\t")
     #end
 end
 
