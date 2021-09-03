@@ -114,7 +114,7 @@ function diamond_blastx(query::AbstractString, subject::AbstractString,
     #end
     diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
                             --outfmt $OUTPUT_FORMAT --out $results_file`, stdout=logfile, 
-                            stderr=logfile, append=true)
+                            stderr=logfile)
     run(diamond_cmd)
     close(results_io)
     return results_file
@@ -144,14 +144,14 @@ function diamond_makeblastdb(reference::AbstractString,  outdir::AbstractString,
         db_file = outdir * "/" * DATABASE
         logfile = outdir * "/diamond_makedb.log"
         makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`, 
-                              stdout=logfile, stderr=logfile, append=true)
+                              stdout=logfile, stderr=logfile)
         run(makedb_cmd)
         #close(db_io)
         return db_file
     else # BLAST DB
         logfile = outdir * "/diamond_prepdb.log"
         makedb_cmd = pipeline(`diamond prepdb -d $reference`, stdout=logfile, 
-                               stderr=logfile, append=true)
+                               stderr=logfile)
         return reference
     end
 end
