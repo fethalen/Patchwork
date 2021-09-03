@@ -105,7 +105,7 @@ file names (as strings), or `MultipleSequenceAlignment`. May include optional
 automatically before the BLAST search.
 """
 function diamond_blastx(query::AbstractString, subject::AbstractString,
-                        flags=[])::AbstractString
+                        outdir::AbstractString, flags=[])::AbstractString
     results_file, results_io = mktemp()
     #results_file = outdir * "/" * DIAMONDOUTPUT
     logfile = outdir * "/diamond_blastx.log"
