@@ -163,35 +163,35 @@ function checkgappenalty(matrix::AbstractString, gapopen::Int64, gapextend::Int6
 end
 
 # Diamond Flags ###########################################################################
+#
+#"""
+#    set_diamondframeshift!(args::Dict{String, Any})
+#
+#If no `--frameshift` argument was provided in `--diamond-flags`, set the `--frameshift` 
+#to the default value.
+#"""
+#function set_diamondframeshift!(args::Dict{String, Any})
+#    if !("--frameshift" in args["diamond-flags"])
+#        push!(args["diamond-flags"], "--frameshift", FRAMESHIFT)
+#    end
+#end
 
-"""
-    set_diamondframeshift!(args::Dict{String, Any})
-
-If no `--frameshift` argument was provided in `--diamond-flags`, set the `--frameshift` 
-to the default value.
-"""
-function set_diamondframeshift!(args::Dict{String, Any})
-    if !("--frameshift" in args["diamond-flags"])
-        push!(args["diamond-flags"], "--frameshift", FRAMESHIFT)
-    end
-end
-
-"""
-    set_diamondmode!(args::Dict{String, Any})
-
-If none of `--fast`, `--mid-sensitive`, `--sensitive`, `--more-sensitive`, `very-sensitive` 
-or `--ultra-sensitive` was set in `--diamond-flags`, set the mode to the default value.
-"""
-function set_diamondmode!(args::Dict{String, Any})
-    if !("--fast" in args["diamond-flags"] 
-         || "--mid-sensitive" in args["diamond-flags"]
-         || "--sensitive" in args["diamond-flags"] 
-         || "--more-sensitive" in args["diamond-flags"] 
-         || "--very-sensitive" in args["diamond-flags"]
-         || "--ultra-sensitive" in args["diamond-flags"])   
-        push!(args["diamond-flags"], DIAMONDMODE)
-    end
-end
+#"""
+#    set_diamondmode!(args::Dict{String, Any})
+#
+#If none of `--fast`, `--mid-sensitive`, `--sensitive`, `--more-sensitive`, `very-sensitive` 
+#or `--ultra-sensitive` was set in `--diamond-flags`, set the mode to the default value.
+#"""
+#function set_diamondmode!(args::Dict{String, Any})
+#    if !("--fast" in args["diamond-flags"] 
+#         || "--mid-sensitive" in args["diamond-flags"]
+#         || "--sensitive" in args["diamond-flags"] 
+#         || "--more-sensitive" in args["diamond-flags"] 
+#         || "--very-sensitive" in args["diamond-flags"]
+#         || "--ultra-sensitive" in args["diamond-flags"])   
+#        push!(args["diamond-flags"], DIAMONDMODE)
+#    end
+#end
 
 """
     checkdiamondflags(args::Dict{String, Any})
@@ -202,7 +202,7 @@ separate place.
 """
 function checkdiamondflags(args::Dict{String, Any})
     flags = args["diamond-flags"]
-    isempty(flags) && return
+    #isempty(flags) && return
     patchworkflags = ["matrix", "custom-matrix", "gapopen", "gapextend", "threads"]
     for flag in patchworkflags
         if flag in flags
@@ -268,11 +268,13 @@ error if any conflicts are detected.
 """
 function setdiamondflags!(args::Dict{String, Any})      # Run this fct. before the next.
     checkdiamondflags(args)
-    set_diamondframeshift!(args)
-    set_diamondmode!(args)
+    #set_diamondframeshift!(args)
+    #set_diamondmode!(args)
     checkmakedbflags(args)
     if !isdiamonddatabase(args["reference"])
         push!(args["makedb-flags"], "--threads", string(args["threads"]))
+        #isfastafile(args["reference"]) && push!(args["makedb-flags"], "-d", 
+        #            args["output-dir"] * DATABASE)
     end
 end
 

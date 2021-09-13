@@ -1,41 +1,42 @@
-# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa"
-# diamond blastx --query 07673_dna.fa --db 07673_ASUC.dmnd --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
+# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultrasensitive"
+# diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
-
-#import Pkg
-#Pkg.add("ArgParse")
-#Pkg.add("BioSymbols")
 
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using ArgParse
 using BioAlignments
+using CSV
+using FASTX
 using DataFrames
 
 include("alignment.jl")
-include("alignmentconcatenation.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
 include("alignmentconcatenation.jl")
+include("checkinput.jl")
 include("diamond.jl")
 include("fasta.jl")
-include("checkinput.jl")
-include("sequencerecord.jl")
 include("multiplesequencealignment.jl")
+include("output.jl")
+include("sequencerecord.jl")
 
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
 const DIAMONDDB = "dmnd"
 const EMPTY = String[]
-const FRAMESHIFT = "15"
-const DIAMONDMODE = "--ultra-sensitive"
-const MIN_DIAMONDVERSION = "2.0.3"
-const MATRIX = "BLOSUM62"
-# --threads option handled by PATCHWORK
-#const MAKEBLASTDB_FLAGS = ["--threads", Sys.CPU_THREADS]
 # --evalue defaults to 0.001 in DIAMOND
 # --threads defaults to autodetect in DIAMOND
-#const DIAMONDFLAGS = ["--evalue", 0.001, "--frameshift", 15, "--threads",
-#                      "--ultra-sensitive", Sys.CPU_THREADS]
+const DIAMONDFLAGS = ["--ultra-sensitive"]
+# const FRAMESHIFT = 15
+# const DIAMONDMODE = "--ultra-sensitive"
+const MIN_DIAMONDVERSION = "2.0.3"
+const MATRIX = "BLOSUM62"
+
+const ALIGNMENTOUTPUT = "alignments.txt"
+const FASTAOUTPUT = "queries_out.fa"
+const DIAMONDOUTPUT = "diamond_results.tsv"
+const DATABASE = "database.dmnd"
+const STATSOUTPUT = "stats.csv"
 
 """
     printinfo()
@@ -78,6 +79,10 @@ function min_diamondversion(minversion::AbstractString)
     return true
 end
 
+function ArgParse.parse_item(::Type{T}, argument::AbstractString) where T <: AbstractVector
+    convert(T, split(argument, " "))
+end
+
 function parse_parameters()
     overview = """
     Alignment-based Exon Retrieval and Concatenation with Phylogenomic
@@ -109,12 +114,12 @@ function parse_parameters()
             metavar = "PATH"
         "--diamond-flags"
             help = "Flags sent to DIAMOND"
-            arg_type = Vector
-            default = EMPTY
+            arg_type = Vector{String}
+            default = DIAMONDFLAGS
             metavar = "LIST"
         "--makedb-flags"
             help = "Flags sent to DIAMOND makedb"
-            arg_type = Vector
+            arg_type = Vector{String}
             default = EMPTY
             metavar = "LIST"
         "--matrix"
@@ -160,49 +165,64 @@ function main()
     setdiamondflags!(args)
     reference = args["reference"]
     query = args["contigs"]
+    outdir = args["output-dir"]
+    alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
+    fastaoutput = outdir * "/" * FASTAOUTPUT
+    diamondoutput = outdir * "/" * DIAMONDOUTPUT
+    statsoutput = outdir * "/" * STATSOUTPUT
+    statistics = DataFrame(id = String[],
+                           length_reference = Int[],
+                           length_query = Int[],
+                           regions = Int[],
+                           contigs = Int[],
+                           matches = Int[],
+                           mismatches = Int[],
+                           deletions = Int[],
+                           occupancy = Float64[])
 
-    reference_db = diamond_makeblastdb(ungap(readmsa(reference)), args["makedb-flags"])
+    mkpath(outdir)
+    if isfile(alignmentoutput) || isfile(fastaoutput)   # !isempty(readdir(outdir))
+        answer = warn_overwrite()
+        isequal(answer, "n") && return
+        cleanfiles(alignmentoutput, fastaoutput)        # if answer == 'y'
+    end
+    println("Creating DIAMOND database...")
+    reference_db = diamond_makeblastdb(reference, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
-    diamondhits = readblastTSV(diamond_blastx(query, reference_db, diamondparams))
-
+    index = 1 # dummy count for working with only one query file
+    # in case of multiple query files: pool first? else process each file separately: 
+    #for (index, query) in enumerate(queries)
+    println("Performing DIAMOND BLASTX search...")
+    diamondsearch = diamond_blastx(query, reference_db, outdir, diamondparams)
+    println("DIAMOND BLASTX search done.")
+    println("Doing Patchwork Magic...")
+    diamondhits = readblastTSV(diamondsearch)
+    writeblastTSV(diamondoutput, diamondhits; header = true)
     regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
+    referencename = regions.referencesequence.id
     mergedregions = mergeoverlaps(regions)
     concatenation = concatenate(mergedregions)
     finalalignment = maskgaps(concatenation).aln
-    alignmentoccupancy = occupancy(finalalignment)
-    concatenation = Patchwork.concatenate(mergedregions)
-    maskedalignment = Patchwork.maskgaps(concatenation)
-    finalalignment = Patchwork.pairalign_global(maskedalignment.aln.a.seq,
-        mergedregions.referencesequence.sequencedata)
-    finalalignment = finalalignment_result.aln
-
-    contigids = [record.queryid.id for record in mergedregions.records]
-
-    results = DataFrame(id = String[],
-                            length_reference = Int[],
-                            length_query = Int[],
-                            regions = Int[],
-                            contigs = Int[],
-                            matches = Int[],
-                            mismatches = Int[],
-                            deletions = Int[],
-                            occupancy = Float64[])
-
-    result = [mergedregions.referencesequence.id.id,
-              length(mergedregions.referencesequence),
-              length(finalalignment.a.seq),
-              length(mergedregions),
-              length(unique(map(region -> region.queryid.id, mergedregions))),
-              BioAlignments.count_matches(finalalignment),
-              BioAlignments.count_mismatches(finalalignment),
-              BioAlignments.count_deletions(finalalignment),
-              round(Patchwork.occupancy(finalalignment), digits=2)]
-
-    push!(results, result)
-    show(results)
+    println("Patchwork Magic done.")
+    println("Saving output...")
+    write_alignmentfile(alignmentoutput, referencename, length(regions), finalalignment, index)
+    # only one query species allowed in regions!: 
+    write_fasta(fastaoutput, regions.records[1].queryid, finalalignment)
+    stats_row = [mergedregions.referencesequence.id.id,
+                 length(mergedregions.referencesequence),
+                 length(finalalignment.a.seq),
+                 length(mergedregions),
+                 length(unique(map(region -> region.queryid.id, mergedregions))),
+                 BioAlignments.count_matches(finalalignment),
+                 BioAlignments.count_mismatches(finalalignment),
+                 BioAlignments.count_deletions(finalalignment),
+                 round(occupancy(finalalignment), digits=2)]
+    push!(statistics, stats_row)
+    CSV.write(statsoutput, statistics, delim = "\t")
+    #end
 end
 
-function julia_main()::Cint # a C signed int (^= Int32 in Julia)
+function julia_main()::Cint
     try
         main()
     catch
