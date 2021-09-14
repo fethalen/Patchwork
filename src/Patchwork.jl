@@ -1,7 +1,12 @@
-# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultrasensitive"
+# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultra-sensitive" --output-dir "../test/patchwork-output"
 # diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
+
+# ERROR occurred in bioconda build test; proposed solution was:
+import Pkg
+Pkg.add("ArgParse")
+##############################################################
 
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using ArgParse
@@ -98,13 +103,19 @@ function parse_parameters()
             arg_type = String
             metavar = "PATH"
         "--reference"
-            help = "Either (1) a path to one or more sequences in FASTA format or (2) a
-                    subject database (DIAMOND or BLAST database)."
+            help = "Either (1) a path to one or more sequences in FASTA format, (2) a 
+                    subject database (DIAMOND or BLAST database), or (3) a DIAMOND output 
+                    file in tabular format."
             required = true
             arg_type = String
             metavar = "PATH"
         #"--database"
         #    help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
+        #    arg_type = Bool
+        #    action = :store_true
+        #"--tabular"
+        #    help = "When specified, \"--reference\" points to a tabular DIAMOND output 
+        #            file generated in a previous Patchwork run."
         #    arg_type = Bool
         #    action = :store_true
         "--output-dir"
@@ -186,6 +197,7 @@ function main()
         isequal(answer, "n") && return
         cleanfiles(alignmentoutput, fastaoutput)        # if answer == 'y'
     end
+    #if !args["tabular"]
     println("Creating DIAMOND database...")
     reference_db = diamond_makeblastdb(reference, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
