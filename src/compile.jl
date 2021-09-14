@@ -6,7 +6,10 @@
 # (no precompilation necessary) 
 # conda build .
 
-using Pkg
+import Pkg
+# ERROR occurred in bioconda build test; proposed solution was:
+Pkg.add("PackageCompiler")
+##############################################################
 using PackageCompiler
 
 projectdirectory = ARGS[1]
