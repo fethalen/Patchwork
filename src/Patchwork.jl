@@ -4,8 +4,8 @@
 module Patchwork
 
 # ERROR occurred in bioconda build test; proposed solution was:
-import Pkg
-Pkg.add("ArgParse")
+#import Pkg
+#Pkg.add("ArgParse")
 ##############################################################
 
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
