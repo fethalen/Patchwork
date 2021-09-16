@@ -7,10 +7,9 @@
 # conda build .
 
 import Pkg
-# ERROR occurred in bioconda build test; proposed solution was:
-#Pkg.add("PackageCompiler") # HERE
-##############################################################
 using PackageCompiler
+# ERROR occurred in bioconda build test (FAILED to precompile LibSSH2_jll); maybe this helps:
+using LibSSH2_jll
 
 println("START") # HERE
 projectdirectory = ARGS[1]
