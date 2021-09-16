@@ -107,11 +107,7 @@ automatically before the BLAST search.
 function diamond_blastx(query::AbstractString, subject::AbstractString,
                         outdir::AbstractString, flags=[])::AbstractString
     results_file, results_io = mktemp()
-    #results_file = outdir * "/" * DIAMONDOUTPUT
     logfile = outdir * "/diamond_blastx.log"
-    #open(results_file, "w") do io                       # This doesn't work, DIAMOND overwrites it. 
-    #    write(io, join(FIELDS, '\t') * '\n')
-    #end
     diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
                             --outfmt $OUTPUT_FORMAT --out $results_file`, stdout=logfile, 
                             stderr=logfile)
@@ -121,14 +117,22 @@ function diamond_blastx(query::AbstractString, subject::AbstractString,
 end
 
 function diamond_blastx(query::MultipleSequenceAlignment, subject::AbstractString,
-                        flags=[])::AbstractString
-    results_file, results_io = mktemp()
-    write(results_file, join(FIELDS, '\t') * '\n')
-    diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
-                            --outfmt $OUTPUT_FORMAT --out $results_file`)
-    run(diamond_cmd)
-    close(results_io)
-    return results_file
+                        outdir::AbstractString, flags=[])::AbstractString
+    querypath = mktemp_fasta(query)
+    return diamond_blastx(querypath, subject, outdir, flags)
+end
+
+function diamond_blastx(query::AbstractString, subject::MultipleSequenceAlignment,
+                        outdir::AbstractString, flags=[])::AbstractString
+    subjectpath = mktemp_fasta(subject)
+    return diamond_blastx(query, subjectpath, outdir, flags)
+end
+
+function diamond_blastx(query::MultipleSequenceAlignment, subject::MultipleSequenceAlignment,
+                        outdir::AbstractString, flags=[])::AbstractString
+    querypath = mktemp_fasta(query)
+    subjectpath = mktemp_fasta(subject)
+    return diamond_blastx(querypath, subjectpath, outdir, flags)
 end
 
 """
