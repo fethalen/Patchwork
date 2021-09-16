@@ -139,18 +139,16 @@ end
 Runs `diamond makedb` on the provided `reference` FASTA sequence. May include
 optional `flags` such as `["--taxonnodes"]`.
 """
-function diamond_makeblastdb(reference::AbstractString,  outdir::AbstractString, flags=[])
+function diamond_makeblastdb(reference::AbstractString,  outdir::AbstractString, flags=[]
+                            )::AbstractString
     if isdiamonddatabase(reference)
         return reference
     elseif isfastafile(reference)
-        #db_file, db_io = mktemp()
-        #db_file = flags[flags, findfirst(isequal("-d"), flags) + 1]
         db_file = outdir * "/" * DATABASE
         logfile = outdir * "/diamond_makedb.log"
         makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`, 
                               stdout=logfile, stderr=logfile)
         run(makedb_cmd)
-        #close(db_io)
         return db_file
     else # BLAST DB
         logfile = outdir * "/diamond_prepdb.log"
@@ -160,16 +158,14 @@ function diamond_makeblastdb(reference::AbstractString,  outdir::AbstractString,
     end
 end
 
-"""
-Runs `diamond makedb` on the provided `reference` FASTA sequence. May include
-optional `flags` such as `["--taxonnodes"]`.
-"""
-function diamond_makeblastdb(alignment::MultipleSequenceAlignment, flags=[])
-    db_file, db_io = mktemp()
+function diamond_makeblastdb(alignment::MultipleSequenceAlignment, outdir::AbstractString, 
+                             flags=[])::AbstractString
     reference = mktemp_fasta(alignment)
-    makedb_cmd = pipeline(`diamond makedb --in $reference -d $db_file $flags`)
+    db_file = outdir * "/" * DATABASE
+    logfile = outdir * "/diamond_makedb.log"
+    makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`, 
+                          stdout=logfile, stderr=logfile)
     run(makedb_cmd)
-    close(db_io)
     return db_file
 end
 
