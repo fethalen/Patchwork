@@ -3,11 +3,6 @@
 
 module Patchwork
 
-# ERROR occurred in bioconda build test; proposed solution was:
-#import Pkg
-#Pkg.add("ArgParse")
-##############################################################
-
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using ArgParse
 using BioAlignments
@@ -38,8 +33,8 @@ const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
 
 const ALIGNMENTOUTPUT = "alignments.txt"
-const FASTAOUTPUT = "queries_out.fa"
-const DIAMONDOUTPUT = "diamond_results.tsv"
+const FASTAOUTPUT = "queries_out"               # directory
+const DIAMONDOUTPUT = "diamond_results"         # directory
 const DATABASE = "database.dmnd"
 const STATSOUTPUT = "stats.csv"
 
@@ -101,6 +96,7 @@ function parse_parameters()
             help = "Path to one or more sequences in FASTA format"
             required = true
             arg_type = String
+            nargs = '+'
             metavar = "PATH"
         "--reference"
             help = "Either (1) a path to one or more sequences in FASTA format, (2) a 
@@ -108,6 +104,7 @@ function parse_parameters()
                     file in tabular format."
             required = true
             arg_type = String
+            nargs = '+' 
             metavar = "PATH"
         #"--database"
         #    help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
@@ -174,12 +171,14 @@ function main()
 
     setpatchworkflags!(args)
     setdiamondflags!(args)
-    reference = args["reference"]
-    query = args["contigs"]
+
+    references = pool(args["reference"]...)                 # MultipleSequenceAlignment
+    references_file = mktemp_fasta(references)
+    queries = pool(args["contigs"]...)                      # MultipleSequenceAlignment
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
-    fastaoutput = outdir * "/" * FASTAOUTPUT
-    diamondoutput = outdir * "/" * DIAMONDOUTPUT
+    fastaoutput = outdir * "/" * FASTAOUTPUT                # directory
+    diamondoutput = outdir * "/" * DIAMONDOUTPUT            # directory
     statsoutput = outdir * "/" * STATSOUTPUT
     statistics = DataFrame(id = String[],
                            length_reference = Int[],
@@ -192,35 +191,41 @@ function main()
                            occupancy = Float64[])
 
     mkpath(outdir)
-    if isfile(alignmentoutput) || isfile(fastaoutput)   # !isempty(readdir(outdir))
+    mkpath(diamondoutput)
+    mkpath(fastaoutput)
+    if isfile(statsoutput) || isfile(alignmentoutput) || (isdir(fastaoutput) 
+                                                          && !isempty(readdir(fastaoutput)))
         answer = warn_overwrite()
         isequal(answer, "n") && return
         cleanfiles(alignmentoutput, fastaoutput)        # if answer == 'y'
     end
-    #if !args["tabular"]
+
     println("Creating DIAMOND database...")
-    reference_db = diamond_makeblastdb(reference, outdir, args["makedb-flags"])
+    reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
-    index = 1 # dummy count for working with only one query file
-    # in case of multiple query files: pool first? else process each file separately: 
-    #for (index, query) in enumerate(queries)
     println("Performing DIAMOND BLASTX search...")
-    diamondsearch = diamond_blastx(query, reference_db, outdir, diamondparams)
+    diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
     println("DIAMOND BLASTX search done.")
+
     println("Doing Patchwork Magic...")
-    diamondhits = readblastTSV(diamondsearch)
-    writeblastTSV(diamondoutput, diamondhits; header = true)
-    regions = AlignedRegionCollection(get_fullseq(reference), diamondhits)
-    referencename = regions.referencesequence.id
-    mergedregions = mergeoverlaps(regions)
-    concatenation = concatenate(mergedregions)
-    finalalignment = maskgaps(concatenation).aln
-    println("Patchwork Magic done.")
-    println("Saving output...")
-    write_alignmentfile(alignmentoutput, referencename, length(regions), finalalignment, index)
-    # only one query species allowed in regions!: 
-    write_fasta(fastaoutput, regions.records[1].queryid, finalalignment)
-    stats_row = [mergedregions.referencesequence.id.id,
+    allhits = readblastTSV(diamondsearch)
+    referenceids = unique(map(hit -> hit.subjectid.id, allhits))
+    
+    for (index, id) in enumerate(referenceids)
+        println("Processing DIAMOND results for " * string(index) * ". reference sequence...")
+        diamondhits = filter(hit -> isequal(id, hit.subjectid.id), allhits)
+        writeblastTSV(*(diamondoutput, "/", id, ".tsv"), diamondhits; header = true)
+        regions = AlignedRegionCollection(selectsequence(references_file, id), diamondhits)
+        # assuming all queries belong to same species: 
+        mergedregions = mergeoverlaps(regions)
+        concatenation = concatenate(mergedregions)
+        finalalignment = maskgaps(concatenation).aln
+
+        println("Saving output...")
+        write_alignmentfile(alignmentoutput, id, length(regions), finalalignment, index)
+        write_fasta(*(fastaoutput, "/", id, ".fa"), regions.records[1].queryid, 
+                    finalalignment)
+        stats_row = [mergedregions.referencesequence.id.id,
                  length(mergedregions.referencesequence),
                  length(finalalignment.a.seq),
                  length(mergedregions),
@@ -229,9 +234,10 @@ function main()
                  BioAlignments.count_mismatches(finalalignment),
                  BioAlignments.count_deletions(finalalignment),
                  round(occupancy(finalalignment), digits=2)]
-    push!(statistics, stats_row)
+        push!(statistics, stats_row)
+    end
     CSV.write(statsoutput, statistics, delim = "\t")
-    #end
+    println("Patchwork Magic done.")
 end
 
 function julia_main()::Cint
