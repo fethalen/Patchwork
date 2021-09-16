@@ -221,3 +221,12 @@ function mktemp_fasta(alignment::AbstractString;
     close(io)
     return path
 end
+
+function pool(files::AbstractString...; name::AbstractString="")::MultipleSequenceAlignment
+    allsequences = Vector{SequenceRecord}()
+    for file in files
+        tmp = readmsa(file)
+        append!(allsequences, (ungap(tmp)).sequences)
+    end
+    return MultipleSequenceAlignment(name, allsequences)
+end
