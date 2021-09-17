@@ -9,6 +9,7 @@ using BioAlignments
 using CSV
 using FASTX
 using DataFrames
+using Statistics
 
 include("alignment.jl")
 include("alignedregion.jl")
@@ -36,7 +37,7 @@ const ALIGNMENTOUTPUT = "alignments.txt"
 const FASTAOUTPUT = "queries_out"               # directory
 const DIAMONDOUTPUT = "diamond_results"         # directory
 const DATABASE = "database.dmnd"
-const STATSOUTPUT = "stats.csv"
+const STATSOUTPUT = "statistics"                # diretory
 
 """
     printinfo()
@@ -48,7 +49,6 @@ function printinfo()
     P A T C H W O R K
     Developed by: Felix Thalén and Clara G. Köhne
     © Dept. for Animal Evolution and Biodiversity, University of Göttingen
-
     """
     println(about)
     return
@@ -62,13 +62,8 @@ provided `minversion`. Returns false if the version number is lower or DIAMOND i
 all.
 """
 function min_diamondversion(minversion::AbstractString)
-    try
-        run(`diamond --version`)
-    catch
-        return false
-    end
-    versioncmd = read(`diamond --version`, String)
-    diamondversion_vector = split(last(split(versioncmd)), ".")
+    version = get_diamondversion()
+    diamondversion_vector = split(version, ".")
     minversion_vector = split(minversion, ".")
     for (v, r) in zip(diamondversion_vector, minversion_vector)
         version = parse(Int64, v)
@@ -77,6 +72,16 @@ function min_diamondversion(minversion::AbstractString)
         version > required && return true
     end
     return true
+end
+
+function get_diamondversion()::AbstractString
+    try
+        run(`diamond --version`, wait=false)
+    catch
+        return false
+    end
+    versioncmd = read(`diamond --version`, String)
+    return last(split(versioncmd))
 end
 
 function ArgParse.parse_item(::Type{T}, argument::AbstractString) where T <: AbstractVector
@@ -112,7 +117,7 @@ function parse_parameters()
         #    action = :store_true
         #"--tabular"
         #    help = "When specified, \"--reference\" points to a tabular DIAMOND output 
-        #            file generated in a previous Patchwork run."
+        #            file generated in a previous Patchwork run"
         #    arg_type = Bool
         #    action = :store_true
         "--output-dir"
@@ -156,6 +161,10 @@ function parse_parameters()
             default = 0
             arg_type = Int64
             metavar = "NUMBER"
+        "--overwrite"
+            help = "Overwrite output from previous runs without warning"
+            arg_type = Bool
+            action = :store_true 
     end
 
     return ArgParse.parse_args(settings)
@@ -168,18 +177,25 @@ function main()
         error("Patchwork requires \'diamond\' with a version number above
                $MIN_DIAMONDVERSION to run")
     end
+    println("Search Engine: DIAMOND version " * get_diamondversion())
+    println()
 
     setpatchworkflags!(args)
     setdiamondflags!(args)
-
-    references = pool(args["reference"]...)                 # MultipleSequenceAlignment
-    references_file = mktemp_fasta(references)
+  
+    if length(args["reference"]) == 1 
+        references_file = args["reference"][1]
+    else                                                         # assume >1 .fa file provided
+        #references = pool(args["reference"]...)                 # MultipleSequenceAlignment
+        #references_file = mktemp_fasta(references)  
+        references_file = mktemp_fasta(pool(args["reference"]...))
+    end
     queries = pool(args["contigs"]...)                      # MultipleSequenceAlignment
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT                # directory
     diamondoutput = outdir * "/" * DIAMONDOUTPUT            # directory
-    statsoutput = outdir * "/" * STATSOUTPUT
+    statsoutput = outdir * "/" * STATSOUTPUT                # directory
     statistics = DataFrame(id = String[],
                            length_reference = Int[],
                            length_query = Int[],
@@ -190,18 +206,22 @@ function main()
                            deletions = Int[],
                            occupancy = Float64[])
 
-    mkpath(outdir)
+    if (isfile(alignmentoutput) || isdir(statsoutput) && !isempty(readdir(statsoutput))
+        || (isdir(fastaoutput) && !isempty(readdir(fastaoutput))))
+        if !args["overwrite"]
+            answer = warn_overwrite()
+            isequal(answer, "n") && return
+        end
+        cleanfiles(alignmentoutput, statsoutput, fastaoutput)
+    end
+    #mkpath(outdir)
     mkpath(diamondoutput)
     mkpath(fastaoutput)
-    if isfile(statsoutput) || isfile(alignmentoutput) || (isdir(fastaoutput) 
-                                                          && !isempty(readdir(fastaoutput)))
-        answer = warn_overwrite()
-        isequal(answer, "n") && return
-        cleanfiles(alignmentoutput, fastaoutput)        # if answer == 'y'
-    end
+    mkpath(statsoutput)
 
     println("Creating DIAMOND database...")
-    reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
+    #reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
+    reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
     println("Performing DIAMOND BLASTX search...")
     diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
@@ -215,6 +235,7 @@ function main()
         println("Processing DIAMOND results for " * string(index) * ". reference sequence...")
         diamondhits = filter(hit -> isequal(id, hit.subjectid.id), allhits)
         writeblastTSV(*(diamondoutput, "/", id, ".tsv"), diamondhits; header = true)
+        #regions = AlignedRegionCollection(get_fullseq(args["reference"][index]), diamondhits)
         regions = AlignedRegionCollection(selectsequence(references_file, id), diamondhits)
         # assuming all queries belong to same species: 
         mergedregions = mergeoverlaps(regions)
@@ -236,8 +257,28 @@ function main()
                  round(occupancy(finalalignment), digits=2)]
         push!(statistics, stats_row)
     end
-    CSV.write(statsoutput, statistics, delim = "\t")
-    println("Patchwork Magic done.")
+    CSV.write(*(statsoutput, "/statistics.csv"), statistics, delim="\t")
+    averages = DataFrame(mean_length_query = Float64[],
+                         mean_no_regions = Float64[],
+                         mean_no_contigs = Float64[],
+                         mean_no_matches = Float64[],
+                         mean_no_mismatches = Float64[],
+                         mean_no_deletions = Float64[],
+                         mean_occupancy = Float64[])
+    push!(averages, map(col -> mean(col), eachcol(select(statistics, 
+          Not([:id, :length_reference])))))
+    CSV.write(*(statsoutput, "/average.csv"), averages, delim="\t")
+    println("Patchwork Magic done.\n")
+    println("Results:")
+    println("---------------------------------")
+    println("Description              | Value")
+    output = ["Mean query length", "Mean no. of regions", "Mean no. of contigs", 
+              "Mean no. of matches", "Mean no. of mismatches", "Mean no. of deletions", 
+              "Mean occupancy"]
+    for (name, value) in zip(output, averages[1, :])
+        println(name, repeat(" ", 25 - length(name)), "| ", value,)
+    end
+    println("---------------------------------")
 end
 
 function julia_main()::Cint
