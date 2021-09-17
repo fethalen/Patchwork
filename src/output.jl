@@ -3,9 +3,10 @@ using FASTX
 
 const WIDTH = 80
 
-function cleanfiles(files::String...)
-    for file in files
-        isfile(file) && rm(file)
+function cleanfiles(paths::String...)
+    for path in paths
+        isfile(path) && rm(path, force = true)
+        isdir(path) && rm(path, force = true, recursive = true)
     end
 end
 
