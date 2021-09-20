@@ -1,6 +1,8 @@
 Patchwork
 ---------
 
+<img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="200"/>
+
 > **Note:** Patchwork is an unfinished product, currently under construction 🚧.
 
 ### Introduction
