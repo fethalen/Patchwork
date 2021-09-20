@@ -1,4 +1,4 @@
-<img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="250"/>
+<img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="225"/>
 
 > **Note:** Patchwork is an unfinished product, currently under construction 🚧.
 
