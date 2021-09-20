@@ -172,7 +172,6 @@ function hasoverlaps(regions::AlignedRegionCollection, sorted=false)
 
     for i in 2:lastindex(regions)
         if isoverlapping(regions[i], regions[i - 1])
-            println(regions[i], regions[i - 1])
             return true
         end
     end
