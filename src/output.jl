@@ -3,9 +3,10 @@ using FASTX
 
 const WIDTH = 80
 
-function cleanfiles(files::String...)
-    for file in files
-        isfile(file) && rm(file)
+function cleanfiles(paths::String...)
+    for path in paths
+        isfile(path) && rm(path, force = true)
+        isdir(path) && rm(path, force = true, recursive = true)
     end
 end
 
@@ -20,7 +21,7 @@ function warn_overwrite()::String
     return answer
 end
 
-function write_alignmentfile(file::AbstractString, id::SequenceIdentifier, contigs::Int64,
+function write_alignmentfile(file::AbstractString, id::AbstractString, contigs::Int64,
                              alignment::BioAlignments.PairwiseAlignment, index::Int64)
     count = string(index) * ". "    
     subjectlength = length(alignment.b)
@@ -32,7 +33,7 @@ function write_alignmentfile(file::AbstractString, id::SequenceIdentifier, conti
     open(file, "a") do io
         print(io, count * repeat('-', WIDTH - length(count)) * "\n")
         print(io, "\n")
-        print(io, "Reference ID:        " * id.id * "\n")
+        print(io, "Reference ID:        " * id * "\n")
         print(io, "Reference Length:    " * string(subjectlength) * "\n")
         print(io, "Query Length:        " * string(querylength) * "\n")
         print(io, "Contigs:             " * string(contigs) * "\n")
