@@ -1,6 +1,9 @@
 > **Note:** Patchwork is an unfinished product, currently under construction 🚧.
 <img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="225"/>
 
+Patchwork is a program for retrieving and concatenating phylogenetic 
+markers from whole-genome sequencing (WGS) data.
+
 ### Introduction
 
 Fragmented genome assemblies—resulting from low-coverage sequencing or similar
