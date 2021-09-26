@@ -1,6 +1,5 @@
-<img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="225"/>
-
 > **Note:** Patchwork is an unfinished product, currently under construction 🚧.
+<img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="225"/>
 
 ### Introduction
 
@@ -23,14 +22,11 @@ resulting homologs are directly suitable for use in phylogenomic studies.
 
 ### Installation
 
-The sequence aligner [DIAMOND](https://github.com/bbuchfink/diamond) is required
-to run Patchwork. We recommend using
-[Anaconda](https://www.anaconda.com/products/individual) for installing this
-program. After installing Anaconda, install DIAMOND by entering:
-
-```bash
-conda install -c bioconda diamond
-```
+> Note: We are working on a Conda build for Patchwork. In the future, 
+> the user will be able to install the programming by running conda 
+> install -c bioconda patchwork. Until then, please refer to 
+> [these instructions](https://github.com/fethalen/Patchwork/wiki/4.-Installation)
+> for installing Patchwork.
 
 ### Cite
 
