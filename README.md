@@ -22,11 +22,11 @@ resulting homologs are directly suitable for use in phylogenomic studies.
 
 ### Installation
 
-> Note: We are working on a Conda build for Patchwork. In the future, 
-> the user will be able to install the programming by running conda 
-> install -c bioconda patchwork. Until then, please refer to 
-> [these instructions](https://github.com/fethalen/Patchwork/wiki/4.-Installation)
-> for installing Patchwork.
+We are working on a Conda build for Patchwork. In the future, 
+the user will be able to install the programming by running conda 
+install -c bioconda patchwork. Until then, please refer to 
+[these instructions](https://github.com/fethalen/Patchwork/wiki/4.-Installation)
+for installing Patchwork.
 
 ### Cite
 
