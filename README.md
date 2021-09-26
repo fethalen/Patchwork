@@ -12,16 +12,16 @@ phylogenomic context. Patchwork employs local alignment searches to retrieve
 homologous regions from a set of contigs and "stitch" them together. The
 resulting homologs are directly suitable for use in phylogenomic studies.
 
-### Graphical Overview
-
-![Graphical Overview](https://github.com/fethalen/patchwork/blob/main/overview.png?raw=true)
-
 ### Features
 
 * Align nucleotide sequences to one or more protein sequences
 * Stitch overlapping or gappy sequences together based on a reference
 * Find homologs, even in distantly-related taxa
 * Written in [Julia](https://julialang.org/) and utilizing [DIAMOND](https://github.com/bbuchfink/diamond) for maximum speed 🐇
+
+### Graphical Overview
+
+![Graphical Overview](https://github.com/fethalen/patchwork/blob/main/overview.png?raw=true)
 
 ### Installation
 
