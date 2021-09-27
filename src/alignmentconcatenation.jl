@@ -125,10 +125,10 @@ function concatenate(regions::Patchwork.AlignedRegionCollection)::BioAlignments.
     end
     # fill the gaps between end and next start
     for i in 2:lastindex(regions)
-        firstotu = Patchwork.splitdescription(regions[i-1].queryid)[1]
-        secondotu = Patchwork.splitdescription(regions[i].queryid)[1]
-        @assert firstotu == secondotu "Can only concatenate sequences from one OTU."
-        @assert regions[i-1].subjectlast < regions[i].subjectfirst "Sequences not sorted."
+        # firstotu = Patchwork.splitdescription(regions[i-1].queryid)[1]
+        # secondotu = Patchwork.splitdescription(regions[i].queryid)[1]
+        # @assert firstotu == secondotu "Can only concatenate sequences from one OTU."
+        # @assert regions[i-1].subjectlast < regions[i].subjectfirst "Sequences not sorted."
         if regions[i].subjectfirst > regions[i-1].subjectlast + 1
             reference = regions.referencesequence.sequencedata[
                                 regions[i-1].subjectlast + 1:regions[i].subjectfirst - 1]

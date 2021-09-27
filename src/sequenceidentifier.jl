@@ -26,7 +26,7 @@ Split the provided `SequenceIdentifier` into two separate parts at the `delimite
 
 Example 1: `Drosophila_melanogaster@16S` becomes `Drosophila` and `16S`
 """
-function splitdescription(id::SequenceIdentifier; delimiter='@')::Vector{String}
+function splitdescription(id::SequenceIdentifier, delimiter::Char='@')::Vector{String}
     if ! (delimiter in id.id)
         error("Missing species delimiter (\'$delimiter\') in description $description")
     end
@@ -41,8 +41,8 @@ Returns the OTU part of the provided `SequenceIdentifier`
 
 Example 1: `Drosophila_melanogaster@16S` becomes `Drosophila`
 """
-function otupart(id::SequenceIdentifier)
-    return first(splitdescription(id))
+function otupart(id::SequenceIdentifier, delimiter::Char='@')
+    return first(splitdescription(id, delimiter))
 end
 
 """

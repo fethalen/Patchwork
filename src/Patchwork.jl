@@ -42,13 +42,21 @@ const STATSOUTPUT = "statistics"                # diretory
 """
     printinfo()
 
-Print basic information about this program.
+Print program title and basic information.
 """
-function printinfo()
+function printinfo(diamondversion::AbstractString, threads::Int64,
+                   outputdir::AbstractString)
     about = """
-    P A T C H W O R K
-    Developed by: Felix Thalén and Clara G. Köhne
-    © Dept. for Animal Evolution and Biodiversity, University of Göttingen
+       ◣
+      ◢◤  P A T C H W O R K
+    ◢◤
+    ◥  ◣  Developers: Felix Thalén & Clara G. Köhne
+      ◢◤  Contact   : <felix.thalen@uni-goettingen.de>
+    ◢◤    Wiki      : github.com/fethalen/patchwork/wiki
+    ◥  ◣  Cite      : In prep.
+      ◢◤  DIAMOND v.: $diamondversion
+    ◢◤    Threads   : $threads
+    ◥     Output    : $outputdir
     """
     println(about)
     return
@@ -90,8 +98,8 @@ end
 
 function parse_parameters()
     overview = """
-    Alignment-based Exon Retrieval and Concatenation with Phylogenomic
-    Applications
+    Alignment-based retrieval and concatenation of phylogenetic markers format
+    whole-genome sequencing (WGS) data
     """
     settings = ArgParseSettings(description=overview,
                                 version = "0.1.0",
@@ -104,19 +112,19 @@ function parse_parameters()
             nargs = '+'
             metavar = "PATH"
         "--reference"
-            help = "Either (1) a path to one or more sequences in FASTA format, (2) a 
-                    subject database (DIAMOND or BLAST database), or (3) a DIAMOND output 
+            help = "Either (1) a path to one or more sequences in FASTA format, (2) a
+                    subject database (DIAMOND or BLAST database), or (3) a DIAMOND output
                     file in tabular format."
             required = true
             arg_type = String
-            nargs = '+' 
+            nargs = '+'
             metavar = "PATH"
         #"--database"
         #    help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
         #    arg_type = Bool
         #    action = :store_true
         #"--tabular"
-        #    help = "When specified, \"--reference\" points to a tabular DIAMOND output 
+        #    help = "When specified, \"--reference\" points to a tabular DIAMOND output
         #            file generated in a previous Patchwork run"
         #    arg_type = Bool
         #    action = :store_true
@@ -156,6 +164,11 @@ function parse_parameters()
             default = Sys.CPU_THREADS
             arg_type = Int64
             metavar = "NUMBER"
+        "--species-delimiter"
+            help = "Used to distinguish the OTU from the rest in sequence IDs"
+            default = '@'
+            arg_type = Char
+            metavar = "CHARACTER"
         "--wrap-column"
             help = "Wrap output sequences at this column number (default: no wrap)"
             default = 0
@@ -164,7 +177,7 @@ function parse_parameters()
         "--overwrite"
             help = "Overwrite output from previous runs without warning"
             arg_type = Bool
-            action = :store_true 
+            action = :store_true
     end
 
     return ArgParse.parse_args(settings)
@@ -172,22 +185,20 @@ end
 
 function main()
     args = parse_parameters()
-    printinfo()
     if !min_diamondversion(MIN_DIAMONDVERSION)
         error("Patchwork requires \'diamond\' with a version number above
                $MIN_DIAMONDVERSION to run")
     end
-    println("Search Engine: DIAMOND version " * get_diamondversion())
-    println()
+    printinfo(get_diamondversion(), args["threads"], args["output-dir"])
 
     setpatchworkflags!(args)
     setdiamondflags!(args)
-  
-    if length(args["reference"]) == 1 
+
+    if length(args["reference"]) == 1
         references_file = args["reference"][1]
     else                                                         # assume >1 .fa file provided
         #references = pool(args["reference"]...)                 # MultipleSequenceAlignment
-        #references_file = mktemp_fasta(references)  
+        #references_file = mktemp_fasta(references)
         references_file = mktemp_fasta(pool(args["reference"]...))
     end
     queries = pool(args["contigs"]...)                      # MultipleSequenceAlignment
@@ -219,33 +230,30 @@ function main()
     mkpath(fastaoutput)
     mkpath(statsoutput)
 
-    println("Creating DIAMOND database...")
+    println("Building DIAMOND database")
     #reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
     reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
-    println("Performing DIAMOND BLASTX search...")
+    println("Aligning query sequences against reference database")
     diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
-    println("DIAMOND BLASTX search done.")
 
-    println("Doing Patchwork Magic...")
+    println("Merging overlapping hits")
     allhits = readblastTSV(diamondsearch)
     referenceids = unique(map(hit -> hit.subjectid.id, allhits))
-    
+
     for (index, id) in enumerate(referenceids)
-        println("Processing DIAMOND results for " * string(index) * ". reference sequence...")
         diamondhits = filter(hit -> isequal(id, hit.subjectid.id), allhits)
         writeblastTSV(*(diamondoutput, "/", id, ".tsv"), diamondhits; header = true)
         #regions = AlignedRegionCollection(get_fullseq(args["reference"][index]), diamondhits)
         regions = AlignedRegionCollection(selectsequence(references_file, id), diamondhits)
-        # assuming all queries belong to same species: 
+        # assuming all queries belong to same species:
         mergedregions = mergeoverlaps(regions)
         concatenation = concatenate(mergedregions)
         finalalignment = maskgaps(concatenation).aln
 
-        println("Saving output...")
         write_alignmentfile(alignmentoutput, id, length(regions), finalalignment, index)
-        write_fasta(*(fastaoutput, "/", id, ".fa"), regions.records[1].queryid, 
-                    finalalignment)
+        write_fasta(*(fastaoutput, "/", id, ".fa"), regions.records[1].queryid,
+                    finalalignment, args["species-delimiter"])
         stats_row = [mergedregions.referencesequence.id.id,
                  length(mergedregions.referencesequence),
                  length(finalalignment.a.seq),
@@ -257,6 +265,7 @@ function main()
                  round(occupancy(finalalignment), digits=2)]
         push!(statistics, stats_row)
     end
+
     CSV.write(*(statsoutput, "/statistics.csv"), statistics, delim="\t")
     averages = DataFrame(mean_length_query = Float64[],
                          mean_no_regions = Float64[],
@@ -265,20 +274,17 @@ function main()
                          mean_no_mismatches = Float64[],
                          mean_no_deletions = Float64[],
                          mean_occupancy = Float64[])
-    push!(averages, map(col -> mean(col), eachcol(select(statistics, 
+    push!(averages, map(col -> mean(col), eachcol(select(statistics,
           Not([:id, :length_reference])))))
     CSV.write(*(statsoutput, "/average.csv"), averages, delim="\t")
-    println("Patchwork Magic done.\n")
-    println("Results:")
-    println("---------------------------------")
-    println("Description              | Value")
-    output = ["Mean query length", "Mean no. of regions", "Mean no. of contigs", 
-              "Mean no. of matches", "Mean no. of mismatches", "Mean no. of deletions", 
+    println("\nStatistics:")
+    println("  Description                Value")
+    output = ["Mean query length", "Mean no. of regions", "Mean no. of contigs",
+              "Mean no. of matches", "Mean no. of mismatches", "Mean no. of deletions",
               "Mean occupancy"]
     for (name, value) in zip(output, averages[1, :])
-        println(name, repeat(" ", 25 - length(name)), "| ", value,)
+        println("  ", name, repeat(" ", 25 - length(name)), "  ", value,)
     end
-    println("---------------------------------")
 end
 
 function julia_main()::Cint
