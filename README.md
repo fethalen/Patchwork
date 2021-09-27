@@ -1,16 +1,7 @@
 > **Note:** Patchwork is an unfinished product, currently under construction 🚧.
 <img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="225"/>
 
-Patchwork is a program for retrieving and concatenating phylogenetic 
-markers from whole-genome sequencing (WGS) data.
-
-### Introduction
-
-Fragmented genome assemblies—resulting from low-coverage sequencing or similar
-technologies—can prove problematic in downstream analyses, when used in a
-phylogenomic context. Patchwork employs local alignment searches to retrieve
-homologous regions from a set of contigs and "stitch" them together. The
-resulting homologs are directly suitable for use in phylogenomic studies.
+Patchwork is an alignment-based program for retrieving and concatenating phylogenetic markers from whole-genome sequencing (WGS) data. The program searches the provided DNA query contigs against one or more amino acid reference sequences. Multiple, overlapping hits are merged to derive a single, continuous sequence for each reference sequence.
 
 ### Features
 
