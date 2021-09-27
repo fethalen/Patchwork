@@ -11,11 +11,10 @@ function cleanfiles(paths::String...)
 end
 
 function warn_overwrite()::String
-    println("WARNING: Found output files from a previous run.")
-    println("Do you want to overwrite them? (y/n): ")
+    print("WARNING: found output from a previous run, overwrite old files? (y/n):")
     answer = readline()
     while !isequal(answer, "y") && !isequal(answer, "n")
-        println("Please type either 'y' for yes or 'n' for no.")
+        println("Please answer 'y' for yes or 'n' for no")
         answer = readline()
     end
     return answer
@@ -23,7 +22,7 @@ end
 
 function write_alignmentfile(file::AbstractString, id::AbstractString, contigs::Int64,
                              alignment::BioAlignments.PairwiseAlignment, index::Int64)
-    count = string(index) * ". "    
+    count = string(index) * ". "
     subjectlength = length(alignment.b)
     querylength = length(alignment.a.seq)
     exactmatches = count_matches(alignment)
@@ -47,9 +46,12 @@ function write_alignmentfile(file::AbstractString, id::AbstractString, contigs::
     end
 end
 
-function write_fasta(file::AbstractString, id::SequenceIdentifier, 
-                     alignment::PairwiseAlignment)
-    queryname = otupart(id)
+function write_fasta(file::AbstractString, id::SequenceIdentifier,
+                     alignment::PairwiseAlignment, delimiter::Char)
+    queryname = ""
+    if delimiter in id.id
+        queryname = otupart(id, delimiter)
+    end
     fastawriter = FASTA.Writer(open(file, "a"))
     write(fastawriter, FASTA.Record(queryname, alignment.a.seq))
     close(fastawriter)
