@@ -14,13 +14,17 @@ Patchwork is an alignment-based program for retrieving and concatenating phyloge
 
 ![Graphical Overview](https://github.com/fethalen/patchwork/blob/main/overview.png?raw=true)
 
-### Installation
+### Quick installation
 
-We are currently working on a Conda build for Patchwork. In the future, 
+We are currently working on a Conda build. In the future, 
 the user will be able to install the programming by running `conda 
 install -c bioconda patchwork`. Until then, please refer to 
 [these instructions](https://github.com/fethalen/Patchwork/wiki/4.-Installation)
-for installing Patchwork.
+for installing from source.
+
+### Documentation
+
+Please see our [Wiki](https://github.com/fethalen/Patchwork/wiki). 
 
 ### Cite
 
