@@ -6,18 +6,16 @@
 # (no precompilation necessary) 
 # conda build .
 
-import Pkg
+#import Pkg
 using PackageCompiler
-# ERROR occurred in bioconda build test (FAILED to precompile LibSSH2_jll); maybe this helps:
-using LibSSH2_jll
 
 println("START") # HERE
 projectdirectory = ARGS[1]
 precompiled = ARGS[2]
 outdirectory = ARGS[3]
 
-println("ACTIVATE") # HERE
-Pkg.activate(projectdirectory)
+#println("ACTIVATE") # HERE
+#Pkg.activate(projectdirectory)
 
 println("CREATE") # HERE
 create_app(projectdirectory, outdirectory; precompile_statements_file = precompiled, 
