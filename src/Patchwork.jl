@@ -69,8 +69,9 @@ Returns `true` if DIAMOND is installed with a version number equal to or higher 
 provided `minversion`. Returns false if the version number is lower or DIAMOND is not found at
 all.
 """
-function min_diamondversion(minversion::AbstractString)
+function min_diamondversion(minversion::AbstractString)::Bool
     version = get_diamondversion()
+    isempty(version) && return false
     diamondversion_vector = split(version, ".")
     minversion_vector = split(minversion, ".")
     for (v, r) in zip(diamondversion_vector, minversion_vector)
@@ -86,7 +87,7 @@ function get_diamondversion()::AbstractString
     try
         run(`diamond --version`, wait=false)
     catch
-        return false
+        return ""
     end
     versioncmd = read(`diamond --version`, String)
     return last(split(versioncmd))
