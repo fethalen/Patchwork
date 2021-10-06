@@ -71,7 +71,7 @@ all.
 """
 function min_diamondversion(minversion::AbstractString)::Bool
     version = get_diamondversion()
-    println(version)
+    println("diamond version: ", version)
     isempty(version) && return false
     diamondversion_vector = split(version, ".")
     minversion_vector = split(minversion, ".")
