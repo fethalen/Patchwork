@@ -6,16 +6,14 @@
 # (no precompilation necessary) 
 # conda build .
 
+import Pkg 
+Pkg.add(["PackageCompiler"])
+using PackageCompiler
+
 println("START")
 projectdirectory = ARGS[1]
 precompiled = ARGS[2]
 outdirectory = ARGS[3]
-
-import Pkg 
-println("ACTIVATE")
-Pkg.activate(projectdirectory)
-Pkg.add(["ArgParse", "PackageCompiler"])
-using PackageCompiler
 
 println("CREATE")
 create_app(projectdirectory, outdirectory; precompile_statements_file = precompiled, 
