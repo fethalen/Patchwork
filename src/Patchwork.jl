@@ -177,7 +177,6 @@ function parse_parameters()
             metavar = "NUMBER"
         "--overwrite"
             help = "Overwrite output from previous runs without warning"
-            arg_type = Bool
             action = :store_true
     end
 
