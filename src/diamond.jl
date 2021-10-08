@@ -56,8 +56,8 @@ function readblastTSV(
 
     diamondsearchresults = []
     for row in eachrow(results)
-        queryid = SequenceIdentifier(row.qseqid)
-        subjectid = SequenceIdentifier(row.sseqid)
+        queryid = SequenceIdentifier(String(row.qseqid))
+        subjectid = SequenceIdentifier(String(row.sseqid))
         result = DiamondSearchResult(
             queryid, BioSequences.LongDNASeq(row.qseq),
             BioSequences.LongDNASeq(row.full_qseq), row.qstart, row.qend, row.qframe,
