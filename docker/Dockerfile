@@ -34,7 +34,7 @@ RUN groupadd --gid 1000 patchwork \
     && chmod -R a+rwx /home/patchwork
 WORKDIR /home/patchwork
 USER patchwork
-ENV VERSION 0.1.2-pre-alpha9
+ENV VERSION 0.1.2-pre-alpha
 
 RUN wget https://julialang-s3.julialang.org/bin/linux/x64/1.6/julia-1.6.3-linux-x86_64.tar.gz \
     && tar xzvf julia-1.6.3-linux-x86_64.tar.gz 
@@ -58,7 +58,7 @@ RUN groupadd --gid 1000 patchwork \
     && chmod -R a+rwx /home/patchwork
 WORKDIR /home/patchwork
 USER patchwork
-ENV VERSION 0.1.2-pre-alpha9
+ENV VERSION 0.1.2-pre-alpha
 
 COPY --from=build /home/patchwork/patchwork-$VERSION patchwork-$VERSION
 COPY --from=build /home/patchwork/diamond diamond
