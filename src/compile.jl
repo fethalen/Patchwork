@@ -7,7 +7,7 @@
 # conda build .
 
 import Pkg 
-Pkg.add(["PackageCompiler"])
+Pkg.add(name="PackageCompiler", version="1.7.0")
 using PackageCompiler
 
 println("START")
