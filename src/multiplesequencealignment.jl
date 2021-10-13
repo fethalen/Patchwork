@@ -28,26 +28,36 @@ mutable struct MultipleSequenceAlignment
     end
 end
 
-function addalignment!(msa::MultipleSequenceAlignment,
-    alignment::SequenceRecord)::MultipleSequenceAlignment
+function addalignment!(
+    msa::MultipleSequenceAlignment,
+    alignment::SequenceRecord
+)::MultipleSequenceAlignment
     push!(msa.sequences, alignment)
     return msa
 end
 
-function removealignment!(msa::MultipleSequenceAlignment,
-    alignment::SequenceRecord)::MultipleSequenceAlignment
+function removealignment!(
+    msa::MultipleSequenceAlignment,
+    alignment::SequenceRecord
+)::MultipleSequenceAlignment
     delete!(msa.sequences, alignment)
     return msa
 end
 
 Base.length(msa::MultipleSequenceAlignment) = length(msa.sequences)
 
-function Base.getindex(msa::MultipleSequenceAlignment, index::Int)::SequenceRecord
+function Base.getindex(
+    msa::MultipleSequenceAlignment,
+    index::Int
+)::SequenceRecord
     return msa.sequences[ind]
 end
 
-function Base.setindex!(msa::MultipleSequenceAlignment, sequence::SequenceRecord,
-                        index::Int)
+function Base.setindex!(
+    msa::MultipleSequenceAlignment,
+    sequence::SequenceRecord,
+    index::Int
+)
     msa.sequences[index] = sequence
 end
 
@@ -56,7 +66,10 @@ function Base.iterate(msa::MultipleSequenceAlignment)
     return iterate(alignment, 1)
 end
 
-function Base.iterate(msa::MultipleSequenceAlignment, state=1::Int)
+function Base.iterate(
+    msa::MultipleSequenceAlignment,
+    state=1::Int
+)
     state > lastindex(msa.sequences) && return nothing
     state += 1
     return (msa.sequences, state)
@@ -195,8 +208,10 @@ end
 Writes `alignment` to a temporary file and returns the path to that file.
 Gaps are removed when `removehyphens=true`.
 """
-function mktemp_fasta(alignment::MultipleSequenceAlignment;
-                      removehyphens::Bool=false)::AbstractString
+function mktemp_fasta(
+    alignment::MultipleSequenceAlignment;
+    removehyphens::Bool=false
+)::AbstractString
     path, io = mktemp()
     removehyphens && ungap!(alignment)
 
@@ -208,8 +223,10 @@ function mktemp_fasta(alignment::MultipleSequenceAlignment;
     return path
 end
 
-function mktemp_fasta(alignment::AbstractString;
-                      removehyphens::Bool=false)::AbstractString
+function mktemp_fasta(
+    alignment::AbstractString;
+    removehyphens::Bool=false
+)::AbstractString
     path, io = mktemp()
     msa = readmsa(alignment, '@')
     removehyphens && ungap!(msa)
@@ -222,7 +239,10 @@ function mktemp_fasta(alignment::AbstractString;
     return path
 end
 
-function pool(files::AbstractString...; name::AbstractString="")::MultipleSequenceAlignment
+function pool(
+    files::AbstractString...;
+    name::AbstractString=""
+)::MultipleSequenceAlignment
     allsequences = Vector{SequenceRecord}()
     for file in files
         tmp = readmsa(file)

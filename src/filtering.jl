@@ -28,8 +28,10 @@ function remove_duplicates(msa::MultipleSequenceAlignment)
     return collection
 end
 
-function remove_duplicates(msa::MultipleSequenceAlignment,
-                           searchresults::BLA)
+function remove_duplicates(
+    msa::MultipleSequenceAlignment,
+    searchresults::BLA
+)
     sotu = "Ceratonereis_australis"
     sequences = queryalignment
 

@@ -38,7 +38,10 @@ Filters non-unique results and results with less percent identity than
 `6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore
  qframe sseq seq`
 """
-function readblastTSV(path::AbstractString; delimiter='@')::Array{DiamondSearchResult,1}
+function readblastTSV(
+    path::AbstractString;
+    delimiter='@'
+)::Array{DiamondSearchResult,1}
     results = CSV.File(path; header=FIELDS, delim='\t') |> DataFrame
     unique!(results)
 
@@ -71,8 +74,12 @@ end
 Write `results` to a TSV file to `path`, using the provided `delimiter` to separate
 columns (default: `'\\t'`). No header is added when `header` is set to `false`.
 """
-function writeblastTSV(path::AbstractString, results::Array{DiamondSearchResult,1};
-                       delimiter='\t', header=false)::AbstractString
+function writeblastTSV(
+    path::AbstractString,
+    results::Array{DiamondSearchResult,1};
+    delimiter='\t',
+    header=false
+)::AbstractString
     dataframe = select!(DataFrames.DataFrame(results), Not(:subjectid))
     dataframe[!, :queryid] = map(result -> result.queryid.id, results)
     CSV.write(path, dataframe, delim=delimiter, writeheader=header)
@@ -85,8 +92,10 @@ end
 
 Insert the alignments within `searchresults` into `queryalignment`.
 """
-function merge!(queryalignment::MultipleSequenceAlignment,
-                searchresults::Array{DiamondSearchResult})::MultipleSequenceAlignment
+function merge!(
+    queryalignment::MultipleSequenceAlignment,
+    searchresults::Array{DiamondSearchResult}
+)::MultipleSequenceAlignment
     sotu = "Ceratonereis_australis"
     sequences = queryalignment
 
@@ -104,32 +113,48 @@ file names (as strings), or `MultipleSequenceAlignment`. May include optional
 `flags` such as `["-num_threads", 4,]`. Hyphens ('-') are removed
 automatically before the BLAST search.
 """
-function diamond_blastx(query::AbstractString, subject::AbstractString,
-                        outdir::AbstractString, flags=[])::AbstractString
+function diamond_blastx(
+    query::AbstractString,
+    subject::AbstractString,
+    outdir::AbstractString,
+    flags=[]
+)::AbstractString
     results_file, results_io = mktemp()
     logfile = outdir * "/diamond_blastx.log"
     diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
-                            --outfmt $OUTPUT_FORMAT --out $results_file`, stdout=logfile, 
+                            --outfmt $OUTPUT_FORMAT --out $results_file`, stdout=logfile,
                             stderr=logfile)
     run(diamond_cmd)
     close(results_io)
     return results_file
 end
 
-function diamond_blastx(query::MultipleSequenceAlignment, subject::AbstractString,
-                        outdir::AbstractString, flags=[])::AbstractString
+function diamond_blastx(
+    query::MultipleSequenceAlignment,
+    subject::AbstractString,
+    outdir::AbstractString,
+    flags=[]
+)::AbstractString
     querypath = mktemp_fasta(query)
     return diamond_blastx(querypath, subject, outdir, flags)
 end
 
-function diamond_blastx(query::AbstractString, subject::MultipleSequenceAlignment,
-                        outdir::AbstractString, flags=[])::AbstractString
+function diamond_blastx(
+    query::AbstractString,
+    subject::MultipleSequenceAlignment,
+    outdir::AbstractString,
+    flags=[]
+)::AbstractString
     subjectpath = mktemp_fasta(subject)
     return diamond_blastx(query, subjectpath, outdir, flags)
 end
 
-function diamond_blastx(query::MultipleSequenceAlignment, subject::MultipleSequenceAlignment,
-                        outdir::AbstractString, flags=[])::AbstractString
+function diamond_blastx(
+    query::MultipleSequenceAlignment,
+    subject::MultipleSequenceAlignment,
+    outdir::AbstractString,
+    flags=[]
+)::AbstractString
     querypath = mktemp_fasta(query)
     subjectpath = mktemp_fasta(subject)
     return diamond_blastx(querypath, subjectpath, outdir, flags)
@@ -139,49 +164,67 @@ end
 Runs `diamond makedb` on the provided `reference` FASTA sequence. May include
 optional `flags` such as `["--taxonnodes"]`.
 """
-function diamond_makeblastdb(reference::AbstractString,  outdir::AbstractString, flags=[]
-                            )::AbstractString
+function diamond_makeblastdb(
+    reference::AbstractString,
+    outdir::AbstractString,
+    flags=[]
+)::AbstractString
     if isdiamonddatabase(reference)
         return reference
     elseif isfastafile(reference)
         db_file = outdir * "/" * DATABASE
         logfile = outdir * "/diamond_makedb.log"
-        makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`, 
+        makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`,
                               stdout=logfile, stderr=logfile)
         run(makedb_cmd)
         return db_file
     else # BLAST DB
         logfile = outdir * "/diamond_prepdb.log"
-        makedb_cmd = pipeline(`diamond prepdb -d $reference`, stdout=logfile, 
+        makedb_cmd = pipeline(`diamond prepdb -d $reference`, stdout=logfile,
                                stderr=logfile)
         return reference
     end
 end
 
-function diamond_makeblastdb(alignment::MultipleSequenceAlignment, outdir::AbstractString, 
-                             flags=[])::AbstractString
+function diamond_makeblastdb(
+    alignment::MultipleSequenceAlignment,
+    outdir::AbstractString,
+    flags=[]
+)::AbstractString
     reference = mktemp_fasta(alignment)
     db_file = outdir * "/" * DATABASE
     logfile = outdir * "/diamond_makedb.log"
-    makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`, 
+    makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`,
                           stdout=logfile, stderr=logfile)
     run(makedb_cmd)
     return db_file
 end
 
-function queryid(result::DiamondSearchResult, speciesdelimiter='@')::String
+function queryid(
+    result::DiamondSearchResult,
+    speciesdelimiter='@'
+)::String
     return *(result.queryotu, speciesdelimiter, result.queryid)
 end
 
-function subjectid(result::DiamondSearchResult, speciesdelimiter='@')::String
+function subjectid(
+    result::DiamondSearchResult,
+    speciesdelimiter='@'
+)::String
     return *(result.subjectotu, speciesdelimiter, result.subjectid)
 end
 
-function queryids(results::Vector{DiamondSearchResult}, speciesdelimiter='@')::Vector{String}
+function queryids(
+    results::Vector{DiamondSearchResult},
+    speciesdelimiter='@'
+)::Vector{String}
     return map(result -> queryid(result), results)
 end
 
-function subjectids(results::Vector{DiamondSearchResult}, speciesdelimiter='@')::Vector{String}
+function subjectids(
+    results::Vector{DiamondSearchResult},
+    speciesdelimiter='@'
+)::Vector{String}
     return map(result -> subjectid(result), results)
 end
 
