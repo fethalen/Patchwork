@@ -44,8 +44,11 @@ const STATSOUTPUT = "statistics"                # diretory
 
 Print program title and basic information.
 """
-function printinfo(diamondversion::AbstractString, threads::Int64,
-                   outputdir::AbstractString)
+function printinfo(
+    diamondversion::AbstractString,
+    threads::Int64,
+    outputdir::AbstractString
+)
     about = """
        ◣
       ◢◤  P A T C H W O R K
@@ -119,15 +122,6 @@ function parse_parameters()
             arg_type = String
             nargs = '+'
             metavar = "PATH"
-        #"--database"
-        #    help = "When specified, \"--reference\" points to a DIAMOND/BLAST database"
-        #    arg_type = Bool
-        #    action = :store_true
-        #"--tabular"
-        #    help = "When specified, \"--reference\" points to a tabular DIAMOND output
-        #            file generated in a previous Patchwork run"
-        #    arg_type = Bool
-        #    action = :store_true
         "--output-dir"
             help = "Write output files to this directory"
             arg_type = String
