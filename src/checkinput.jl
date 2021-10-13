@@ -3,27 +3,27 @@ using BioSymbols
 
 include("diamond.jl")
 
-const MATRICES = Dict("BLOSUM45"=>BLOSUM45, "BLOSUM50"=>BLOSUM50,"BLOSUM62"=>BLOSUM62, 
-                      "BLOSUM80"=>BLOSUM80, "BLOSUM90"=>BLOSUM90, "PAM30"=>PAM30, 
+const MATRICES = Dict("BLOSUM45"=>BLOSUM45, "BLOSUM50"=>BLOSUM50,"BLOSUM62"=>BLOSUM62,
+                      "BLOSUM80"=>BLOSUM80, "BLOSUM90"=>BLOSUM90, "PAM30"=>PAM30,
                       "PAM70"=>PAM70, "PAM250"=>PAM250)
-const GAPS = Dict("BLOSUM45"=>[(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13, 2), 
-                               (14, 2), (15, 2), (16, 2), (16, 1), (17, 1), (18, 1), 
-                               (19, 1)], 
-                  "BLOSUM50"=>[(9, 3),(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13, 2), 
-                              (14, 2), (15, 2), (16, 2), (15, 1), (16, 1), (17, 1), 
+const GAPS = Dict("BLOSUM45"=>[(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13, 2),
+                               (14, 2), (15, 2), (16, 2), (16, 1), (17, 1), (18, 1),
+                               (19, 1)],
+                  "BLOSUM50"=>[(9, 3),(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13, 2),
+                              (14, 2), (15, 2), (16, 2), (15, 1), (16, 1), (17, 1),
                               (18, 1), (19, 1)],
-                  "BLOSUM62"=>[(6, 2), (7, 2), (8, 2), (9, 2), (10, 2), (11, 1), (9, 1), 
-                               (10, 1), (11, 1), (12, 1), (13, 1)], 
-                  "BLOSUM80"=>[(6, 2), (7, 2), (8, 2), (9, 2), (9, 1), (10, 1), (11, 1), 
-                               (13, 2), (25, 2)], 
-                  "BLOSUM90"=>[(6, 2), (7, 2), (8, 2), (9, 2), (9, 1), (10, 1), (11, 1)], 
-                  "PAM30"=>[(5, 2), (6, 2), (7, 2), (8, 1), (9, 1), (10, 1)], 
-                  "PAM70"=>[(6, 2), (7, 2), (8, 2), (9, 1), (10, 1), (11, 1)], 
-                  "PAM250"=>[(11, 3), (12, 3), (13, 3), (14, 3), (15, 3), (13, 2), (14, 2), 
-                             (15, 2), (16, 2), (17, 2), (17, 1), (18, 1), (19, 1), (20, 1), 
+                  "BLOSUM62"=>[(6, 2), (7, 2), (8, 2), (9, 2), (10, 2), (11, 1), (9, 1),
+                               (10, 1), (11, 1), (12, 1), (13, 1)],
+                  "BLOSUM80"=>[(6, 2), (7, 2), (8, 2), (9, 2), (9, 1), (10, 1), (11, 1),
+                               (13, 2), (25, 2)],
+                  "BLOSUM90"=>[(6, 2), (7, 2), (8, 2), (9, 2), (9, 1), (10, 1), (11, 1)],
+                  "PAM30"=>[(5, 2), (6, 2), (7, 2), (8, 1), (9, 1), (10, 1)],
+                  "PAM70"=>[(6, 2), (7, 2), (8, 2), (9, 1), (10, 1), (11, 1)],
+                  "PAM250"=>[(11, 3), (12, 3), (13, 3), (14, 3), (15, 3), (13, 2), (14, 2),
+                             (15, 2), (16, 2), (17, 2), (17, 1), (18, 1), (19, 1), (20, 1),
                              (21, 1)])
-const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(11, 1), 
-                         "BLOSUM80"=>(10, 1), "BLOSUM90"=>(10, 1), "PAM30"=>(9, 1), 
+const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(11, 1),
+                         "BLOSUM80"=>(10, 1), "BLOSUM90"=>(10, 1), "PAM30"=>(9, 1),
                          "PAM70"=>(10, 1), "PAM250"=>(14, 2))
 
 # FUNCTIONS ###############################################################################
@@ -33,18 +33,18 @@ const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(
 """
     checkmatrixtype(args::Dict{String, Any})
 
-Ensure that at most one of `--matrix` and `--custom-matrix` was provided as command line 
-argument. The name supplied to the argument `--matrix` must correspond to one of 
-`BioAlignements`'s pre-defined matrices (BLOSUM45, BLOSUM50, BLOSUM62, BLOSUM80, BLOSUM90, 
-PAM30, PAM70, or PAM250). In case a custom matrix is used, check that `--lambda` and `--K` 
-were set in `--diamond-flags`. 
+Ensure that at most one of `--matrix` and `--custom-matrix` was provided as command line
+argument. The name supplied to the argument `--matrix` must correspond to one of
+`BioAlignements`'s pre-defined matrices (BLOSUM45, BLOSUM50, BLOSUM62, BLOSUM80, BLOSUM90,
+PAM30, PAM70, or PAM250). In case a custom matrix is used, check that `--lambda` and `--K`
+were set in `--diamond-flags`.
 """
 function checkmatrixtype(args::Dict{String, Any})
     if !isnothing(args["matrix"]) && !isnothing(args["custom-matrix"])
         error("You can only supply one of --matrix and --custom-matrix")
-    elseif !isnothing(args["custom-matrix"]) && (!("--lambda" in args["diamond-flags"]) 
+    elseif !isnothing(args["custom-matrix"]) && (!("--lambda" in args["diamond-flags"])
                                                  || !("--K" in args["diamond-flags"]))
-        error("DIAMOND custom scoring matrices require setting the --lambda and", 
+        error("DIAMOND custom scoring matrices require setting the --lambda and",
               " --K options.")
     elseif !isnothing(args["matrix"]) && !(args["matrix"] in keys(MATRICES))
         error("Invalid scoring matrix: $matrix.")
@@ -64,13 +64,13 @@ end
 """
     setmatrixname!(args::Dict{String, Any})
 
-If neither `--matrix` nor `--custom-matrix` were supplied, set the substitution matrix to 
-the default `MATRIX`. For matrices provided with `--matrix`, convert the name to capitals 
+If neither `--matrix` nor `--custom-matrix` were supplied, set the substitution matrix to
+the default `MATRIX`. For matrices provided with `--matrix`, convert the name to capitals
 for internal compatibility with other functions using the same `args`.
 """
 function setmatrixname!(args::Dict{String, Any})
     matrixtype = getmatrixtype(args)
-    if !isequal("custom-matrix", matrixtype) 
+    if !isequal("custom-matrix", matrixtype)
         if isnothing(args[matrixtype])
             args[matrixtype] = MATRIX
         else
@@ -82,8 +82,8 @@ end
 """
     read_custommatrix(path::AbstractString)::SubstitutionMatrix
 
-Parse the file provided in `--custom-matrix` as an amino acid substitution matrix, 
-creating a new `BioAlignments.SubstitutionMatrix` object from the data. 
+Parse the file provided in `--custom-matrix` as an amino acid substitution matrix,
+creating a new `BioAlignments.SubstitutionMatrix` object from the data.
 """
 function read_custommatrix(path::AbstractString)::SubstitutionMatrix
     return BioAlignments.parse_ncbi_submat(BioSymbols.AminoAcid, path)
@@ -93,13 +93,16 @@ end
 """
     getmatrix(matrixname::AbstractString, matrixtype::AbstractString)::SubstitutionMatrix
 
-Get the `BioAlignments.SubstitutionMatrix` object corresponding to the substitution matrix. 
-If `--custom-matrix` was set, this function will parse the provided file as an amino acid 
-substitution matrix and create a new `BioAlignments.SubstitutionMatrix` object. Otherwise, 
-the matrix must correspond to one of `BioAlignments`'s pre-defined matrices (BLOSUM45, 
+Get the `BioAlignments.SubstitutionMatrix` object corresponding to the substitution matrix.
+If `--custom-matrix` was set, this function will parse the provided file as an amino acid
+substitution matrix and create a new `BioAlignments.SubstitutionMatrix` object. Otherwise,
+the matrix must correspond to one of `BioAlignments`'s pre-defined matrices (BLOSUM45,
 BLOSUM50, BLOSUM62, BLOSUM80, BLOSUM90, PAM30, PAM70, or PAM250).
 """
-function getmatrix(matrixname::AbstractString, matrixtype::AbstractString)::SubstitutionMatrix
+function getmatrix(
+    matrixname::AbstractString,
+    matrixtype::AbstractString
+)::SubstitutionMatrix
     isequal("custom-matrix", matrixtype) && return read_custommatrix(matrixname)
     return MATRICES[matrixname]
 end
@@ -109,9 +112,9 @@ end
 """
     setgapopen!(args::Dict{String, Any})
 
-Set the gap-opening penalty to the default value, depending on the matrix provided in 
-`--matrix`, if no gap-opening penalty was explicitely provided via `--gapopen`. 
-If necessary, convert the penalty to a positive integer. This function throws an error if 
+Set the gap-opening penalty to the default value, depending on the matrix provided in
+`--matrix`, if no gap-opening penalty was explicitely provided via `--gapopen`.
+If necessary, convert the penalty to a positive integer. This function throws an error if
 `--custom-matrix` was set without providing a gap-opening penalty.
 """
 function setgapopen!(args::Dict{String, Any})
@@ -130,9 +133,9 @@ end
 """
     setgapextend!(args::Dict{String, Any})
 
-Set the gap-extension penalty to the default value, depending on the matrix provided in 
-`--matrix`, if no gap-extension penalty was explicitely provided via `--gapextend`. 
-If necessary, convert the penalty to a positive integer. This function throws an error if 
+Set the gap-extension penalty to the default value, depending on the matrix provided in
+`--matrix`, if no gap-extension penalty was explicitely provided via `--gapextend`.
+If necessary, convert the penalty to a positive integer. This function throws an error if
 `--custom-matrix` was set without providing a gap-extension penalty.
 """
 function setgapextend!(args::Dict{String, Any})
@@ -153,7 +156,11 @@ end
 
 Ensure that the gap penalties are compatible with the matrix.
 """
-function checkgappenalty(matrix::AbstractString, gapopen::Int64, gapextend::Int64)
+function checkgappenalty(
+    matrix::AbstractString,
+    gapopen::Int64,
+    gapextend::Int64
+)
     if matrix in keys(MATRICES)
         allowedgaps = GAPS[matrix]
         if isnothing(findfirst(isequal((gapopen, gapextend)), allowedgaps))
@@ -167,7 +174,7 @@ end
 #"""
 #    set_diamondframeshift!(args::Dict{String, Any})
 #
-#If no `--frameshift` argument was provided in `--diamond-flags`, set the `--frameshift` 
+#If no `--frameshift` argument was provided in `--diamond-flags`, set the `--frameshift`
 #to the default value.
 #"""
 #function set_diamondframeshift!(args::Dict{String, Any})
@@ -179,16 +186,16 @@ end
 #"""
 #    set_diamondmode!(args::Dict{String, Any})
 #
-#If none of `--fast`, `--mid-sensitive`, `--sensitive`, `--more-sensitive`, `very-sensitive` 
+#If none of `--fast`, `--mid-sensitive`, `--sensitive`, `--more-sensitive`, `very-sensitive`
 #or `--ultra-sensitive` was set in `--diamond-flags`, set the mode to the default value.
 #"""
 #function set_diamondmode!(args::Dict{String, Any})
-#    if !("--fast" in args["diamond-flags"] 
+#    if !("--fast" in args["diamond-flags"]
 #         || "--mid-sensitive" in args["diamond-flags"]
-#         || "--sensitive" in args["diamond-flags"] 
-#         || "--more-sensitive" in args["diamond-flags"] 
+#         || "--sensitive" in args["diamond-flags"]
+#         || "--more-sensitive" in args["diamond-flags"]
 #         || "--very-sensitive" in args["diamond-flags"]
-#         || "--ultra-sensitive" in args["diamond-flags"])   
+#         || "--ultra-sensitive" in args["diamond-flags"])
 #        push!(args["diamond-flags"], DIAMONDMODE)
 #    end
 #end
@@ -196,9 +203,9 @@ end
 """
     checkdiamondflags(args::Dict{String, Any})
 
-Ensure that no conflicts are caused by command line arguments provided in `--diamond-flags`, 
-i.e. that parameters used and set by `Patchwork` are not also provided to `DIAMOND` in a 
-separate place. 
+Ensure that no conflicts are caused by command line arguments provided in `--diamond-flags`,
+i.e. that parameters used and set by `Patchwork` are not also provided to `DIAMOND` in a
+separate place.
 """
 function checkdiamondflags(args::Dict{String, Any})
     flags = args["diamond-flags"]
@@ -230,11 +237,11 @@ function checkmakedbflags(args::Dict{String, Any})
     flags = args["makedb-flags"]
     isempty(flags) && return
     if "--in" in flags
-        error("Please use Patchwork's --reference option instead. ", 
+        error("Please use Patchwork's --reference option instead. ",
               "It willl be used to construct your DIAMOND database.")
     end
     if "--db" in flags || "-d" in flags
-        error("The creation of your DIAMOND database will be internally handled. ", 
+        error("The creation of your DIAMOND database will be internally handled. ",
               "You should not explicitly provide an output database filename.")
     end
     if "--threads"  in flags
@@ -247,9 +254,9 @@ end
 """
     setpatchworkflags!(args::Dict{String, Any})
 
-Ensure that no conflicts are caused by combinations of, or missing, command line arguments. 
-Set gap-opening and gap-extension penalties correctly, modifying `args`. This function 
-throws an error if any conflicts are detected. 
+Ensure that no conflicts are caused by combinations of, or missing, command line arguments.
+Set gap-opening and gap-extension penalties correctly, modifying `args`. This function
+throws an error if any conflicts are detected.
 """
 function setpatchworkflags!(args::Dict{String, Any})     # Run this fct. before the next.
     checkmatrixtype(args)
@@ -262,9 +269,9 @@ end
 """
     setdiamondflags!(args::Dict{String, Any})
 
-Ensure that no conflicts are caused by combinations of, or missing, command line arguments. 
-Set `DIAMOND` frameshift and mode correctly, modifying `args`. This function throws an 
-error if any conflicts are detected. 
+Ensure that no conflicts are caused by combinations of, or missing, command line arguments.
+Set `DIAMOND` frameshift and mode correctly, modifying `args`. This function throws an
+error if any conflicts are detected.
 """
 function setdiamondflags!(args::Dict{String, Any})      # Run this fct. before the next.
     checkdiamondflags(args)
@@ -273,7 +280,7 @@ function setdiamondflags!(args::Dict{String, Any})      # Run this fct. before t
     checkmakedbflags(args)
     if length(args["reference"]) > 1 || !isdiamonddatabase(args["reference"]...)
         push!(args["makedb-flags"], "--threads", string(args["threads"]))
-        #isfastafile(args["reference"]) && push!(args["makedb-flags"], "-d", 
+        #isfastafile(args["reference"]) && push!(args["makedb-flags"], "-d",
         #            args["output-dir"] * DATABASE)
     end
 end
@@ -281,12 +288,12 @@ end
 """
     collectdiamondflags(args::Dict{String, Any})::Vector{String}
 
-Build the complete vector of parameters for running `DIAMOND`. 
+Build the complete vector of parameters for running `DIAMOND`.
 """
 function collectdiamondflags(args::Dict{String, Any})::Vector{String}
-    @assert !isnothing(args["gapopen"]) && !isnothing(args["gapextend"]) """set gap 
+    @assert !isnothing(args["gapopen"]) && !isnothing(args["gapextend"]) """set gap
     penalties with setpatchworkflags!(args) before calling this function"""
-    return [args["diamond-flags"]..., "--" * getmatrixtype(args), args[getmatrixtype(args)], 
-            "--gapopen", string(args["gapopen"]), "--gapextend", string(args["gapextend"]), 
+    return [args["diamond-flags"]..., "--" * getmatrixtype(args), args[getmatrixtype(args)],
+            "--gapopen", string(args["gapopen"]), "--gapextend", string(args["gapextend"]),
             "--threads", string(args["threads"])]
 end

@@ -33,7 +33,7 @@ All data fields are optional and can contain the value `missing`.
 - `iscircular::Bool`: indicates whether the feature is circular.
 - `other`: any attributes that are not covered by the above; stored as a Vector of Pairs.
 """
-mutable struct GFF3Attributes # mutable ? 
+mutable struct GFF3Attributes # mutable ?
     id::Union{String, Missing}
     name::Union{String, Missing}
     alias::Union{AbstractVector{String}, Missing} # multiple values
@@ -41,14 +41,14 @@ mutable struct GFF3Attributes # mutable ?
     target::Union{String, Missing}
     gap::Union{String, Missing}
     derivesfrom::Union{String, Missing}
-    note::Union{String, Missing} 
+    note::Union{String, Missing}
     dbcrossreference::Union{AbstractVector{String}, Missing} # multiple values
     ontologyterm::Union{AbstractVector{String}, Missing} # multiple values
     iscircular::Union{Bool, Missing}
     other::Any # Union{AbstractVector{Pair{String, AbstractVector{String}}}, Missing}
-end 
+end
 
-# attention: case sensitivity in attribute keys ! 
+# attention: case sensitivity in attribute keys !
 """
     GFF3Attributes(record::GFF3.Record)
 
@@ -61,14 +61,14 @@ function GFF3Attributes(record::GFF3.Record)
     result[12] = [] # other
     recordattributes = Dict(GFF3.attributes(record))
     recordkeys = collect(keys(recordattributes))
-    
+
     for key in recordkeys
         if key in attributelist
             index = findfirst(isequal(key), attributelist)
             if key == "Note"
                 result[index] = join(recordattributes[key], ',')
             elseif !(index in allowsmultiplevalues)
-                if length(recordattributes[key]) != 1 
+                if length(recordattributes[key]) != 1
                     error("Attribute $key only allows one value per record.")
                 end
                 result[index] = recordattributes[key][1]
@@ -100,8 +100,8 @@ function Base.convert(::Type{String}, attributes::GFF3Attributes)
     end
 
     recordattributes = [attributes.id, attributes.name, attributes.alias,
-                        attributes.parent, attributes.target, attributes.gap, 
-                        attributes.derivesfrom, attributes.note, attributes.dbcrossreference, 
+                        attributes.parent, attributes.target, attributes.gap,
+                        attributes.derivesfrom, attributes.note, attributes.dbcrossreference,
                         attributes.ontologyterm, attributes.iscircular]
     attributes_tmp = []
 
@@ -116,7 +116,7 @@ function Base.convert(::Type{String}, attributes::GFF3Attributes)
     end
 
     if !ismissing(attributes.other)
-        for (key, value) in attributes.other 
+        for (key, value) in attributes.other
             if isa(value, AbstractVector{String})
                 push!(attributes_tmp, join([key, join(value, ",")], "="))
             else
@@ -150,7 +150,7 @@ All data fields are optional and can contain the value `missing`.
                     and p-values for ab initio gene prediction features.
 - `strand::GenomicFeatures.Strand`: the strand of the feature ('+', '-', or '?').
 - `phase::Char`: the phase of the feature (0, 1, or 2); required for features of type "CDS".
-- `attributes::GFF3Attributes`: optional additional information, see `GFF3Attributes`. 
+- `attributes::GFF3Attributes`: optional additional information, see `GFF3Attributes`.
 """
 mutable struct GFF3Record
     seqid::Union{String, Missing}
@@ -176,12 +176,12 @@ end
 """
     GFF3Record(record::GFF3.Record)
 
-Convert the provided GFF3.Record to GFF3Record. 
+Convert the provided GFF3.Record to GFF3Record.
 This enables easier access to data fields as well as validity checks on the data.
 """
 function GFF3Record(record::GFF3.Record)
     result = Vector{Any}(missing, 9)
-    functions = [GFF3.seqid, GFF3.source, GFF3.featuretype, GFF3.seqstart, 
+    functions = [GFF3.seqid, GFF3.source, GFF3.featuretype, GFF3.seqstart,
                  GFF3.seqend, GFF3.score, GFF3.strand, GFF3.phase, GFF3Attributes]
 
     for i in eachindex(result)
@@ -202,12 +202,12 @@ function GFF3Record(record::GFF3.Record)
     return GFF3Record(result...)
 end
 
-# third constructor for building a GFF3Record from a String 
+# third constructor for building a GFF3Record from a String
 # makes use of the fancy GFF3.jl FSM/parser (thus the extra conversion step).
 """
     GFF3Record(record::AbstractString)
 
-Convert the provided String to a GFF3Record. 
+Convert the provided String to a GFF3Record.
 The String is parsed to ensure it is correctly formatted.
 """
 function GFF3Record(record::AbstractString)
@@ -215,14 +215,14 @@ function GFF3Record(record::AbstractString)
 end
 
 function BioCore.isfilled(record::GFF3Record)
-    return !(ismissing(record.seqid) && ismissing(record.source) && ismissing(record.type) && 
-            ismissing(record.start) && ismissing(record.end_) && ismissing(record.score) && 
+    return !(ismissing(record.seqid) && ismissing(record.source) && ismissing(record.type) &&
+            ismissing(record.start) && ismissing(record.end_) && ismissing(record.score) &&
             ismissing(record.strand) && ismissing(record.phase) && ismissing(record.attributes))
 
 end
 
 # convert GFF3Record back to GFF3.Record --> for GFF3.Writer
-function Base.convert(::Type{GFF3.Record}, record::GFF3Record) 
+function Base.convert(::Type{GFF3.Record}, record::GFF3Record)
     return GFF3.Record(String(record))
 end
 
@@ -230,10 +230,13 @@ function GFF3.Record(record::GFF3Record)
     return convert(GFF3.Record, record)
 end
 
-function Base.convert(::Type{String}, record::GFF3Record)
-    tmp = replace(join([record.seqid, record.source, record.type, record.start, record.end_, 
+function Base.convert(
+    ::Type{String},
+    record::GFF3Record
+)
+    tmp = replace(join([record.seqid, record.source, record.type, record.start, record.end_,
                         record.score, record.strand, record.phase], "\t"), "missing" => ".")
-    
+
     if ismissing(record.attributes)
         return tmp * "\t"
     else
@@ -262,7 +265,7 @@ function Base.show(io::IO, record::GFF3Record)
 end
 
 function Base.convert(::Type{DataFrames.DataFrame}, record::GFF3Record)
-    data = [[record.seqid], [record.source], [record.type], [record.start], [record.end_], 
+    data = [[record.seqid], [record.source], [record.type], [record.start], [record.end_],
             [record.score], [record.strand], [record.phase], [record.attributes]]
     result = DataFrames.DataFrame(data, columns)
     return result
@@ -282,7 +285,7 @@ Both are given as positive 1-based integers relative to the landmark `seqid`.
 function checkstartend(record::GFF3Record)
     if !ismissing(record.start) || !ismissing(record.end_)
         @assert !ismissing(record.seqid) "Sequence start and end must be given in relation to the landmark seqid."
-        if !ismissing(record.start) 
+        if !ismissing(record.start)
             @assert record.start >= 1 "Sequence start and end must be given as positive 1-based integers relativ to the landmark seqid."
             if !ismissing(record.end_)
                 @assert record.start <= record.end_ "Sequence end must be greater than or equal to start."
@@ -294,7 +297,7 @@ end
 """
     checkcdsphase(record::GFF3Record)
 
-Verify that a record of `type`== "CDS" also specifies a `phase`. 
+Verify that a record of `type`== "CDS" also specifies a `phase`.
 """
 function checkcdsphase(record::GFF3Record)
     if !ismissing(record.type)

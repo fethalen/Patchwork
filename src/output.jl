@@ -20,8 +20,13 @@ function warn_overwrite()::String
     return answer
 end
 
-function write_alignmentfile(file::AbstractString, id::AbstractString, contigs::Int64,
-                             alignment::BioAlignments.PairwiseAlignment, index::Int64)
+function write_alignmentfile(
+    file::AbstractString,
+    id::AbstractString,
+    contigs::Int64,
+    alignment::BioAlignments.PairwiseAlignment,
+    index::Int64
+)
     count = string(index) * ". "
     subjectlength = length(alignment.b)
     querylength = length(alignment.a.seq)
@@ -46,8 +51,12 @@ function write_alignmentfile(file::AbstractString, id::AbstractString, contigs::
     end
 end
 
-function write_fasta(file::AbstractString, id::SequenceIdentifier,
-                     alignment::PairwiseAlignment, delimiter::Char)
+function write_fasta(
+    file::AbstractString,
+    id::SequenceIdentifier,
+    alignment::PairwiseAlignment,
+    delimiter::Char
+)
     queryname = ""
     if delimiter in id.id
         queryname = otupart(id, delimiter)
