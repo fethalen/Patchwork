@@ -30,9 +30,15 @@ struct AlignedRegion
     querylast::Int64
     queryframe::Int64
 
-    function AlignedRegion(alignment::BioAlignments.PairwiseAlignment, subjectfirst::Int64,
-        subjectlast::Int64, queryid::SequenceIdentifier, queryfirst::Int64,
-        querylast::Int64, queryframe::Int64)
+    function AlignedRegion(
+        alignment::BioAlignments.PairwiseAlignment,
+        subjectfirst::Int64,
+        subjectlast::Int64,
+        queryid::SequenceIdentifier,
+        queryfirst::Int64,
+        querylast::Int64,
+        queryframe::Int64
+    )
         return new(alignment, subjectfirst, subjectlast, queryid, queryfirst, querylast,
             queryframe)
     end
