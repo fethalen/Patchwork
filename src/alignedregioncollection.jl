@@ -26,11 +26,17 @@ mutable struct AlignedRegionCollection
         return new(SequenceRecord(), records)
     end
 
-    function AlignedRegionCollection(reference::SequenceRecord, records::Vector{AlignedRegion})
+    function AlignedRegionCollection(
+        reference::SequenceRecord,
+        records::Vector{AlignedRegion}
+    )
         return new(reference, records)
     end
 
-    function AlignedRegionCollection(reference::SequenceRecord, results::Vector{DiamondSearchResult})
+    function AlignedRegionCollection(
+        reference::SequenceRecord,
+        results::Vector{DiamondSearchResult}
+    )
         regions = []
         for result in results
             push!(regions, AlignedRegion(result))
@@ -39,8 +45,10 @@ mutable struct AlignedRegionCollection
     end
 end
 
-function AlignedRegionCollection(msa::MultipleSequenceAlignment,
-                                 searchresults::Array{DiamondSearchResult})
+function AlignedRegionCollection(
+    msa::MultipleSequenceAlignment,
+    searchresults::Array{DiamondSearchResult}
+)
     querycount = length(msa)
     merge!(msa, searchresults)
     hitcount = length(msa) - querycount
@@ -69,15 +77,23 @@ function Base.length(regions::AlignedRegionCollection)
     return length(regions.records)
 end
 
-function Base.push!(regions::AlignedRegionCollection, region::AlignedRegion)
+function Base.push!(
+    regions::AlignedRegionCollection,
+    region::AlignedRegion
+)
     return push!(regions.records, region)
 end
 
-function Base.pop!(regions::AlignedRegionCollection)
+function Base.pop!(
+    regions::AlignedRegionCollection
+)
     return pop!(regions.records)
 end
 
-function Base.getindex(regions::AlignedRegionCollection, index::Integer)
+function Base.getindex(
+    regions::AlignedRegionCollection,
+    index::Integer
+)
     return getindex(regions.records, index)
 end
 
@@ -86,7 +102,10 @@ Base.firstindex(regions::AlignedRegionCollection) = 1
 Base.lastindex(regions::AlignedRegionCollection) = length(regions)
 Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
 
-@inline function Base.iterate(regions::AlignedRegionCollection, i::Int = firstindex(regions))
+@inline function Base.iterate(
+    regions::AlignedRegionCollection,
+    i::Int = firstindex(regions)
+)
     if i > lastindex(regions)
         return nothing
     else
@@ -165,7 +184,10 @@ end
 
 Returns `true` if there are overlapping sequences within `regions`.
 """
-function hasoverlaps(regions::AlignedRegionCollection, sorted=false)
+function hasoverlaps(
+    regions::AlignedRegionCollection,
+    sorted=false
+)
     if !sorted
         regions = sort(regions)
     end
@@ -194,8 +216,12 @@ their non-overlapping subset and are selected based on how well they align to th
 sequence. Because sometimes multiple rounds of merging are needed, there is a limit to
 how many times the function can run before stopping.
 """
-function mergeoverlaps(regions::AlignedRegionCollection, sorted::Bool=false,
-                       iteration::Int64=1, maxiterate::Int64=100)
+function mergeoverlaps(
+    regions::AlignedRegionCollection,
+    sorted::Bool=false,
+    iteration::Int64=1,
+    maxiterate::Int64=100
+)
     if !sorted
         regions = sort(regions)
     end

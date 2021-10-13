@@ -15,14 +15,20 @@ const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSU
 Globally align the `seq` (sequence) against a `ref` (reference) sequence using the
 provided `scoremodel`.
 """
-function pairalign_global(seq::SequenceRecord, ref::SequenceRecord,
-                          scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel)
+function pairalign_global(
+    seq::SequenceRecord,
+    ref::SequenceRecord,
+    scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+)
     return BioAlignments.pairalign(BioAlignments.GlobalAlignment(), seq.sequencedata,
                                    ref.sequencedata, scoremodel)
 end
 
-function pairalign_global(seq::BioSequences.LongSequence, ref::BioSequences.LongSequence,
-                         scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel)
+function pairalign_global(
+    seq::BioSequences.LongSequence,
+    ref::BioSequences.LongSequence,
+    scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+)
     return BioAlignments.pairalign(BioAlignments.GlobalAlignment(), seq, ref, scoremodel)
 end
 
@@ -32,15 +38,21 @@ end
 Align the `seq` (sequence) against a `ref` (reference) sequence using the
 provided `scoremodel`.
 """
-function pairalign_local(seq::SequenceRecord, ref::SequenceRecord,
-                         scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel)
+function pairalign_local(
+    seq::SequenceRecord,
+    ref::SequenceRecord,
+    scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+)
     return BioAlignments.pairalign(BioAlignments.LocalAlignment(), seq.sequencedata,
                                    ref.sequencedata, scoremodel)
 end
 
 
-function pairalign_local(seq::BioSequences.LongSequence, ref::BioSequences.LongSequence,
-                         scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel)
+function pairalign_local(
+    seq::BioSequences.LongSequence,
+    ref::BioSequences.LongSequence,
+    scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+)
     return BioAlignments.pairalign(BioAlignments.LocalAlignment(), seq, ref, scoremodel)
 end
 
@@ -50,7 +62,11 @@ end
 Realign the provided `AlignedRegion` objects at the provided interval and a tuple with the
 best-scoring alignment first and the other alignment second.
 """
-function order(a::AlignedRegion, b::AlignedRegion, interval::UnitRange)::Tuple
+function order(
+    a::AlignedRegion,
+    b::AlignedRegion,
+    interval::UnitRange
+)::Tuple
     scorea = realign(a, fullsubject2subject(a, interval)).value
     scoreb = realign(b, fullsubject2subject(b, interval)).value
     if scorea > scoreb
@@ -67,7 +83,10 @@ end
 
 Realigned the `region` at the specific `interval`.
 """
-function realign(region::AlignedRegion, interval::UnitRange)
+function realign(
+    region::AlignedRegion,
+    interval::UnitRange
+)
     alignment = region.pairwisealignment
     queryinterval = BioAlignments.ref2seq(alignment, interval)
     queryseq = alignment.a.seq[queryinterval]
@@ -80,7 +99,10 @@ end
 
 Realigned the `region` at the specific `interval`.
 """
-function realign(region::AlignedRegion, interval::UnitRange)
+function realign(
+    region::AlignedRegion,
+    interval::UnitRange
+)
     alignment = region.pairwisealignment
     queryinterval = BioAlignments.ref2seq(alignment, interval)
     queryseq = alignment.a.seq[queryinterval]
@@ -94,13 +116,19 @@ end
 Construct a `PairwiseAlignment` from two sequences, `seq` and `ref`, and a `cigar` string.
 """
 function BioAlignments.PairwiseAlignment(
-    seq::BioSequences.LongSequence, ref::BioSequences.LongSequence, cigar::String)
+    seq::BioSequences.LongSequence,
+    ref::BioSequences.LongSequence,
+    cigar::String
+)
     alignment = BioAlignments.Alignment(cigar)
     alignedseq = BioAlignments.AlignedSequence(seq, alignment)
     return BioAlignments.PairwiseAlignment(alignedseq, ref)
 end
 
-function BioAlignments.seq2ref(aln::BioAlignments.PairwiseAlignment, interval::UnitRange)
+function BioAlignments.seq2ref(
+    aln::BioAlignments.PairwiseAlignment,
+    interval::UnitRange
+)
     # for "negative" frames, the first < stop, so we grab the leftmost and rightmost
     # positions
     firstposition = first(interval)
@@ -111,7 +139,10 @@ function BioAlignments.seq2ref(aln::BioAlignments.PairwiseAlignment, interval::U
                      first(BioAlignments.seq2ref(aln, rightmost)))
 end
 
-function BioAlignments.ref2seq(aln::BioAlignments.PairwiseAlignment, interval::UnitRange)
+function BioAlignments.ref2seq(
+    aln::BioAlignments.PairwiseAlignment,
+    interval::UnitRange
+)
     # for "negative" frames, the first < stop, so we grab the leftmost and rightmost
     # positions
     firstposition = first(interval)
@@ -126,22 +157,20 @@ Base.firstindex(aln::BioAlignments.PairwiseAlignment) = 1
 Base.lastindex(aln::BioAlignments.PairwiseAlignment) = length(aln)
 Base.eachindex(aln::BioAlignments.PairwiseAlignment) = Base.OneTo(lastindex(aln))
 
-function Base.getindex(aln::BioAlignments.PairwiseAlignment, index::Integer)
+function Base.getindex(
+    aln::BioAlignments.PairwiseAlignment,
+    index::Integer
+)
     return aln[index:index]
 end
 
 # TODO: Lose global alignment dependency, retrieve alignment without realigning
-function Base.getindex(aln::BioAlignments.PairwiseAlignment, indices::UnitRange)
+function Base.getindex(
+    aln::BioAlignments.PairwiseAlignment,
+    indices::UnitRange
+)
     queryinterval = BioAlignments.ref2seq(aln, indices)
     queryseq = aln.a.seq[queryinterval]
     subjectseq = aln.b[indices]
     return pairalign_global(queryseq, subjectseq)
 end
-
-# @inline function Base.iterate(aln::BioAlignments.PairwiseAlignment, i::Int = firstindex(aln))
-#     if i > lastindex(aln)
-#         return nothing
-#     else
-#         return getindex(aln, i), i + 1
-#     end
-# end
