@@ -10,7 +10,10 @@ Takes the path to a directory and a list of acceptable FASTA filetype
 extensions as an input and returns all of the FASTA files with that filetype
 extension within the provided directory in form of a names.
 """
-function fastafiles(directory::String, extensions::Array{String, 1})::Array{String, 1}
+function fastafiles(
+    directory::String,
+    extensions::Array{String, 1}
+)::Array{String, 1}
     absdir = abspath(directory)
     isdir(absdir) || error(*("the directory ", directory, " does not exist"))
     files = []
@@ -76,8 +79,10 @@ end
 Searches within a `fastafile` for a sequence record that matches the
 provided `identifier`. `nothing` is return if no matching records were found.
 """
-function selectsequence(fastafile::AbstractString,
-                        identifier::String)
+function selectsequence(
+    fastafile::AbstractString,
+    identifier::String
+)
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
     record = FASTA.Record()
@@ -98,8 +103,10 @@ end
 Searches within a `fastafile` for sequence records with identifiers that matches the
 provided `identifiers`.
 """
-function selectsequences(fastafile::AbstractString,
-                         identifiers::Array{String})::MultipleSequenceAlignment
+function selectsequences(
+    fastafile::AbstractString,
+    identifiers::Array{String}
+)::MultipleSequenceAlignment
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
     record = FASTA.Record()
