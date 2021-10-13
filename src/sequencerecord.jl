@@ -140,8 +140,11 @@ end
 Add gap characters to `sequence` based on the `totalrange` of an alignment and
 the `coveredrange` by that `sequence`.
 """
-function fillmissing(sequence::LongSequence, totalrange::Integer,
-    coveredrange::Tuple)::LongSequence
+function fillmissing(
+    sequence::LongSequence,
+    totalrange::Integer,
+    coveredrange::Tuple
+)::LongSequence
     leftmost, rightmost = coveredrange
     coveredpositions = rightmost - leftmost + 1
     if length(sequence) != coveredpositions
@@ -278,7 +281,10 @@ end
 Returns the identifier of `sequence`, including the OTU separated by
 `separator`.
 """
-function identifier(sequence::SequenceRecord, separator::AbstractChar='@')
+function identifier(
+    sequence::SequenceRecord,
+    separator::AbstractChar='@'
+)
     return *(sequence.otu, separator, sequence.identifier)
 end
 
