@@ -7,8 +7,7 @@ include("alignedregioncollection.jl")
 
 #########################################################################################################################################################
 
-function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)::String
-    anchors = alignment.a.aln.anchors
+function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnchor})::String
     out = IOBuffer()
     if isempty(anchors)
         return ""
@@ -20,6 +19,10 @@ function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)::String
         print(out, positions, anchors[i].op)
     end
     return String(take!(out))
+end
+
+function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)::String
+    return BioAlignments.cigar(alignment.a.aln.anchors)
 end
 
 """

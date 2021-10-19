@@ -18,7 +18,7 @@ include("sequencerecord.jl")
 - `queryid::SequenceIdentifier`: the identifier associated with the aligned region.
 - `queryfirst::Int64`: the first position in the query sequence.
 - `querylast::Int64`: the first position in the query sequence.
-- `queryframe::Int64: the queryframe of the sequence (-3, -2, -1, 1, 2, or 3;
+- `queryframe::Int64`: the queryframe of the sequence (-3, -2, -1, 1, 2, or 3;
   0 = undefined).
 """
 struct AlignedRegion
@@ -253,9 +253,13 @@ Base.eachindex(region::AlignedRegion) = Base.OneTo(lastindex(region))
 # TODO: This is now defined two times
 function Base.getindex(aln::BioAlignments.PairwiseAlignment, indices::UnitRange)
     queryinterval = BioAlignments.ref2seq(aln, indices)
+    if first(queryinterval) < 1
+        queryinterval = 1:last(queryinterval)
+    end
     queryseq = aln.a.seq[queryinterval]
     subjectseq = aln.b[indices]
     return pairalign_global(queryseq, subjectseq)
+    #return pairalign_local(queryseq, subjectseq)
 end
 
 function Base.getindex(region::Patchwork.AlignedRegion, indices::UnitRange)
@@ -266,6 +270,27 @@ function Base.getindex(region::Patchwork.AlignedRegion, indices::UnitRange)
         subject2fullsubject(region, subjectfirst), subject2fullsubject(region, subjectlast),
         region.queryid, queryfirst, querylast, region.queryframe)
 end
+
+function slicealignment(region::AlignedRegion)
+    alignment = region.pairwisealignment
+    query = alignment.a.seq
+    subject = alignment.b
+    cig = cigar(alignment)
+    anchors = collect(eachmatch(r"[MIDNSHP=X]", cig))
+    positions = collect(eachmatch(r"\d+", cig))
+    if first(anchors) == "D" || first(anchors) == "N"
+        deleteat!(anchors, firstindex(anchors))
+        deleteat!(positions, firstindex(anchors))
+        query = query[first(positions):lastindex(query)]
+    end
+    if last(anchors) == "D" || last(anchors) == "N"
+        deleteat!(anchors, lastindex(anchors))
+        deleteat!(position, lastindex(positions))
+    end
+
+end
+# BioSequences.translate(result.querysequence, 
+#result.cigar), result.subjectsequence, cleancigar(result.cigar)
 
 """
     query_leftposition(region::AlignedRegion)::Integer
@@ -412,6 +437,7 @@ function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
     if shadows(bestscore, lowestscore) || samerange(bestscore, lowestscore)
         return [bestscore]
     elseif precedes(bestscore, lowestscore) || bestscore.subjectfirst == lowestscore.subjectfirst
+        println("PRECEDES")
         bestfirst = fullsubject2subject(bestscore, bestscore.subjectfirst)
         bestlast = fullsubject2subject(bestscore, last(overlappingregion))
         lowestfirst = fullsubject2subject(lowestscore, last(overlappingregion) + 1)
@@ -419,6 +445,7 @@ function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
         return [bestscore[bestfirst:bestlast],
                 lowestscore[lowestfirst:lowestlast]]
     else
+        println("NOT PRECEDES")
         lowestfirst = fullsubject2subject(lowestscore, lowestscore.subjectfirst)
         lowestlast = fullsubject2subject(lowestscore, first(overlappingregion) - 1)
         bestfirst = fullsubject2subject(bestscore, first(overlappingregion))
