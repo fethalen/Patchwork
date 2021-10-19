@@ -62,6 +62,19 @@ function order(a::AlignedRegion, b::AlignedRegion, interval::UnitRange)::Tuple
     end
 end
 
+#"""
+#    realign(region, interval)
+#
+#Realigned the `region` at the specific `interval`.
+#"""
+#function realign(region::AlignedRegion, interval::UnitRange)
+#    alignment = region.pairwisealignment
+#    queryinterval = BioAlignments.ref2seq(alignment, interval)
+#    queryseq = alignment.a.seq[queryinterval]
+#    subjectseq = alignment.b[interval]
+#    pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
+#end
+
 """
     realign(region, interval)
 
@@ -70,19 +83,10 @@ Realigned the `region` at the specific `interval`.
 function realign(region::AlignedRegion, interval::UnitRange)
     alignment = region.pairwisealignment
     queryinterval = BioAlignments.ref2seq(alignment, interval)
-    queryseq = alignment.a.seq[queryinterval]
-    subjectseq = alignment.b[interval]
-    pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
-end
-
-"""
-    realign(region, interval)
-
-Realigned the `region` at the specific `interval`.
-"""
-function realign(region::AlignedRegion, interval::UnitRange)
-    alignment = region.pairwisealignment
-    queryinterval = BioAlignments.ref2seq(alignment, interval)
+    #if first(queryinterval) < 1 
+    #    queryinterval = 1:last(queryinterval)
+    #end
+    println(Patchwork.cigar(alignment))
     queryseq = alignment.a.seq[queryinterval]
     subjectseq = alignment.b[interval]
     pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
@@ -118,6 +122,9 @@ function BioAlignments.ref2seq(aln::BioAlignments.PairwiseAlignment, interval::U
     lastposition = last(interval)
     leftmost = min(firstposition, lastposition)
     rightmost = max(firstposition, lastposition)
+    println(leftmost, " ", BioAlignments.ref2seq(aln, leftmost))
+    println(rightmost, " ", BioAlignments.ref2seq(aln, rightmost))
+    println(aln)
     return UnitRange(first(BioAlignments.ref2seq(aln, leftmost)),
                      first(BioAlignments.ref2seq(aln, rightmost)))
 end
