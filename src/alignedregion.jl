@@ -298,9 +298,9 @@ function Base.getindex(
     indices::UnitRange
 )
     queryinterval = BioAlignments.ref2seq(aln, indices)
-    if first(queryinterval) < 1
-        queryinterval = 1:last(queryinterval)
-    end
+    #if first(queryinterval) < 1
+    #    queryinterval = 1:last(queryinterval)
+    #end
     queryseq = aln.a.seq[queryinterval]
     subjectseq = aln.b[indices]
     return pairalign_global(queryseq, subjectseq)
@@ -319,23 +319,37 @@ function Base.getindex(
         region.queryid, queryfirst, querylast, region.queryframe)
 end
 
-function slicealignment(region::AlignedRegion)
+function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegion
     alignment = region.pairwisealignment
-    query = alignment.a.seq
-    subject = alignment.b
-    cig = cigar(alignment)
-    anchors = collect(eachmatch(r"[MIDNSHP=X]", cig))
-    positions = collect(eachmatch(r"\d+", cig))
-    if first(anchors) == "D" || first(anchors) == "N"
+    query = alignment.a.seq # for slicedalignment
+    subject = alignment.b # for slicedalignment
+    cigar = cigar(alignment)
+    anchors = collect(eachmatch(r"[MIDNSHP=X]", cigar))
+    positions = collect(eachmatch(r"\d+", cigar))
+    skipstart = 0
+    skipend = 0
+    while first(anchors) == "D" || first(anchors) == "N"
         deleteat!(anchors, firstindex(anchors))
-        deleteat!(positions, firstindex(anchors))
-        query = query[first(positions):lastindex(query)]
+        pos = popat!(positions, firstindex(anchors))
+        skipstart += parse(Int64, pos)
+        cigar = cigar[(firstindex(cigar)+length(pos)+1):lastindex(cigar)] # slicedalignment
     end
-    if last(anchors) == "D" || last(anchors) == "N"
+    while last(anchors) == "D" || last(anchors) == "N"
         deleteat!(anchors, lastindex(anchors))
-        deleteat!(position, lastindex(positions))
+        pos = popat!(positions, lastindex(positions))
+        skipend += parse(Int64, pos)
+        cigar = cigar[firstindex(cigar):(lastindex(cigar)-length(pos)-1)] # slicedalignment
     end
-
+    range = (first(indices) + skipstart):(last(indices) - skipend)
+    # the following avoids realigning query and subject: 
+    slicedalignment = BioAlignments.PairwiseAlignment(query, subject[range], cigar)
+    subjectfirst = subject2fullsubject(first(range))
+    subjectlast = subject2fullsubject(last(range))
+    queryfirst, querylast = subject_queryboundaries(region, range) # I don't get this stuff here
+    #return AlignedRegion(alignment[range].aln, subjectfirst, subjectlast, region.queryid, 
+    #    queryfirst, querylast, region.queryframe)
+    return AlignedRegion(slicedalignment, subjectfirst, subjectlast, region.queryid, 
+        queryfirst, querylast, region.queryframe)
 end
 # BioSequences.translate(result.querysequence, 
 #result.cigar), result.subjectsequence, cleancigar(result.cigar)
@@ -515,16 +529,20 @@ function merge(
         bestlast = fullsubject2subject(bestscore, last(overlappingregion))
         lowestfirst = fullsubject2subject(lowestscore, last(overlappingregion) + 1)
         lowestlast = fullsubject2subject(lowestscore, lowestscore.subjectlast)
-        return [bestscore[bestfirst:bestlast],
-                lowestscore[lowestfirst:lowestlast]]
+        return [slicealignment(bestscore, bestfirst:bestlast), 
+                slicealignment(lowestscore, lowestfirst:lowestlast)]
+        #return [bestscore[bestfirst:bestlast],
+        #        lowestscore[lowestfirst:lowestlast]]
     else
         println("NOT PRECEDES")
         lowestfirst = fullsubject2subject(lowestscore, lowestscore.subjectfirst)
         lowestlast = fullsubject2subject(lowestscore, first(overlappingregion) - 1)
         bestfirst = fullsubject2subject(bestscore, first(overlappingregion))
         bestlast = fullsubject2subject(bestscore, bestscore.subjectlast)
-        return [lowestscore[lowestfirst:lowestlast],
-                bestscore[bestfirst:bestlast]]
+        return [slicealignment(lowestscore, lowestfirst:lowestlast), 
+                slicealignment(bestscore, bestfirst:bestlast)]
+        #return [lowestscore[lowestfirst:lowestlast],
+        #        bestscore[bestfirst:bestlast]]
     end
 end
 
