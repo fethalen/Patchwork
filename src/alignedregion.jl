@@ -56,6 +56,25 @@ struct AlignedRegion
     end
 end
 
+function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnchor})::String
+    out = IOBuffer()
+    if isempty(anchors)
+        return ""
+    end
+    @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
+    for i in 2:lastindex(anchors)
+        positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
+                        anchors[i].refpos - anchors[i-1].refpos)
+        print(out, positions, anchors[i].op)
+    end
+    return String(take!(out))
+end
+
+function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)::String
+    return BioAlignments.cigar(alignment.a.aln.anchors)
+end
+
+
 """
     cleancigar(cigar::AbstractString)
 
@@ -323,28 +342,28 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     alignment = region.pairwisealignment
     query = alignment.a.seq # for slicedalignment
     subject = alignment.b # for slicedalignment
-    cigar = cigar(alignment)
-    anchors = collect(eachmatch(r"[MIDNSHP=X]", cigar))
-    positions = collect(eachmatch(r"\d+", cigar))
+    cig = cigar(alignment)
+    anchors = collect(eachmatch(r"[MIDNSHP=X]", cig))
+    positions = collect(eachmatch(r"\d+", cig))
     skipstart = 0
     skipend = 0
     while first(anchors) == "D" || first(anchors) == "N"
         deleteat!(anchors, firstindex(anchors))
         pos = popat!(positions, firstindex(anchors))
         skipstart += parse(Int64, pos)
-        cigar = cigar[(firstindex(cigar)+length(pos)+1):lastindex(cigar)] # slicedalignment
+        cig = cig[(firstindex(cig)+length(pos)+1):lastindex(cig)] # slicedalignment
     end
     while last(anchors) == "D" || last(anchors) == "N"
         deleteat!(anchors, lastindex(anchors))
         pos = popat!(positions, lastindex(positions))
         skipend += parse(Int64, pos)
-        cigar = cigar[firstindex(cigar):(lastindex(cigar)-length(pos)-1)] # slicedalignment
+        cig = cig[firstindex(cig):(lastindex(cig)-length(pos)-1)] # slicedalignment
     end
     range = (first(indices) + skipstart):(last(indices) - skipend)
     # the following avoids realigning query and subject: 
-    slicedalignment = BioAlignments.PairwiseAlignment(query, subject[range], cigar)
-    subjectfirst = subject2fullsubject(first(range))
-    subjectlast = subject2fullsubject(last(range))
+    slicedalignment = BioAlignments.PairwiseAlignment(query, subject[range], cig)
+    subjectfirst = subject2fullsubject(region, first(range))
+    subjectlast = subject2fullsubject(region, last(range))
     queryfirst, querylast = subject_queryboundaries(region, range) # I don't get this stuff here
     #return AlignedRegion(alignment[range].aln, subjectfirst, subjectlast, region.queryid, 
     #    queryfirst, querylast, region.queryframe)
