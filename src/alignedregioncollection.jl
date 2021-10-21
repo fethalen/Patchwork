@@ -231,12 +231,14 @@ function mergeoverlaps(
     push!(mergedregions, first(regions))
 
     for i in 2:lastindex(regions)
-        println("CALL MERGEOVERLAPS, NO. ", iteration)
+        println("CALL MERGEOVERLAPS, NO. ", iteration, "; FOR LOOP INTERATION ", i-1)
         currentregion = regions[i]
         lastregion = last(mergedregions)
         if isoverlapping(currentregion, lastregion)
             pop!(mergedregions)
-            println("OVERLAPPING REGIONS")
+            println("OVERLAP: ", overlap(currentregion, lastregion))
+            println("CURRENT SUBJECT RANGE: ", currentregion.subjectfirst, ":", currentregion.subjectlast)
+            println("LAST SUBJECT RANGE: ", lastregion.subjectfirst, ":", lastregion.subjectlast)
             for region in merge(currentregion, lastregion)
                 push!(mergedregions, region)
             end

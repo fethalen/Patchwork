@@ -339,6 +339,8 @@ function Base.getindex(
 end
 
 function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegion
+    println("SLICEALIGNMENT START")
+    println("INDICES: ", indices)
     alignment = region.pairwisealignment
     query = alignment.a.seq # for slicedalignment
     subject = alignment.b # for slicedalignment
@@ -359,16 +361,22 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
         skipend += parse(Int64, pos)
         cig = cig[firstindex(cig):(lastindex(cig)-length(pos)-1)] # slicedalignment
     end
-    range = (first(indices) + skipstart):(last(indices) - skipend)
+    range = (first(indices)+skipstart):(last(indices)-skipend)
+    println("ADJUSTED INDICES: ", range)
     # the following avoids realigning query and subject: 
+    println("SUBJECT RANGE: ", subject[range])
     slicedalignment = BioAlignments.PairwiseAlignment(query, subject[range], cig)
+    println(slicedalignment)
     subjectfirst = subject2fullsubject(region, first(range))
     subjectlast = subject2fullsubject(region, last(range))
     queryfirst, querylast = subject_queryboundaries(region, range) # I don't get this stuff here
     #return AlignedRegion(alignment[range].aln, subjectfirst, subjectlast, region.queryid, 
     #    queryfirst, querylast, region.queryframe)
-    return AlignedRegion(slicedalignment, subjectfirst, subjectlast, region.queryid, 
+    newregion = AlignedRegion(slicedalignment, subjectfirst, subjectlast, region.queryid, 
         queryfirst, querylast, region.queryframe)
+    println(newregion)
+    println("SLICEALIGNMENT END")
+    return newregion
 end
 # BioSequences.translate(result.querysequence, 
 #result.cigar), result.subjectsequence, cleancigar(result.cigar)
@@ -541,6 +549,7 @@ function merge(
     overlappingregion = overlap(a, b)
     bestscore, lowestscore = order(a, b, overlappingregion)
     if shadows(bestscore, lowestscore) || samerange(bestscore, lowestscore)
+        println("SHADOWS")
         return [bestscore]
     elseif precedes(bestscore, lowestscore) || bestscore.subjectfirst == lowestscore.subjectfirst
         println("PRECEDES")
