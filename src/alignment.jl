@@ -51,6 +51,7 @@ Realign the provided `AlignedRegion` objects at the provided interval and a tupl
 best-scoring alignment first and the other alignment second.
 """
 function order(a::AlignedRegion, b::AlignedRegion, interval::UnitRange)::Tuple
+    println("ORDER")
     scorea = realign(a, fullsubject2subject(a, interval)).value
     scoreb = realign(b, fullsubject2subject(b, interval)).value
     if scorea > scoreb
@@ -81,6 +82,7 @@ end
 Realigned the `region` at the specific `interval`.
 """
 function realign(region::AlignedRegion, interval::UnitRange)
+    println("REALIGN")
     alignment = region.pairwisealignment
     queryinterval = BioAlignments.ref2seq(alignment, interval)
     #if first(queryinterval) < 1 
@@ -89,6 +91,7 @@ function realign(region::AlignedRegion, interval::UnitRange)
     println(Patchwork.cigar(alignment))
     queryseq = alignment.a.seq[queryinterval]
     subjectseq = alignment.b[interval]
+    println("REALIGN END")
     pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
 end
 
@@ -118,6 +121,7 @@ end
 function BioAlignments.ref2seq(aln::BioAlignments.PairwiseAlignment, interval::UnitRange)
     # for "negative" frames, the first < stop, so we grab the leftmost and rightmost
     # positions
+    println("REF2SEQ")
     firstposition = first(interval)
     lastposition = last(interval)
     leftmost = min(firstposition, lastposition)
@@ -125,6 +129,7 @@ function BioAlignments.ref2seq(aln::BioAlignments.PairwiseAlignment, interval::U
     println(leftmost, " ", BioAlignments.ref2seq(aln, leftmost))
     println(rightmost, " ", BioAlignments.ref2seq(aln, rightmost))
     println(aln)
+    println("REF2SEQ END")
     return UnitRange(first(BioAlignments.ref2seq(aln, leftmost)),
                      first(BioAlignments.ref2seq(aln, rightmost)))
 end
