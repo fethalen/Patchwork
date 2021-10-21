@@ -7,24 +7,6 @@ include("alignedregioncollection.jl")
 
 #########################################################################################################################################################
 
-function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnchor})::String
-    out = IOBuffer()
-    if isempty(anchors)
-        return ""
-    end
-    @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
-    for i in 2:lastindex(anchors)
-        positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
-                        anchors[i].refpos - anchors[i-1].refpos)
-        print(out, positions, anchors[i].op)
-    end
-    return String(take!(out))
-end
-
-function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)::String
-    return BioAlignments.cigar(alignment.a.aln.anchors)
-end
-
 """
     createbridgealignment(reference::LongSequence)
 
