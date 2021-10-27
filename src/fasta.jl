@@ -72,31 +72,6 @@ function get_fullseq(fastafile::String)::SequenceRecord
 end
 
 """
-    get_fullseq(fastafile::String, id::SequenceIdentifier)::SequenceRecord
-
-Returns the first and only the first sequence within the provided FASTA file whose
-identifier matches `id` as a `SequenceRecord`.
-"""
-function get_fullseq(fastafile::String, id::String)::SequenceRecord
-    abs_fastafile = abspath(fastafile)
-    isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
-    record = FASTA.Record()
-    msa = MultipleSequenceAlignment(abs_fastafile)
-
-    open(FASTA.Reader, fastafile) do reader
-        while !eof(reader)
-            read!(reader, record)
-            if isfilled(record)
-                isequal(FASTA.identifier(record), id) && return SequenceRecord(
-                        FASTA.identifier(record), FASTA.sequence(record))
-            end
-        end
-    end
-
-    return SequenceRecord()
-end
-
-"""
     selectsequence(fastafile, identifier)
 
 Searches within a `fastafile` for a sequence record that matches the
