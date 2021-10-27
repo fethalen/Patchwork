@@ -577,15 +577,7 @@ end
 Given two overlapping `AlignedRegion`s, slice the regions such that the best-scoring region
 covers the overlapping interval. Returns an array of `AlignedRegion` objects.
 """
-<<<<<<< HEAD
-function merge(
-    a::AlignedRegion,
-    b::AlignedRegion,
-    skipcheck::Bool=false
-)
-=======
 function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
->>>>>>> fix BoundsError in mergeoverlaps
     !skipcheck && !isoverlapping(a, b) && error("region $a and $b are not overlapping")
 
     overlappingregion = overlap(a, b)
