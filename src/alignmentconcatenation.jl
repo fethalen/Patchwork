@@ -5,20 +5,7 @@ include("alignment.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
 
-function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)::String
-    anchors = alignment.a.aln.anchors
-    out = IOBuffer()
-    if isempty(anchors)
-        return ""
-    end
-    @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
-    for i in 2:lastindex(anchors)
-        positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
-                        anchors[i].refpos - anchors[i-1].refpos)
-        print(out, positions, anchors[i].op)
-    end
-    return String(take!(out))
-end
+#########################################################################################################################################################
 
 """
     createbridgealignment(reference::LongSequence)

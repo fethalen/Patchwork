@@ -2,7 +2,6 @@
 
 include("alignedregion.jl")
 include("diamond.jl")
-include("mafft.jl")
 
 """
     struct AlignedRegionCollection
@@ -236,7 +235,9 @@ function mergeoverlaps(
         if isoverlapping(currentregion, lastregion)
             pop!(mergedregions)
             for region in merge(currentregion, lastregion)
-                push!(mergedregions, region)
+                if !isempty(region)
+                    push!(mergedregions, region)
+                end
             end
         else
             push!(mergedregions, currentregion)
