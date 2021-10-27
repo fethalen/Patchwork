@@ -2,7 +2,6 @@
 
 include("alignedregion.jl")
 include("diamond.jl")
-include("mafft.jl")
 
 """
     struct AlignedRegionCollection
