@@ -30,15 +30,15 @@ struct AlignedRegion
     querylast::Int64
     queryframe::Int64
 
-    function AlignedRegion(
-        alignment::BioAlignments.PairwiseAlignment,
-        subjectfirst::Int64,
-        subjectlast::Int64,
-        queryid::SequenceIdentifier,
-        queryfirst::Int64,
-        querylast::Int64,
-        queryframe::Int64
-    )
+    function AlignedRegion()
+        emptyaln = BioAlignments.PairwiseAlignment(BioSequences.LongAminoAcidSeq(), 
+            BioSequences.LongAminoAcidSeq(), "")
+        return new(emptyaln, 0, 0, SequenceIdentifier(), 0, 0, 0)
+    end
+
+    function AlignedRegion(alignment::BioAlignments.PairwiseAlignment, subjectfirst::Int64,
+        subjectlast::Int64, queryid::SequenceIdentifier, queryfirst::Int64,
+        querylast::Int64, queryframe::Int64)
         return new(alignment, subjectfirst, subjectlast, queryid, queryfirst, querylast,
             queryframe)
     end
@@ -55,6 +55,8 @@ struct AlignedRegion
                    result.querystart, result.queryend, result.queryframe)
     end
 end
+
+Base.isempty(region::AlignedRegion) = isempty(region.pairwisealignment)
 
 function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnchor})::String
     out = IOBuffer()
@@ -317,13 +319,12 @@ function Base.getindex(
     indices::UnitRange
 )
     queryinterval = BioAlignments.ref2seq(aln, indices)
-    #if first(queryinterval) < 1
-    #    queryinterval = 1:last(queryinterval)
-    #end
-    queryseq = aln.a.seq[queryinterval]
     subjectseq = aln.b[indices]
+    isequal(queryinterval, 0:0) && 
+        return pairalign_global(BioSequences.LongAminoAcidSeq(), subjectseq)
+    queryinterval = max(1, first(queryinterval)):last(queryinterval)
+    queryseq = aln.a.seq[queryinterval]
     return pairalign_global(queryseq, subjectseq)
-    #return pairalign_local(queryseq, subjectseq)
 end
 
 function Base.getindex(
@@ -338,48 +339,85 @@ function Base.getindex(
         region.queryid, queryfirst, querylast, region.queryframe)
 end
 
+# function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegion
+#     queryint = BioAlignments.ref2seq(region.pairwisealignment, indices)
+#     isequal(queryint, 0:0) && return AlignedRegion() # empty/gap-only alignment
+#     queryint = max(1, first(queryint)):last(queryint)
+#     query = region.pairwisealignment.a.seq
+#     subject = region.pairwisealignment.b
+#     anchors = deepcopy(region.pairwisealignment.a.aln.anchors)
+#     @assert first(anchors).op == BioAlignments.OP_START
+#     querystart = first(queryint)
+#     queryend = last(queryint)
+#     i = 2
+#     while i <= lastindex(anchors) && isdeleteop(anchors[i].op)
+#         if anchors[i].seqpos > first(queryint) 
+#             querystart = anchors[i].seqpos
+#         end
+#         i += 1
+#     end
+#     i = lastindex(anchors)
+#     while 1 < i <= lastindex(anchors) && isdeleteop(anchors[i].op) 
+#         if anchors[i].seqpos < last(queryint) 
+#             queryend = anchors[i].seqpos
+#         end
+#         i -= 1
+#     end
+#     @assert i > 1
+#     subjectstart = query2subject(region, querystart)
+#     subjectend = query2subject(region, queryend)
+#     sliced = pairalign_global(query[querystart:queryend], subject[subjectstart:subjectend]).aln
+#     queryfirst, querylast = subject_queryboundaries(region, subjectstart:subjectend)
+#     return AlignedRegion(sliced, subject2fullsubject(region, subjectstart), 
+#         subject2fullsubject(region, subjectend), region.queryid, queryfirst, querylast, 
+#         region.queryframe)
+# end
+
+# The same but without using pairalign_global: 
 function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegion
-    println("SLICEALIGNMENT START")
-    println("INDICES: ", indices)
-    alignment = region.pairwisealignment
-    query = alignment.a.seq # for slicedalignment
-    subject = alignment.b # for slicedalignment
-    cig = cigar(alignment)
-    anchors = collect(eachmatch(r"[MIDNSHP=X]", cig))
-    positions = collect(eachmatch(r"\d+", cig))
-    skipstart = 0
-    skipend = 0
-    while first(anchors) == "D" || first(anchors) == "N"
-        deleteat!(anchors, firstindex(anchors))
-        pos = popat!(positions, firstindex(anchors))
-        skipstart += parse(Int64, pos)
-        cig = cig[(firstindex(cig)+length(pos)+1):lastindex(cig)] # slicedalignment
+    queryint = BioAlignments.ref2seq(region.pairwisealignment, indices)
+    isequal(queryint, 0:0) && return AlignedRegion() # empty/gap-only alignment
+    queryint = max(1, first(queryint)):last(queryint)
+    query = region.pairwisealignment.a.seq
+    subject = region.pairwisealignment.b
+    anchors = deepcopy(region.pairwisealignment.a.aln.anchors)
+    @assert first(anchors).op == BioAlignments.OP_START
+    querystart = first(queryint)
+    queryend = last(queryint)
+    while length(anchors) >= 2 && (isdeleteop(anchors[2].op) ||
+            anchors[2].seqpos < first(queryint))
+        if anchors[2].seqpos > first(queryint) 
+            querystart = anchors[2].seqpos
+        end
+        deleteat!(anchors, 2)
     end
-    while last(anchors) == "D" || last(anchors) == "N"
-        deleteat!(anchors, lastindex(anchors))
-        pos = popat!(positions, lastindex(positions))
-        skipend += parse(Int64, pos)
-        cig = cig[firstindex(cig):(lastindex(cig)-length(pos)-1)] # slicedalignment
+    while length(anchors) >= 2 && (isdeleteop(last(anchors).op) || 
+            last(anchors).seqpos > last(queryint))
+        if last(anchors).seqpos < last(queryint) 
+            queryend = last(anchors).seqpos
+        end
+        toomuch = pop!(anchors)
+        lastanchor = last(anchors)
+        if lastanchor.seqpos < queryend
+            push!(anchors, BioAlignments.AlignmentAnchor(queryend, last(indices), 
+                toomuch.op))
+        end
     end
-    range = (first(indices)+skipstart):(last(indices)-skipend)
-    println("ADJUSTED INDICES: ", range)
-    # the following avoids realigning query and subject: 
-    println("SUBJECT RANGE: ", subject[range])
-    slicedalignment = BioAlignments.PairwiseAlignment(query, subject[range], cig)
-    println(slicedalignment)
-    subjectfirst = subject2fullsubject(region, first(range))
-    subjectlast = subject2fullsubject(region, last(range))
-    queryfirst, querylast = subject_queryboundaries(region, range) # I don't get this stuff here
-    #return AlignedRegion(alignment[range].aln, subjectfirst, subjectlast, region.queryid, 
-    #    queryfirst, querylast, region.queryframe)
-    newregion = AlignedRegion(slicedalignment, subjectfirst, subjectlast, region.queryid, 
-        queryfirst, querylast, region.queryframe)
-    println(newregion)
-    println("SLICEALIGNMENT END")
-    return newregion
+    @assert length(anchors) > 1
+    subjectstart = query2subject(region, querystart)
+    subjectend = query2subject(region, queryend)
+    newanchors = [anchors[1]]
+    for anchor in anchors[2:lastindex(anchors)]
+        push!(newanchors, BioAlignments.AlignmentAnchor(anchor.seqpos-querystart+1, 
+            anchor.refpos-subjectstart+1, anchor.op))
+    end
+    sliced = BioAlignments.PairwiseAlignment(query[querystart:queryend], 
+        subject[subjectstart:subjectend], cigar(newanchors))
+    queryfirst, querylast = subject_queryboundaries(region, subjectstart:subjectend)
+    return AlignedRegion(sliced, subject2fullsubject(region, subjectstart), 
+        subject2fullsubject(region, subjectend), region.queryid, queryfirst, querylast, 
+        region.queryframe)
 end
-# BioSequences.translate(result.querysequence, 
-#result.cigar), result.subjectsequence, cleancigar(result.cigar)
 
 """
     query_leftposition(region::AlignedRegion)::Integer
@@ -539,38 +577,42 @@ end
 Given two overlapping `AlignedRegion`s, slice the regions such that the best-scoring region
 covers the overlapping interval. Returns an array of `AlignedRegion` objects.
 """
+<<<<<<< HEAD
 function merge(
     a::AlignedRegion,
     b::AlignedRegion,
     skipcheck::Bool=false
 )
+=======
+function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
+>>>>>>> fix BoundsError in mergeoverlaps
     !skipcheck && !isoverlapping(a, b) && error("region $a and $b are not overlapping")
 
     overlappingregion = overlap(a, b)
     bestscore, lowestscore = order(a, b, overlappingregion)
     if shadows(bestscore, lowestscore) || samerange(bestscore, lowestscore)
-        println("SHADOWS")
-        return [bestscore]
+        bestfirst = fullsubject2subject(bestscore, bestscore.subjectfirst)
+        bestlast = fullsubject2subject(bestscore, bestscore.subjectlast)
+        return [slicealignment(bestscore, bestfirst:bestlast)]
     elseif precedes(bestscore, lowestscore) || bestscore.subjectfirst == lowestscore.subjectfirst
-        println("PRECEDES")
         bestfirst = fullsubject2subject(bestscore, bestscore.subjectfirst)
         bestlast = fullsubject2subject(bestscore, last(overlappingregion))
         lowestfirst = fullsubject2subject(lowestscore, last(overlappingregion) + 1)
         lowestlast = fullsubject2subject(lowestscore, lowestscore.subjectlast)
         return [slicealignment(bestscore, bestfirst:bestlast), 
                 slicealignment(lowestscore, lowestfirst:lowestlast)]
-        #return [bestscore[bestfirst:bestlast],
-        #        lowestscore[lowestfirst:lowestlast]]
-    else
-        println("NOT PRECEDES")
-        lowestfirst = fullsubject2subject(lowestscore, lowestscore.subjectfirst)
-        lowestlast = fullsubject2subject(lowestscore, first(overlappingregion) - 1)
-        bestfirst = fullsubject2subject(bestscore, first(overlappingregion))
-        bestlast = fullsubject2subject(bestscore, bestscore.subjectlast)
-        return [slicealignment(lowestscore, lowestfirst:lowestlast), 
-                slicealignment(bestscore, bestfirst:bestlast)]
-        #return [lowestscore[lowestfirst:lowestlast],
-        #        bestscore[bestfirst:bestlast]]
+    else#if precedes(lowestscore, bestscore) 
+        beforeoverlap_first = fullsubject2subject(lowestscore, lowestscore.subjectfirst)
+        beforeoverlap_last = fullsubject2subject(lowestscore, first(overlappingregion) - 1)
+        if lowestscore.subjectlast > last(overlappingregion)
+            afteroverlap_first = fullsubject2subject(lowestscore, last(overlappingregion) + 1)
+            afteroverlap_last = fullsubject2subject(lowestscore, lowestscore.subjectlast)
+            return [slicealignment(lowestscore, beforeoverlap_first:beforeoverlap_last), 
+                bestscore, slicealignment(lowestscore, afteroverlap_first:afteroverlap_last)]
+        else
+            return [slicealignment(lowestscore, beforeoverlap_first:beforeoverlap_last), 
+                bestscore]
+        end
     end
 end
 
@@ -696,7 +738,7 @@ function shadows(
 )::Bool
     return length(a) > length(b) &&
            subject_leftposition(a) <= subject_leftposition(b) &&
-           subject_rightposition(a) >= subject_rightposition(b)
+           subject_rightposition(a) >= subject_rightposition(b) # b ends BEFORE a, see docstring?!
 end
 
 """

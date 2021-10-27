@@ -102,13 +102,11 @@ function realign(
 )
     alignment = region.pairwisealignment
     queryinterval = BioAlignments.ref2seq(alignment, interval)
-    #if first(queryinterval) < 1 
-    #    queryinterval = 1:last(queryinterval)
-    #end
-    println(Patchwork.cigar(alignment))
-    queryseq = alignment.a.seq[queryinterval]
     subjectseq = alignment.b[interval]
-    println("REALIGN END")
+    isequal(queryinterval, 0:0) && 
+        return pairalign_local(BioSequences.LongAminoAcidSeq(), subjectseq[interval])
+    queryinterval = max(1, first(queryinterval)):last(queryinterval)
+    queryseq = alignment.a.seq[queryinterval]
     pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
 end
 
@@ -147,15 +145,10 @@ function BioAlignments.ref2seq(
 )
     # for "negative" frames, the first < stop, so we grab the leftmost and rightmost
     # positions
-    println("REF2SEQ")
     firstposition = first(interval)
     lastposition = last(interval)
     leftmost = min(firstposition, lastposition)
     rightmost = max(firstposition, lastposition)
-    println(leftmost, " ", BioAlignments.ref2seq(aln, leftmost))
-    println(rightmost, " ", BioAlignments.ref2seq(aln, rightmost))
-    println(aln)
-    println("REF2SEQ END")
     return UnitRange(first(BioAlignments.ref2seq(aln, leftmost)),
                      first(BioAlignments.ref2seq(aln, rightmost)))
 end
@@ -172,12 +165,17 @@ function Base.getindex(
 end
 
 # TODO: Lose global alignment dependency, retrieve alignment without realigning
-function Base.getindex(
-    aln::BioAlignments.PairwiseAlignment,
-    indices::UnitRange
-)
-    queryinterval = BioAlignments.ref2seq(aln, indices)
-    queryseq = aln.a.seq[queryinterval]
-    subjectseq = aln.b[indices]
-    return pairalign_global(queryseq, subjectseq)
-end
+#function Base.getindex(aln::BioAlignments.PairwiseAlignment, indices::UnitRange)
+#    queryinterval = BioAlignments.ref2seq(aln, indices)
+#    queryseq = aln.a.seq[queryinterval]
+#    subjectseq = aln.b[indices]
+#    return pairalign_global(queryseq, subjectseq)
+#end
+
+# @inline function Base.iterate(aln::BioAlignments.PairwiseAlignment, i::Int = firstindex(aln))
+#     if i > lastindex(aln)
+#         return nothing
+#     else
+#         return getindex(aln, i), i + 1
+#     end
+# end
