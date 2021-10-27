@@ -7,7 +7,7 @@ package:
 
 source: 
  url: https://github.com/fethalen/Patchwork/archive/v0.1.2-pre-alpha.tar.gz
- sha256: 9e1cae9b6b110986ef1ce887a1d9c820152a23c2c401cda36da9ad7374c41d18
+ sha256: 171a1e92adaa04bc605d64518c499f458e4f1c3e4e2f681a7a6ff797af5bc6a7
 
 build:
  number: 0
@@ -15,7 +15,9 @@ build:
 requirements:
  build: 
   - {{ compiler('c') }}
-  - julia>=1.6.0
+  - julia >=1.6.2
+ run:
+  - diamond >=2.0.10
 
 test:
  commands: 

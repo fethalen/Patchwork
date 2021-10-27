@@ -78,21 +78,18 @@ function order(
     end
 end
 
-"""
-    realign(region, interval)
-
-Realigned the `region` at the specific `interval`.
-"""
-function realign(
-    region::AlignedRegion,
-    interval::UnitRange
-)
-    alignment = region.pairwisealignment
-    queryinterval = BioAlignments.ref2seq(alignment, interval)
-    queryseq = alignment.a.seq[queryinterval]
-    subjectseq = alignment.b[interval]
-    pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
-end
+#"""
+#    realign(region, interval)
+#
+#Realigned the `region` at the specific `interval`.
+#"""
+#function realign(region::AlignedRegion, interval::UnitRange)
+#    alignment = region.pairwisealignment
+#    queryinterval = BioAlignments.ref2seq(alignment, interval)
+#    queryseq = alignment.a.seq[queryinterval]
+#    subjectseq = alignment.b[interval]
+#    pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
+#end
 
 """
     realign(region, interval)
@@ -105,8 +102,11 @@ function realign(
 )
     alignment = region.pairwisealignment
     queryinterval = BioAlignments.ref2seq(alignment, interval)
-    queryseq = alignment.a.seq[queryinterval]
     subjectseq = alignment.b[interval]
+    isequal(queryinterval, 0:0) && 
+        return pairalign_local(BioSequences.LongAminoAcidSeq(), subjectseq[interval])
+    queryinterval = max(1, first(queryinterval)):last(queryinterval)
+    queryseq = alignment.a.seq[queryinterval]
     pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
 end
 
@@ -165,12 +165,17 @@ function Base.getindex(
 end
 
 # TODO: Lose global alignment dependency, retrieve alignment without realigning
-function Base.getindex(
-    aln::BioAlignments.PairwiseAlignment,
-    indices::UnitRange
-)
-    queryinterval = BioAlignments.ref2seq(aln, indices)
-    queryseq = aln.a.seq[queryinterval]
-    subjectseq = aln.b[indices]
-    return pairalign_global(queryseq, subjectseq)
-end
+#function Base.getindex(aln::BioAlignments.PairwiseAlignment, indices::UnitRange)
+#    queryinterval = BioAlignments.ref2seq(aln, indices)
+#    queryseq = aln.a.seq[queryinterval]
+#    subjectseq = aln.b[indices]
+#    return pairalign_global(queryseq, subjectseq)
+#end
+
+# @inline function Base.iterate(aln::BioAlignments.PairwiseAlignment, i::Int = firstindex(aln))
+#     if i > lastindex(aln)
+#         return nothing
+#     else
+#         return getindex(aln, i), i + 1
+#     end
+# end

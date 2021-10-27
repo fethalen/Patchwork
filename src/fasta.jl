@@ -2,6 +2,7 @@
 
 using FASTX
 using BioSequences
+using BioGenerics
 
 """
     fastafiles(directory::String, extensions::Array{String, 1})::Array{String, 1}
