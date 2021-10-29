@@ -290,3 +290,9 @@ function BioSequences.translate(regions::AlignedRegionCollection)
     end
     return translatedregions
 end
+
+function queryids(
+    regions::AlignedRegionCollection
+)::Vector{String}
+    return map(region -> region.queryid.id, regions)
+end
