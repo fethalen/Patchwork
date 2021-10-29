@@ -48,8 +48,9 @@ Example 1: `Drosophila_melanogaster@16S` becomes `Drosophila`
 function otupart(
     id::SequenceIdentifier,
     delimiter::Char='@'
-)
-    return first(splitdescription(id, delimiter))
+)::String
+    delimiter in id.id && return first(splitdescription(id, delimiter))
+    return ""
 end
 
 """
@@ -60,6 +61,7 @@ Returns the sequence part (i.e., the identifier without the OTU) of the provided
 
 Example 1: `Drosophila_melanogaster@16S` becomes `16S`
 """
-function sequencepart(id::SequenceIdentifier)
-    return last(splitdescription(id))
+function sequencepart(id::SequenceIdentifier, delimiter::Char='@')::String
+    delimiter in id.id && return last(splitdescription(id, delimiter))
+    return id.id
 end
