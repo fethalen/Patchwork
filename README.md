@@ -8,7 +8,8 @@ Patchwork is an alignment-based program for retrieving and concatenating phyloge
 * Align nucleotide sequences to one or more protein sequences
 * Stitch overlapping or gappy sequences together based on a reference
 * Find homologs, even in distantly-related taxa
-* Written in [Julia](https://julialang.org/) and utilizing [DIAMOND](https://github.com/bbuchfink/diamond) for maximum speed 🐇
+* Written in [Julia](https://julialang.org/) and utilizing
+  [DIAMOND](https://github.com/bbuchfink/diamond) for maximum speed 🐇
 
 ### Graphical Overview
 
@@ -16,15 +17,15 @@ Patchwork is an alignment-based program for retrieving and concatenating phyloge
 
 ### Quick installation
 
-We are currently working on a Conda build. In the future, 
-the user will be able to install the programming by running `conda 
-install -c bioconda patchwork`. Until then, please refer to 
+We are currently working on a Conda build. In the future,
+the user will be able to install the programming by running `conda
+install -c bioconda patchwork`. Until then, please refer to
 [these instructions](https://github.com/fethalen/Patchwork/wiki/4.-Installation)
-for installing from source.
+for installing Patchwork from source.
 
 ### Documentation
 
-Please see our [Wiki](https://github.com/fethalen/Patchwork/wiki). 
+Please see our [Wiki](https://github.com/fethalen/Patchwork/wiki).
 
 ### Cite
 
