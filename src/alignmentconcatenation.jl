@@ -47,8 +47,8 @@ function concatenate(
     firstreference = first.b
     secondreference = second.b
 
-    @assert Alphabet(firstquery) == Alphabet(secondquery) "Can only concatenate
-        alignments of same type (i.e. two protein-protein alignments)."
+    @assert Alphabet(firstquery) == Alphabet(secondquery) """Can only concatenate
+        alignments of same type (i.e. two protein-protein alignments)."""
 
     joinedquery = typeof(firstquery)(firstquery, secondquery)
     joinedreference = typeof(firstquery)(firstreference, secondreference)
@@ -74,8 +74,8 @@ function concatenate(
     queries = [alignment.a.seq for alignment in alignments]
     references = [alignment.b for alignment in alignments]
 
-    @assert eltype(queries) == typeof(queries[1]) "Can only concatenate alignments of
-        same type (i.e. a collection of protein-protein alignments)."
+    @assert eltype(queries) == typeof(queries[1]) """Can only concatenate alignments of
+        same type (i.e. a collection of protein-protein alignments)."""
 
     joinedquery = typeof(queries[1])(queries...)
     joinedreference = typeof(queries[1])(references...)
@@ -102,6 +102,7 @@ function concatenate(
     regions::Patchwork.AlignedRegionCollection, 
     delimiter::Char='@'
 )::BioAlignments.PairwiseAlignment
+    @assert !hasoverlaps(regions) "Detected overlaps in regions."
     @assert !isempty(regions.referencesequence) "Reference sequence may not be empty."
     reference = regions.referencesequence.sequencedata
     isempty(regions) && 
@@ -127,13 +128,13 @@ function concatenate(
     for i in 2:lastindex(regions)
         if !isempty(otu) # missing OTUs are always okay
             currentotu = otupart(regions[i].queryid, delimiter)
-            !isempty(currentotu) && @assert isequal(currentotu, otu) "Can only concatenate 
-                contigs from same species."
+            !isempty(currentotu) && @assert isequal(currentotu, otu) """Can only concatenate 
+                contigs from same species."""
         else
             otu = otupart(regions[i].queryid, delimiter)
         end
-        #@assert regions[i-1].subjectlast < regions[i].subjectfirst "Regions incorrectly 
-        #    sorted or merged: $(regions[i-1].subjectlast) $(regions[i].subjectfirst)"
+        @assert regions[i-1].subjectlast < regions[i].subjectfirst """Regions incorrectly 
+            sorted."""
         if regions[i].subjectfirst > regions[i-1].subjectlast + 1
             push!(alignments, createbridgealignment(reference, 
                 regions[i-1].subjectlast+1:regions[i].subjectfirst-1), 
@@ -262,12 +263,13 @@ function maskgaps(
 )::BioAlignments.PairwiseAlignmentResult
     # Iterate backwards, since we're deleting things.
     # a is query, b is reference sequence
+    #println("MASK")
     anchors = alignment.a.aln.anchors
     maskedseq = BioSequences.LongAminoAcidSeq()
     from = 1
     gapcount = 0
     for i in 2:lastindex(anchors)
-        if anchors[i].op === BioAlignments.OP_INSERT
+        if isinsertop(anchors[i].op) # === BioAlignments.OP_INSERT
             firstinsertion = anchors[i - 1].seqpos + 1
             lastinsertion = anchors[i].seqpos
             to = anchors[i - 1].seqpos
@@ -279,5 +281,6 @@ function maskgaps(
             maskedseq *= alignment.a.seq[from:to]
         end
     end
+    #println("DONE")
     return pairalign_global(maskedseq, alignment.b)
 end
