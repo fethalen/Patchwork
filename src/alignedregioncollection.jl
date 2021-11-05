@@ -246,7 +246,7 @@ function mergeoverlaps(
     if hasoverlaps(mergedregions, false) && iteration <= maxiterate
         return mergeoverlaps(mergedregions, false, iteration + 1)
     end
-    return mergedregions
+    return sort(mergedregions)
 end
 
 """
