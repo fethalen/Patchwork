@@ -251,8 +251,9 @@ function main()
         stats_row = [mergedregions.referencesequence.id.id,
                  length(mergedregions.referencesequence),
                  length(finalalignment.a.seq),
-                 length(mergedregions),
-                 length(unique(map(region -> region.queryid.id, mergedregions))),
+                 length(mergedregions), # only the merged regions
+                 #length(unique(map(region -> region.queryid.id, mergedregions))), # ???
+                 length(regions), # all contigs retrieved by DIAMOND search
                  BioAlignments.count_matches(finalalignment),
                  BioAlignments.count_mismatches(finalalignment),
                  BioAlignments.count_deletions(finalalignment),
