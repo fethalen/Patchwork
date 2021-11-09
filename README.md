@@ -19,7 +19,7 @@ We are currently working on a Conda build. In the future,
 the user will be able to install the programming by running `conda 
 install -c bioconda patchwork`. Until then, please refer to 
 [these instructions](https://github.com/fethalen/Patchwork/wiki/4.-Installation)
-for installing from source. It is also possible to [install
+for installing from source. It is now also possible to [install
 Patchwork using Docker](https://github.com/fethalen/Patchwork/wiki/4.-Installation#installing-patchwork-with-docker).
 
 ### Documentation
