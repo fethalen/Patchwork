@@ -57,10 +57,7 @@ function write_fasta(
     alignment::PairwiseAlignment,
     delimiter::Char
 )
-    queryname = ""
-    if delimiter in id.id
-        queryname = otupart(id, delimiter)
-    end
+    queryname = otupart(id, delimiter) # "" if no OTU part found
     fastawriter = FASTA.Writer(open(file, "a"))
     write(fastawriter, FASTA.Record(queryname, alignment.a.seq))
     close(fastawriter)

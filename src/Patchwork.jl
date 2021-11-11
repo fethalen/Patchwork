@@ -233,7 +233,7 @@ function main()
 
     println("Merging overlapping hits")
     allhits = readblastTSV(diamondsearch)
-    referenceids = unique(map(hit -> hit.subjectid.id, allhits))
+    referenceids = unique(subjectids(allhits))
 
     for (index, id) in enumerate(referenceids)
         diamondhits = filter(hit -> isequal(id, hit.subjectid.id), allhits)
@@ -242,7 +242,7 @@ function main()
         regions = AlignedRegionCollection(selectsequence(references_file, id), diamondhits)
         # assuming all queries belong to same species:
         mergedregions = mergeoverlaps(regions)
-        concatenation = concatenate(mergedregions)
+        concatenation = concatenate(mergedregions, args["species-delimiter"])
         finalalignment = maskgaps(concatenation).aln
 
         write_alignmentfile(alignmentoutput, id, length(regions), finalalignment, index)
@@ -251,8 +251,9 @@ function main()
         stats_row = [mergedregions.referencesequence.id.id,
                  length(mergedregions.referencesequence),
                  length(finalalignment.a.seq),
-                 length(mergedregions),
-                 length(unique(map(region -> region.queryid.id, mergedregions))),
+                 length(mergedregions), # only the merged regions
+                 #length(unique(map(region -> region.queryid.id, mergedregions))), # ???
+                 length(regions), # all contigs retrieved by DIAMOND search
                  BioAlignments.count_matches(finalalignment),
                  BioAlignments.count_mismatches(finalalignment),
                  BioAlignments.count_deletions(finalalignment),

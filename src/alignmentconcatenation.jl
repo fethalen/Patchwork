@@ -14,11 +14,14 @@ Create a `PairwiseAlignment` object with an empty (gap-only) query and the provi
 `reference`.
 """
 function createbridgealignment(
-    reference::LongSequence
+    reference::LongSequence, 
+    range::UnitRange
 )::BioAlignments.PairwiseAlignment
+    first(range) < 1 || last(range) > lastindex(reference) && 
+        error("The provided indices $range are out ouf bounds for this reference sequence.")
     gapquery = typeof(reference)()
-    gapcigar = string(length(reference)) * "D"
-    return BioAlignments.PairwiseAlignment(gapquery, reference, gapcigar)
+    gapcigar = string(length(range)) * "D"
+    return BioAlignments.PairwiseAlignment(gapquery, reference[range], gapcigar)
 end
 
 """
@@ -45,7 +48,7 @@ function concatenate(
     secondreference = second.b
 
     @assert Alphabet(firstquery) == Alphabet(secondquery) """Can only concatenate
-    alignments of same type (i.e. protein-protein alignments)."""
+        alignments of same type (i.e. two protein-protein alignments)."""
 
     joinedquery = typeof(firstquery)(firstquery, secondquery)
     joinedreference = typeof(firstquery)(firstreference, secondreference)
@@ -72,7 +75,7 @@ function concatenate(
     references = [alignment.b for alignment in alignments]
 
     @assert eltype(queries) == typeof(queries[1]) """Can only concatenate alignments of
-    same type (i.e. protein-protein alignments)."""
+        same type (i.e. a collection of protein-protein alignments)."""
 
     joinedquery = typeof(queries[1])(queries...)
     joinedreference = typeof(queries[1])(references...)
@@ -96,39 +99,53 @@ The `referencesequence` of the collection may not be empty. Regions in the refer
 are not covered by alignments to query sequences will be aligned to gaps (empty queries).
 """
 function concatenate(
-    regions::Patchwork.AlignedRegionCollection
+    regions::Patchwork.AlignedRegionCollection, 
+    delimiter::Char='@'
 )::BioAlignments.PairwiseAlignment
-    if isempty(regions)
-        return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
-    elseif length(regions) == 1
-        return regions[1].pairwisealignment
-    end
+    @assert !hasoverlaps(regions) "Detected overlaps in regions."
     @assert !isempty(regions.referencesequence) "Reference sequence may not be empty."
+    reference = regions.referencesequence.sequencedata
+    isempty(regions) && 
+        return createbridgealignment(reference, 1:lastindex(regions.referencesequence))
 
     if regions[1].subjectfirst > 1
-        reference = regions.referencesequence.sequencedata[1:regions[1].subjectfirst - 1]
-        alignments = [createbridgealignment(reference), regions[1].pairwisealignment]
+        alignments = [createbridgealignment(reference, 1:regions[1].subjectfirst-1), 
+            regions[1].pairwisealignment]
     else
         alignments = [regions[1].pairwisealignment]
     end
-    # fill the gaps between end and next start
+
+    if lastindex(regions) == 1 
+        if regions[1].subjectlast < lastindex(regions.referencesequence)
+            push!(alignments, createbridgealignment(reference, 
+                regions[1].subjectlast+1:lastindex(regions.referencesequence)))
+        end
+        return concatenate(alignments)
+    end
+
+    otu = otupart(regions[1].queryid, delimiter) # empty if no OTU part found
+    # fill the gaps between end and next start)
     for i in 2:lastindex(regions)
-        # firstotu = Patchwork.splitdescription(regions[i-1].queryid)[1]
-        # secondotu = Patchwork.splitdescription(regions[i].queryid)[1]
-        # @assert firstotu == secondotu "Can only concatenate sequences from one OTU."
-        # @assert regions[i-1].subjectlast < regions[i].subjectfirst "Sequences not sorted."
+        if !isempty(otu) # missing OTUs are always okay
+            currentotu = otupart(regions[i].queryid, delimiter)
+            !isempty(currentotu) && @assert isequal(currentotu, otu) """Can only concatenate 
+                contigs from same species."""
+        else
+            otu = otupart(regions[i].queryid, delimiter)
+        end
+        @assert regions[i-1].subjectlast < regions[i].subjectfirst """Regions incorrectly 
+            sorted."""
         if regions[i].subjectfirst > regions[i-1].subjectlast + 1
-            reference = regions.referencesequence.sequencedata[
-                                regions[i-1].subjectlast + 1:regions[i].subjectfirst - 1]
-            push!(alignments, createbridgealignment(reference), regions[i].pairwisealignment)
+            push!(alignments, createbridgealignment(reference, 
+                regions[i-1].subjectlast+1:regions[i].subjectfirst-1), 
+                regions[i].pairwisealignment)
         else
             push!(alignments, regions[i].pairwisealignment)
         end
         if (i == lastindex(regions)
-            && regions[i].subjectlast < length(regions.referencesequence))
-            reference = regions.referencesequence.sequencedata[
-                        regions[i].subjectlast + 1:length(regions.referencesequence)]
-            push!(alignments, createbridgealignment(reference))
+            && regions[i].subjectlast < lastindex(regions.referencesequence))
+            push!(alignments, createbridgealignment(reference, 
+                regions[i].subjectlast+1:length(regions.referencesequence)))
         end
     end
     return concatenate(alignments)
@@ -246,12 +263,13 @@ function maskgaps(
 )::BioAlignments.PairwiseAlignmentResult
     # Iterate backwards, since we're deleting things.
     # a is query, b is reference sequence
+    #println("MASK")
     anchors = alignment.a.aln.anchors
     maskedseq = BioSequences.LongAminoAcidSeq()
     from = 1
     gapcount = 0
     for i in 2:lastindex(anchors)
-        if anchors[i].op === BioAlignments.OP_INSERT
+        if isinsertop(anchors[i].op) # === BioAlignments.OP_INSERT
             firstinsertion = anchors[i - 1].seqpos + 1
             lastinsertion = anchors[i].seqpos
             to = anchors[i - 1].seqpos
@@ -263,5 +281,6 @@ function maskgaps(
             maskedseq *= alignment.a.seq[from:to]
         end
     end
+    #println("DONE")
     return pairalign_global(maskedseq, alignment.b)
 end
