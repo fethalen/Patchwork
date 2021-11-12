@@ -1,4 +1,3 @@
-> **Note:** Patchwork is an unfinished product, currently under construction 🚧.
 <img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="225"/>
 
 Patchwork is an alignment-based program for retrieving and concatenating phylogenetic markers from whole-genome sequencing (WGS) data. The program searches the provided DNA query contigs against one or more amino acid reference sequences. Multiple, overlapping hits are merged to derive a single, continuous sequence for each reference sequence.
@@ -17,11 +16,12 @@ Patchwork is an alignment-based program for retrieving and concatenating phyloge
 
 ### Quick installation
 
-We are currently working on a Conda build. In the future,
-the user will be able to install the programming by running `conda
-install -c bioconda patchwork`. Until then, please refer to
+We are currently working on a Conda build. In the future, 
+the user will be able to install this program by running `conda 
+install -c bioconda patchwork`. Until then, please refer to 
 [these instructions](https://github.com/fethalen/Patchwork/wiki/4.-Installation)
-for installing Patchwork from source.
+for installing from source. It is now also possible to [install
+Patchwork using Docker](https://github.com/fethalen/Patchwork/wiki/4.-Installation#installing-patchwork-with-docker).
 
 ### Documentation
 

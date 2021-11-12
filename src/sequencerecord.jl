@@ -37,6 +37,7 @@ mutable struct SequenceRecord
 end
 
 Base.length(alignment::SequenceRecord) = length(alignment.sequencedata)
+Base.lastindex(alignment::SequenceRecord) = lastindex(alignment.sequencedata)
 
 function BioSequences.ungap(alignment::SequenceRecord)::SequenceRecord
     return SequenceRecord(alignment.id,
