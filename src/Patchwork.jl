@@ -22,8 +22,6 @@ include("multiplesequencealignment.jl")
 include("output.jl")
 include("sequencerecord.jl")
 
-const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const DIAMONDDB_EXT = "dmnd"
 const EMPTY = String[]
 const DIAMONDFLAGS = ["--ultra-sensitive"]
 const MIN_DIAMONDVERSION = "2.0.3"
@@ -31,7 +29,6 @@ const MATRIX = "BLOSUM62"
 const ALIGNMENTOUTPUT = "alignments.txt"
 const FASTAOUTPUT = "query_sequences"
 const DIAMONDOUTPUT = "diamond_out"
-const DATABASE = "database.dmnd"
 const STATSOUTPUT = "sequence_stats"
 
 """
@@ -97,8 +94,8 @@ end
 
 function parse_parameters()
     overview = """
-    Alignment-based retrieval and concatenation of phylogenetic markers format
-    whole-genome sequencing (WGS) data
+    Alignment-based retrieval and concatenation of phylogenetic markers from
+    whole-genome sequencing data
     """
     settings = ArgParseSettings(description=overview,
                                 version = "0.1.0",
@@ -213,14 +210,15 @@ function main()
         end
         cleanfiles(alignmentoutput, statsoutput, fastaoutput)
     end
+
     mkpath(diamondoutput)
     mkpath(fastaoutput)
     mkpath(statsoutput)
 
     println("Building DIAMOND database")
-    #reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
     reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
+
     println("Aligning query sequences against reference database")
     diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
 
