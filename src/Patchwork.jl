@@ -22,22 +22,14 @@ include("multiplesequencealignment.jl")
 include("output.jl")
 include("sequencerecord.jl")
 
-const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const DIAMONDDB = "dmnd"
 const EMPTY = String[]
-# --evalue defaults to 0.001 in DIAMOND
-# --threads defaults to autodetect in DIAMOND
 const DIAMONDFLAGS = ["--ultra-sensitive"]
-# const FRAMESHIFT = 15
-# const DIAMONDMODE = "--ultra-sensitive"
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
-
 const ALIGNMENTOUTPUT = "alignments.txt"
-const FASTAOUTPUT = "queries_out"               # directory
-const DIAMONDOUTPUT = "diamond_results"         # directory
-const DATABASE = "database.dmnd"
-const STATSOUTPUT = "statistics"                # diretory
+const FASTAOUTPUT = "query_sequences"
+const DIAMONDOUTPUT = "diamond_out"
+const STATSOUTPUT = "sequence_stats"
 
 """
     printinfo()
@@ -102,8 +94,8 @@ end
 
 function parse_parameters()
     overview = """
-    Alignment-based retrieval and concatenation of phylogenetic markers format
-    whole-genome sequencing (WGS) data
+    Alignment-based retrieval and concatenation of phylogenetic markers from
+    whole-genome sequencing data
     """
     settings = ArgParseSettings(description=overview,
                                 version = "0.1.0",
@@ -190,17 +182,16 @@ function main()
 
     if length(args["reference"]) == 1
         references_file = args["reference"][1]
-    else                                                         # assume >1 .fa file provided
-        #references = pool(args["reference"]...)                 # MultipleSequenceAlignment
-        #references_file = mktemp_fasta(references)
+    else
         references_file = mktemp_fasta(pool(args["reference"]...))
     end
-    queries = pool(args["contigs"]...)                      # MultipleSequenceAlignment
+
+    queries = pool(args["contigs"]...)
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
-    fastaoutput = outdir * "/" * FASTAOUTPUT                # directory
-    diamondoutput = outdir * "/" * DIAMONDOUTPUT            # directory
-    statsoutput = outdir * "/" * STATSOUTPUT                # directory
+    fastaoutput = outdir * "/" * FASTAOUTPUT
+    diamondoutput = outdir * "/" * DIAMONDOUTPUT
+    statsoutput = outdir * "/" * STATSOUTPUT
     statistics = DataFrame(id = String[],
                            length_reference = Int[],
                            length_query = Int[],
@@ -219,15 +210,15 @@ function main()
         end
         cleanfiles(alignmentoutput, statsoutput, fastaoutput)
     end
-    #mkpath(outdir)
+
     mkpath(diamondoutput)
     mkpath(fastaoutput)
     mkpath(statsoutput)
 
     println("Building DIAMOND database")
-    #reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
     reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
     diamondparams = collectdiamondflags(args)
+
     println("Aligning query sequences against reference database")
     diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
 

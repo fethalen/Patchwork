@@ -8,6 +8,9 @@ include("multiplesequencealignment.jl")
 include("sequencerecord.jl")
 include("sequenceidentifier.jl")
 
+const DATABASE = "database.dmnd"
+const DIAMONDDB_EXT = "dmnd"
+const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
 const FIELDS = ["qseqid", "qseq", "full_qseq", "qstart", "qend", "qframe", "sseqid",
                 "sseq", "sstart", "send", "cigar", "pident", "bitscore"]
 const OUTPUT_FORMAT = [6; FIELDS]
@@ -220,6 +223,6 @@ end
 
 function isdiamonddatabase(path::AbstractString)::Bool
     splits = split(path, ".")
-    length(splits) > 1 && isequal(last(splits), DIAMONDDB) && return true
+    length(splits) > 1 && isequal(last(splits), DIAMONDDB_EXT) && return true
     return false
 end
