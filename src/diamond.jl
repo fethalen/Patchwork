@@ -203,32 +203,16 @@ function diamond_makeblastdb(
     return db_file
 end
 
-function queryid(
-    result::DiamondSearchResult,
-    speciesdelimiter='@'
-)::String
-    return *(result.queryotu, speciesdelimiter, result.queryid)
-end
-
-function subjectid(
-    result::DiamondSearchResult,
-    speciesdelimiter='@'
-)::String
-    return *(result.subjectotu, speciesdelimiter, result.subjectid)
-end
-
 function queryids(
-    results::Vector{DiamondSearchResult},
-    speciesdelimiter='@'
+    results::Vector{DiamondSearchResult}
 )::Vector{String}
-    return map(result -> queryid(result), results)
+    return map(result -> result.queryid.id, results)
 end
 
 function subjectids(
-    results::Vector{DiamondSearchResult},
-    speciesdelimiter='@'
+    results::Vector{DiamondSearchResult}
 )::Vector{String}
-    return map(result -> subjectid(result), results)
+    return map(result -> result.subjectid.id, results)
 end
 
 function isfastafile(path::AbstractString)::Bool

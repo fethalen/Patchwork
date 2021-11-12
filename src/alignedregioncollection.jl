@@ -246,7 +246,7 @@ function mergeoverlaps(
     if hasoverlaps(mergedregions, false) && iteration <= maxiterate
         return mergeoverlaps(mergedregions, false, iteration + 1)
     end
-    return mergedregions
+    return sort(mergedregions)
 end
 
 """
@@ -289,4 +289,10 @@ function BioSequences.translate(regions::AlignedRegionCollection)
         push!(translatedregions, translate(region))
     end
     return translatedregions
+end
+
+function queryids(
+    regions::AlignedRegionCollection
+)::Vector{String}
+    return map(region -> region.queryid.id, regions)
 end
