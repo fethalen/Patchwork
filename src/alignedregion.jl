@@ -4,9 +4,10 @@
 
 import BioSequences
 import BioAlignments
+import BioGenerics
 
-include("diamond.jl")
-include("sequencerecord.jl")
+#include("diamond.jl")
+#include("sequencerecord.jl")
 
 """
     struct AlignedRegion
@@ -33,7 +34,7 @@ struct AlignedRegion
     function AlignedRegion()
         emptyaln = BioAlignments.PairwiseAlignment(BioSequences.LongAminoAcidSeq(), 
             BioSequences.LongAminoAcidSeq(), "")
-        return new(emptyaln, 0, 0, SequenceIdentifier(), 0, 0, 0)
+        return new(emptyaln, 0, -1, SequenceIdentifier(), 0, -1, 0)
     end
 
     function AlignedRegion(alignment::BioAlignments.PairwiseAlignment, subjectfirst::Int64,
@@ -55,8 +56,6 @@ struct AlignedRegion
                    result.querystart, result.queryend, result.queryframe)
     end
 end
-
-Base.isempty(region::AlignedRegion) = isempty(region.pairwisealignment)
 
 function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnchor})::String
     out = IOBuffer()
@@ -92,6 +91,11 @@ function cleancigar(cigar::AbstractString)::String
     end
 
     return String(take!(buffer))
+end
+
+function BioSequences.translate(region::AlignedRegion)
+    isnucleotide(region) || error("cannot translate non-nucleic region: ", region)
+    return BioSequences.translate(region.record)
 end
 
 function BioSequences.translate(
@@ -309,7 +313,8 @@ function Base.length(region::AlignedRegion)
     return region.subjectlast - region.subjectfirst + 1
 end
 
-Base.isempty(region::AlignedRegion) = length(region) < 1
+Base.isempty(region::AlignedRegion) = isempty(region.pairwisealignment)
+#Base.isempty(region::AlignedRegion) = length(region) < 1
 Base.firstindex(region::AlignedRegion) = 1
 Base.lastindex(region::AlignedRegion) = length(region)
 Base.eachindex(region::AlignedRegion) = Base.OneTo(lastindex(region))
@@ -328,7 +333,7 @@ function Base.getindex(
 end
 
 function Base.getindex(
-    region::Patchwork.AlignedRegion,
+    region::AlignedRegion,
     indices::UnitRange
 )
     subjectfirst = first(indices)
@@ -339,41 +344,6 @@ function Base.getindex(
         region.queryid, queryfirst, querylast, region.queryframe)
 end
 
-# function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegion
-#     queryint = BioAlignments.ref2seq(region.pairwisealignment, indices)
-#     isequal(queryint, 0:0) && return AlignedRegion() # empty/gap-only alignment
-#     queryint = max(1, first(queryint)):last(queryint)
-#     query = region.pairwisealignment.a.seq
-#     subject = region.pairwisealignment.b
-#     anchors = deepcopy(region.pairwisealignment.a.aln.anchors)
-#     @assert first(anchors).op == BioAlignments.OP_START
-#     querystart = first(queryint)
-#     queryend = last(queryint)
-#     i = 2
-#     while i <= lastindex(anchors) && isdeleteop(anchors[i].op)
-#         if anchors[i].seqpos > first(queryint) 
-#             querystart = anchors[i].seqpos
-#         end
-#         i += 1
-#     end
-#     i = lastindex(anchors)
-#     while 1 < i <= lastindex(anchors) && isdeleteop(anchors[i].op) 
-#         if anchors[i].seqpos < last(queryint) 
-#             queryend = anchors[i].seqpos
-#         end
-#         i -= 1
-#     end
-#     @assert i > 1
-#     subjectstart = query2subject(region, querystart)
-#     subjectend = query2subject(region, queryend)
-#     sliced = pairalign_global(query[querystart:queryend], subject[subjectstart:subjectend]).aln
-#     queryfirst, querylast = subject_queryboundaries(region, subjectstart:subjectend)
-#     return AlignedRegion(sliced, subject2fullsubject(region, subjectstart), 
-#         subject2fullsubject(region, subjectend), region.queryid, queryfirst, querylast, 
-#         region.queryframe)
-# end
-
-# The same but without using pairalign_global: 
 function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegion
     query = region.pairwisealignment.a.seq
     subject = region.pairwisealignment.b
@@ -423,16 +393,6 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
         push!(newanchors, BioAlignments.AlignmentAnchor(anchor.seqpos-querystart+1, 
             anchor.refpos-subjectstart+1, anchor.op))
     end
-    # if last(newanchors).seqpos != last(queryint)-first(queryint)+1 ||
-    #         last(newanchors).refpos != subjectend-subjectstart+1
-    #     println(anchors)
-    #     println(newanchors)
-    #     println(last(newanchors).seqpos, " ", last(queryint)-first(queryint)+1)
-    #     println(last(newanchors).refpos, " ", subjectend-subjectstart+1)
-    # else
-    #     @assert last(newanchors).seqpos == last(queryint)-first(queryint)+1
-    #     @assert last(newanchors).refpos == subjectend-subjectstart+1
-    # end
     sliced = BioAlignments.PairwiseAlignment(query[queryint], 
         subject[subjectstart:subjectend], cigar(newanchors))
     queryfirst, querylast = subject_queryboundaries(region, subjectstart:subjectend)
@@ -440,20 +400,6 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
         subject2fullsubject(region, subjectend), region.queryid, queryfirst, querylast, 
         region.queryframe)
 end
-
-function BioAlignments.ref2seq(aln::Alignment, i::Integer)::Tuple{Int,Operation}
-    idx = BioAlignments.findanchor(aln, i, Val{false})
-    if idx == 0
-        throw(ArgumentError("invalid reference position: $i"))
-    end
-    anchor = aln.anchors[idx]
-    seqpos = anchor.seqpos
-    if BioAlignments.ismatchop(anchor.op)
-        seqpos += i - anchor.refpos
-    end
-    return seqpos, anchor.op
-end
-
 
 """
     query_leftposition(region::AlignedRegion)::Integer
@@ -549,7 +495,7 @@ end
 
 Returns `true` if the interval of `a` overlaps that of `b`.
 """
-function isoverlapping(
+function BioGenerics.isoverlapping(
     a::AlignedRegion,
     b::AlignedRegion
 )::Bool
@@ -617,17 +563,12 @@ function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
     !skipcheck && !isoverlapping(a, b) && error("region $a and $b are not overlapping")
 
     overlappingregion = overlap(a, b)
-    # println("INTERVAL ", overlappingregion)
-    # println("CURRENT ", a.subjectfirst, ":", a.subjectlast)
-    # println("LAST ", b.subjectfirst, ":", b.subjectlast)
     bestscore, lowestscore = order(a, b, overlappingregion)
     if shadows(bestscore, lowestscore) || samerange(bestscore, lowestscore)
-        # println("SHADOWS")
         bestfirst = fullsubject2subject(bestscore, bestscore.subjectfirst)
         bestlast = fullsubject2subject(bestscore, bestscore.subjectlast)
         return [slicealignment(bestscore, bestfirst:bestlast)]
     elseif precedes(bestscore, lowestscore) || bestscore.subjectfirst == lowestscore.subjectfirst
-        # println("PRECEDES")
         bestfirst = fullsubject2subject(bestscore, bestscore.subjectfirst)
         bestlast = fullsubject2subject(bestscore, last(overlappingregion))
         lowestfirst = fullsubject2subject(lowestscore, last(overlappingregion) + 1)
@@ -640,14 +581,12 @@ function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
         bestfirst = fullsubject2subject(bestscore, first(overlappingregion))
         bestlast = fullsubject2subject(bestscore, last(overlappingregion))
         if lowestscore.subjectlast > last(overlappingregion)
-            # println("REVERSE SHADOWS")
             afteroverlap_first = fullsubject2subject(lowestscore, last(overlappingregion) + 1)
             afteroverlap_last = fullsubject2subject(lowestscore, lowestscore.subjectlast)
             return [slicealignment(lowestscore, beforeoverlap_first:beforeoverlap_last), 
                 slicealignment(bestscore, bestfirst:bestlast), 
                 slicealignment(lowestscore, afteroverlap_first:afteroverlap_last)]
         else
-            # println("REVERSE PRECEDES")
             return [slicealignment(lowestscore, beforeoverlap_first:beforeoverlap_last), 
                 slicealignment(bestscore, bestfirst:bestlast)]
         end
@@ -876,9 +815,4 @@ Returns true if this record's `record` consists of amino acids.
 """
 function isaminoacid(region::AlignedRegion)
     return isaminoacid(region.record)
-end
-
-function BioSequences.translate(region::AlignedRegion)
-    isnucleotide(region) || error("cannot translate non-nucleic region: ", region)
-    return BioSequences.translate(region.record)
 end
