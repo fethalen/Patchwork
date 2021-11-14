@@ -31,9 +31,8 @@ function splitdescription(
     id::SequenceIdentifier,
     delimiter::Char='@'
 )::Vector{String}
-    if ! (delimiter in id.id)
+    delimiter in id.id ||
         error("Missing species delimiter (\'$delimiter\') in description $description")
-    end
     parts = split.(id.id, delimiter)
     return map(part -> string(part), parts)
 end

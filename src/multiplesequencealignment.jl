@@ -1,6 +1,6 @@
 # Utilities and types for working with multiple sequence alignments (MSAs)
 
-include("sequencerecord.jl")
+#include("sequencerecord.jl")
 
 """
 Datastructures which holds a collection of `SequenceRecord`s.
@@ -45,6 +45,9 @@ function removealignment!(
 end
 
 Base.length(msa::MultipleSequenceAlignment) = length(msa.sequences)
+Base.firstindex(msa::MultipleSequenceAlignment) = 1
+Base.lastindex(msa::MultipleSequenceAlignment) = lastindex(msa.sequences)
+Base.isempty(msa::MultipleSequenceAlignment) = isempty(msa.sequences)
 
 function Base.getindex(
     msa::MultipleSequenceAlignment,
@@ -62,17 +65,17 @@ function Base.setindex!(
 end
 
 function Base.iterate(msa::MultipleSequenceAlignment)
-    isempty(msa.sequences) && return nothing
-    return iterate(alignment, 1)
+    isempty(msa) && return nothing
+    i = firstindex(msa)
+    return getindex(msa, i), i + 1
 end
 
 function Base.iterate(
     msa::MultipleSequenceAlignment,
-    state=1::Int
+    i::Int
 )
-    state > lastindex(msa.sequences) && return nothing
-    state += 1
-    return (msa.sequences, state)
+    i > lastindex(msa) && return nothing
+    return getindex(msa, i), i + 1
 end
 
 function countgaps(msa::MultipleSequenceAlignment)::Int
@@ -228,7 +231,7 @@ function mktemp_fasta(
     removehyphens::Bool=false
 )::AbstractString
     path, io = mktemp()
-    msa = readmsa(alignment, '@')
+    msa = readmsa(alignment)
     removehyphens && ungap!(msa)
 
     for record in msa.sequences

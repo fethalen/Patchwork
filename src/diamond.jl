@@ -4,9 +4,9 @@ using CSV
 using DataFrames
 using BioSequences
 
-include("multiplesequencealignment.jl")
-include("sequencerecord.jl")
-include("sequenceidentifier.jl")
+#include("multiplesequencealignment.jl")
+#include("sequencerecord.jl")
+#include("sequenceidentifier.jl")
 
 const FIELDS = ["qseqid", "qseq", "full_qseq", "qstart", "qend", "qframe", "sseqid",
                 "sseq", "sstart", "send", "cigar", "pident", "bitscore"]
