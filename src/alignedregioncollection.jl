@@ -1,7 +1,7 @@
 # Collection of zero or more AlignedRegions
 
-include("alignedregion.jl")
-include("diamond.jl")
+#include("alignedregion.jl")
+#include("diamond.jl")
 
 """
     struct AlignedRegionCollection
@@ -101,16 +101,27 @@ Base.firstindex(regions::AlignedRegionCollection) = 1
 Base.lastindex(regions::AlignedRegionCollection) = length(regions)
 Base.eachindex(regions::AlignedRegionCollection) = Base.OneTo(lastindex(regions))
 
-@inline function Base.iterate(
-    regions::AlignedRegionCollection,
-    i::Int = firstindex(regions)
-)
-    if i > lastindex(regions)
-        return nothing
-    else
-        return getindex(regions, i), i + 1
-    end
+function Base.iterate(regions::AlignedRegionCollection)
+    isempty(regions) && return nothing
+    i = firstindex(regions)
+    return getindex(regions, i), i + 1
 end
+
+function Base.iterate(regions::AlignedRegionCollection, i::Int)
+    i > lastindex(regions) && return nothing
+    return getindex(regions, i), i + 1
+end
+
+# @inline function Base.iterate(
+#     regions::AlignedRegionCollection,
+#     i::Int = firstindex(regions)
+# )
+#     if i > lastindex(regions)
+#         return nothing
+#     else
+#         return getindex(regions, i), i + 1
+#     end
+# end
 
 """
     sameids(regions)

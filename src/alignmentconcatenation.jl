@@ -1,9 +1,9 @@
 import BioAlignments
 using BioSequences
 
-include("alignment.jl")
-include("alignedregion.jl")
-include("alignedregioncollection.jl")
+#include("alignment.jl")
+#include("alignedregion.jl")
+#include("alignedregioncollection.jl")
 
 #########################################################################################################################################################
 
@@ -160,15 +160,11 @@ reference sequence.
 function countmatches(
     alignment::BioAlignments.PairwiseAlignment
 )::Int64
-    if isempty(alignment)
-        return 0
-    end
-
+    isempty(alignment) && return 0
+    
     covered = 0
     anchors = alignment.a.aln.anchors
-
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
-
     for i in 2:lastindex(anchors)
         if BioAlignments.ismatchop(anchors[i].op)
             covered += (anchors[i].seqpos - anchors[i-1].seqpos)
@@ -187,22 +183,19 @@ function countmatches(region::AlignedRegion)::Int64
     return countmatches(region.pairwisealignment)
 end
 
-"""
-    countgaps(alignment::PairwiseAlignment)
-
-Compute the absolute number of gaps in the query sequence that align to residues in the
-reference sequence.
-"""
+#"""
+#    countgaps(alignment::PairwiseAlignment)
+#    countgaps(region::AlignedRegion)
+#
+#Compute the absolute number of gaps in the query sequence that align to residues in the
+#reference sequence.
+#"""
 function countgaps(alignment::BioAlignments.PairwiseAlignment)::Int64
-    if isempty(alignment)
-        return 0
-    end
+    isempty(alignment) && return 0
 
     gaps = 0
     anchors = alignment.a.aln.anchors
-
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
-
     for i in 2:lastindex(anchors)
         if BioAlignments.isdeleteop(anchors[i].op)
             gaps += (anchors[i].refpos - anchors[i-1].refpos)
@@ -211,12 +204,6 @@ function countgaps(alignment::BioAlignments.PairwiseAlignment)::Int64
     return gaps
 end
 
-"""
-    countgaps(region::AlignedRegion)
-
-Compute the absolute number of gaps in the query sequence that align to residues in the
-reference sequence.
-"""
 function countgaps(region::AlignedRegion)::Int64
     return countgaps(region.pairwisealignment)
 end
