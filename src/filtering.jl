@@ -1,8 +1,8 @@
 using BioSequences
 using DataFrames
 
-include("multiplesequencealignment.jl")
-include("alignedregion.jl")
+#include("multiplesequencealignment.jl")
+#include("alignedregion.jl")
 
 function remove_duplicates!(searchresults::DataFrame)::DataFrame
     unique!(searchresults, [:qstart, :qend])
@@ -28,15 +28,16 @@ function remove_duplicates(msa::MultipleSequenceAlignment)
     return collection
 end
 
-function remove_duplicates(
-    msa::MultipleSequenceAlignment,
-    searchresults::BLA
-)
-    sotu = "Ceratonereis_australis"
-    sequences = queryalignment
+# What is BLA?
+# function remove_duplicates(
+#     msa::MultipleSequenceAlignment,
+#     searchresults::BLA
+# )
+#     sotu = "Ceratonereis_australis"
+#     sequences = queryalignment
 
-    for result in searchresults
-        addalignment!(queryalignment, SequenceRecord(sotu, result.subjectid, result.subjectsequence))
-    end
-    return sequences::MultipleSequenceAlignment
-end
+#     for result in searchresults
+#         addalignment!(queryalignment, SequenceRecord(sotu, result.subjectid, result.subjectsequence))
+#     end
+#     return sequences::MultipleSequenceAlignment
+# end

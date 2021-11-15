@@ -1,6 +1,7 @@
-using BioSequences
+import BioSequences
+import Base
 
-include("sequenceidentifier.jl")
+#include("sequenceidentifier.jl")
 
 """
 A `SequenceRecord` represents a record in a multiple sequence alignment
@@ -9,7 +10,7 @@ species), a sequence identifier, and the sequence data itself.
 """
 mutable struct SequenceRecord
     id::SequenceIdentifier
-    sequencedata::LongSequence
+    sequencedata::BioSequences.LongSequence
 
     function SequenceRecord()
         return new(SequenceIdentifier(), BioSequences.LongSequence())
@@ -36,7 +37,9 @@ mutable struct SequenceRecord
     end
 end
 
+Base.getindex(record::SequenceRecord, i::Int) = record.sequencedata[i]
 Base.length(alignment::SequenceRecord) = length(alignment.sequencedata)
+Base.firstindex(alignment::SequenceRecord) = firstindex(alignment.sequencedata)
 Base.lastindex(alignment::SequenceRecord) = lastindex(alignment.sequencedata)
 
 function BioSequences.ungap(alignment::SequenceRecord)::SequenceRecord
@@ -49,18 +52,31 @@ function BioSequences.ungap!(alignment::SequenceRecord)::SequenceRecord
     return alignment
 end
 
-countgaps(alignment::SequenceRecord) = length(alignment) - length(ungap(alignment))
-hasgaps(alignment::SequenceRecord) = countgaps(alignment) > 0
+"""
+    countgaps(object)
+
+Return the absolute number of gap characters in a SequenceRecord, MultipleSequenceAlignment, 
+PairwiseAlignment, or AlignedRegion. 
+For sequences in a pairwise alignment, compute the number of gaps in the query that align 
+to residues in the reference sequence.
+"""
+function countgaps end
+
+function countgaps(alignment::SequenceRecord)::Int64 
+    length(alignment) - length(ungap(alignment))
+end
+
+hasgaps(alignment::SequenceRecord)::Bool = countgaps(alignment) > 0
 
 function Base.iterate(alignment::SequenceRecord)
     isempty(alignment.sequencedata) && return nothing
-    return iterate(alignment, 1)
+    i = firstindex(alignment)
+    return getindex(alignment, i), i + 1
 end
 
-function Base.iterate(alignment::SequenceRecord, state=1::Int)
-    state > lastindex(alignment.sequencedata) && return nothing
-    state += 1
-    return (alignment.sequencedata, state)
+function Base.iterate(alignment::SequenceRecord, i::Int)
+    i > lastindex(alignment.sequencedata) && return nothing
+    return getindex(alignment.sequencedata, i), i + 1
 end
 
 function missingdata(alignment::SequenceRecord)::Float64
@@ -98,7 +114,7 @@ gap characters.
     |...|....|....|
     1   5    10   15
 """
-function nongap_range(sequence::LongSequence)
+function nongap_range(sequence::BioSequences.LongSequence)::Tuple{Int64, Int64}
     first = 0
     last = 0
     for (index, position) in enumerate(sequence)
@@ -111,7 +127,7 @@ function nongap_range(sequence::LongSequence)
     return (first, last)
 end
 
-function nongap_range(record::SequenceRecord)
+function nongap_range(record::SequenceRecord)::Tuple{Int64, Int64}
     return nongap_range(record.sequencedata)
 end
 
@@ -129,7 +145,7 @@ two non-overlapping regions: `REPIGKFHIQ` and `FHIIGKPR`.
     |...|....|....|....|....|....|
     1   5    10   15   20   25   30
 """
-function has_compoundregions(sequence::SequenceRecord)
+function has_compoundregions(sequence::SequenceRecord)::Bool
     leftmost, rightmost = nongap_range(sequence)
     regionsize = rightmost - leftmost + 1
     return regionsize < length(sequence)
@@ -142,10 +158,10 @@ Add gap characters to `sequence` based on the `totalrange` of an alignment and
 the `coveredrange` by that `sequence`.
 """
 function fillmissing(
-    sequence::LongSequence,
+    sequence::BioSequences.LongSequence,
     totalrange::Integer,
     coveredrange::Tuple
-)::LongSequence
+)::BioSequences.LongSequence
     leftmost, rightmost = coveredrange
     coveredpositions = rightmost - leftmost + 1
     if length(sequence) != coveredpositions
@@ -166,11 +182,11 @@ function fillmissing(
     filledsequence = *(gapsbefore, string(sequence), gapsafter)
 
     if eltype(sequence) == AminoAcid
-        return LongAminoAcidSeq(filledsequence)
+        return BioSequences.LongAminoAcidSeq(filledsequence)
     elseif eltype(sequence) == DNA
-        return LongDNASeq(filledsequence)
+        return BioSequences.LongDNASeq(filledsequence)
     elseif eltype(sequence) == RNA
-        return LongRNASeq(filledsequence)
+        return BioSequences.LongRNASeq(filledsequence)
     end
 end
 
@@ -195,7 +211,7 @@ composed of these two regions.
     |...|....|....|....|....|....|
     1   5    10   15   20   25   30
 """
-function compoundregions(record::SequenceRecord)::Array{LongSequence{},1}
+function compoundregions(record::SequenceRecord)::Array{BioSequences.LongSequence{},1}
     regions = []
     seqlength = length(record)
     println(length(seqlength))
@@ -230,7 +246,7 @@ non-gap region within the aligned `sequence` starts and ends.
     |...|....|....|....|....|....|
     1   5    10   15   20   25   30
 """
-function compoundranges(record::SequenceRecord)
+function compoundranges(record::SequenceRecord)::Vector{Tuple{Int64, Int64}}
     regionranges = []
     inregion = false
     leftmost = nothing
@@ -262,18 +278,20 @@ Example 1. Returns `[(4,6), (9,14)]` since the other characters in the
     |...|....|....|
     1   5    10   15
 """
-function nongap_ranges(sequence::SequenceRecord)
-    ranges = []
-    tovisit = eachindex(sequence)
+function nongap_ranges(sequence::SequenceRecord)::Vector{Tuple{Int64, Int64}}
+    ranges = Vector{Tuple{Int64, Int64}}()
+    #tovisit = eachindex(sequence)
+    first = 0
 
     for (index, position) in enumerate(sequence.sequencedata)
-        if first == 0 && ! isgap(position)
+        if first == 0 && !isgap(position)
             first = index
-        elseif last == 0 && first != 0 && isgap(position)
-            last = index - 1
+        elseif first != 0 && isgap(position)
+            push!(ranges, (first, index - 1))
+            first = 0
         end
     end
-    return (first, last)
+    return ranges
 end
 
 """
@@ -285,7 +303,7 @@ Returns the identifier of `sequence`, including the OTU separated by
 function identifier(
     sequence::SequenceRecord,
     separator::AbstractChar='@'
-)
+)::String
     return *(sequence.otu, separator, sequence.identifier)
 end
 
@@ -294,7 +312,7 @@ end
 
 Returns true if this record's `sequencedata` consists of nucleotides.
 """
-function isnucleotide(record::SequenceRecord)
+function isnucleotide(record::SequenceRecord)::Bool
     return isa(BioSequences.Alphabet(record.sequencedata), BioSequences.DNAAlphabet)
 end
 
@@ -303,11 +321,11 @@ end
 
 Returns true if this record's `sequencedata` consists of amino acids.
 """
-function isaminoacid(record::SequenceRecord)
+function isaminoacid(record::SequenceRecord)::Bool
     return ! isnucleotide(record)
 end
 
-function BioSequences.translate(record::SequenceRecord)
+function BioSequences.translate(record::SequenceRecord)::SequenceRecord
     isnucleotide(record) || error("cannot translate non-nucleotide sequence in record: ", record)
     recordtranslated = SequenceRecord(record.otu, record.identifier,
         BioSequences.translate(record.sequencedata))

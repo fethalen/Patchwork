@@ -4,9 +4,9 @@ using CSV
 using DataFrames
 using BioSequences
 
-include("multiplesequencealignment.jl")
-include("sequencerecord.jl")
-include("sequenceidentifier.jl")
+#include("multiplesequencealignment.jl")
+#include("sequencerecord.jl")
+#include("sequenceidentifier.jl")
 
 const DATABASE = "database.dmnd"
 const DIAMONDDB_EXT = "dmnd"
