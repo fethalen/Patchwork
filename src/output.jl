@@ -55,10 +55,40 @@ function write_fasta(
     file::AbstractString,
     id::SequenceIdentifier,
     alignment::PairwiseAlignment,
+)
+    fastawriter = FASTA.Writer(open(file, "a"))
+    write(fastawriter, FASTA.Record(id.id, alignment.a.seq))
+    close(fastawriter)
+end
+
+function write_fasta(
+    file::AbstractString,
+    id::AbstractString,
+    alignment::PairwiseAlignment,
+)
+    fastawriter = FASTA.Writer(open(file, "a"))
+    write(fastawriter, FASTA.Record(id, alignment.a.seq))
+    close(fastawriter)
+    return file
+end
+
+function write_fasta(
+    file::AbstractString,
+    queryid::SequenceIdentifier,
+    subjectid::SequenceIdentifier,
+    alignment::PairwiseAlignment,
     delimiter::Char
 )
-    queryname = otupart(id, delimiter) # "" if no OTU part found
     fastawriter = FASTA.Writer(open(file, "a"))
-    write(fastawriter, FASTA.Record(queryname, alignment.a.seq))
+    otu = otupart(queryid)
+    sequenceid = sequencepart(subjectid)
+
+    isempty(otu) && return write_fasta(file, sequenceid, alignment)
+
+    write(
+        fastawriter,
+        FASTA.Record(otu * delimiter * sequenceid, alignment.a.seq)
+    )
     close(fastawriter)
+    return file
 end
