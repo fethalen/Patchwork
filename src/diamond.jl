@@ -205,14 +205,14 @@ end
 
 function queryids(
     results::Vector{DiamondSearchResult}
-)::Vector{String}
-    return map(result -> result.queryid.id, results)
+)::Vector{SequenceIdentifier}
+    return map(result -> result.queryid, results)
 end
 
 function subjectids(
     results::Vector{DiamondSearchResult}
-)::Vector{String}
-    return map(result -> result.subjectid.id, results)
+)::Vector{SequenceIdentifier}
+    return map(result -> result.subjectid, results)
 end
 
 function isfastafile(path::AbstractString)::Bool
