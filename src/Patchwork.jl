@@ -211,9 +211,7 @@ function main()
         cleanfiles(alignmentoutput, statsoutput, fastaoutput)
     end
 
-    mkpath(diamondoutput)
-    mkpath(fastaoutput)
-    mkpath(statsoutput)
+    map(mkpath, [diamondoutput, fastaoutput, statsoutput])
 
     println("Building DIAMOND database")
     reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
@@ -226,29 +224,35 @@ function main()
     allhits = readblastTSV(diamondsearch)
     referenceids = unique(subjectids(allhits))
 
-    for (index, id) in enumerate(referenceids)
-        diamondhits = filter(hit -> isequal(id, hit.subjectid.id), allhits)
-        writeblastTSV(*(diamondoutput, "/", id, ".tsv"), diamondhits; header = true)
+    for (index, subjectid) in enumerate(referenceids)
+        diamondhits = filter(hit -> isequal(subjectid.id, hit.subjectid.id), allhits)
+        writeblastTSV(*(diamondoutput, "/", subjectid.id, ".tsv"), diamondhits; header = true)
         #regions = AlignedRegionCollection(get_fullseq(args["reference"][index]), diamondhits)
-        regions = AlignedRegionCollection(selectsequence(references_file, id), diamondhits)
+        regions = AlignedRegionCollection(selectsequence(references_file, subjectid.id), diamondhits)
         # assuming all queries belong to same species:
         mergedregions = mergeoverlaps(regions)
         concatenation = concatenate(mergedregions, args["species-delimiter"])
         finalalignment = maskgaps(concatenation).aln
 
-        write_alignmentfile(alignmentoutput, id, length(regions), finalalignment, index)
-        write_fasta(*(fastaoutput, "/", id, ".fa"), regions.records[1].queryid,
-                    finalalignment, args["species-delimiter"])
-        stats_row = [mergedregions.referencesequence.id.id,
-                 length(mergedregions.referencesequence),
-                 length(finalalignment.a.seq),
-                 length(mergedregions), # only the merged regions
-                 #length(unique(map(region -> region.queryid.id, mergedregions))), # ???
-                 length(regions), # all contigs retrieved by DIAMOND search
-                 BioAlignments.count_matches(finalalignment),
-                 BioAlignments.count_mismatches(finalalignment),
-                 BioAlignments.count_deletions(finalalignment),
-                 round(occupancy(finalalignment), digits=2)]
+        write_alignmentfile(alignmentoutput, subjectid.id, length(regions), finalalignment, index)
+        write_fasta(
+            *(fastaoutput, "/", sequencepart(subjectid), ".fa"),
+            regions.records[1].queryid,
+            subjectid,
+            finalalignment,
+            args["species-delimiter"]
+        )
+        stats_row = [
+            mergedregions.referencesequence.id.id,
+            length(mergedregions.referencesequence),
+            length(finalalignment.a.seq),
+            length(mergedregions), # only the merged regions
+            length(regions), # all contigs retrieved by DIAMOND search
+            BioAlignments.count_matches(finalalignment),
+            BioAlignments.count_mismatches(finalalignment),
+            BioAlignments.count_deletions(finalalignment),
+            round(occupancy(finalalignment), digits=2)
+        ]
         push!(statistics, stats_row)
     end
 
@@ -269,7 +273,7 @@ function main()
               "Mean no. of matches", "Mean no. of mismatches", "Mean no. of deletions",
               "Mean occupancy"]
     for (name, value) in zip(output, averages[1, :])
-        println("  ", name, repeat(" ", 25 - length(name)), "  ", value,)
+        println("  ", name, repeat(" ", 25 - length(name)), "  ", round(value, digits=2))
     end
 end
 
