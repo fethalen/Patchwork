@@ -212,12 +212,6 @@ function subjectids(
     return map(result -> result.subjectid.id, results)
 end
 
-function isfastafile(path::AbstractString)::Bool
-    splits = split(path, ".")
-    length(splits) > 1 && last(splits) in FASTAEXTENSIONS && return true
-    return false
-end
-
 function isdiamonddatabase(path::AbstractString)::Bool
     splits = split(path, ".")
     length(splits) > 1 && isequal(last(splits), DIAMONDDB) && return true
