@@ -4,6 +4,8 @@ using FASTX
 using BioSequences
 using BioGenerics
 
+const FASTQEXTENSIONS = ["fq", "fastq"]
+
 """
     fastafiles(directory::String, extensions::Array{String, 1})::Array{String, 1}
 
@@ -32,24 +34,34 @@ function fastafiles(
 end
 
 """
-    readmsa(fastafile::String)::MultipleSequenceAlignment
+    readmsa(file::String, removeduplicates::Bool=true)::MultipleSequenceAlignment
 
 Takes the path to a multiple sequence alignment (MSA) as an input and returns a
-MultipleSequenceAlignment object
+MultipleSequenceAlignment object. If `removeduplicates` is set, duplicate sequences
+will be removed before returning the object. 
 """
-function readmsa(fastafile::String)::MultipleSequenceAlignment
-    abs_fastafile = abspath(fastafile)
-    isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
-    record = FASTA.Record()
-    msa = MultipleSequenceAlignment(abs_fastafile)
+function readmsa(file::String, removeduplicates::Bool=true)::MultipleSequenceAlignment
+    absfile = abspath(file)
+    isfile(absfile) || error(*("cannot locate file ", file))
+    msa = MultipleSequenceAlignment(absfile)
 
-    open(FASTA.Reader, fastafile) do reader
-        while !eof(reader)
-            read!(reader, record)
-            alignment = SequenceRecord(FASTA.identifier(record), FASTA.sequence(record))
-            addalignment!(msa, alignment)
-        end
+    if isfastafile(file)
+        record = FASTA.Record()
+        reader = FASTA.Reader(file)
+    elseif isfastqfile(file)
+        record = FASTQ.Record()
+        reader = FASTQ.Reader(file)
+    else 
+        error("incorrect file type.")
     end
+
+    while !eof(reader)
+        read!(reader, record)
+        alignment = SequenceRecord(identifier(record), sequence(record))
+        addalignment!(msa, alignment)
+    end
+    close(reader)
+    removeduplicates && remove_duplicates!(msa)
     return msa
 end
 
@@ -124,4 +136,52 @@ function selectsequences(
         end
     end
     return msa
+end
+
+function isfastafile(
+    path::AbstractString, 
+    ext::Vector{AbstractString}=FASTAEXTENSIONS
+)::Bool
+    splits = split(path, ".")
+    length(splits) > 1 && last(splits) in ext && return true
+    return false
+end
+
+function isfastqfile(
+    file::AbstractString, 
+    ext::Vector{AbstractString}=FASTQEXTENSIONS
+)::Bool
+    splits = split(file, ".")
+    length(splits) > 1 && last(splits) in ext && return true
+    return false
+end
+
+function fastq2fasta(
+    infile::AbstractString, 
+    ext::Vector{AbstractString}=FASTQEXTENSIONS, 
+    removeduplicates::Bool=true
+)::AbstractString
+    isfastqfile(infile, ext) || error("Wrong file format; input must be a fastq file.")
+    # outfile = *(rsplit(infile, ".", limit=1)[1], ".fasta")
+    # fastawriter = open(FASTA.Writer, outfile)
+    # open(FASTQ.Reader, infile) do reader
+    #     for record in reader
+    #         id = identifier(record)
+    #         seq = sequence(record) 
+    #         write(fastawriter, FASTA.Record(id, seq))
+    #     end
+    # end
+    # return outfile
+    msa = readmsa(infile, removeduplicates)
+    #removeduplicates && remove_duplicates!(msa)
+    return mktemp_fasta(msa)
+end
+
+function fastq2fasta(infiles::Vector{AbstractString})::Vector{AbstractString}
+    output = String[]
+    for file in infiles
+        outfile = fastq2fasta(file)
+        push!(output, outfile)
+    end
+    return output
 end
