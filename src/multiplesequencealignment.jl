@@ -44,6 +44,9 @@ function removealignment!(
     return msa
 end
 
+Base.push!(msa::MultipleSequenceAlignment, alignment::SequenceRecord) = push!(msa.sequences, alignment)
+Base.deleteat!(msa::MultipleSequenceAlignment, index::Int64) = deleteat!(msa.sequences, index)
+
 Base.length(msa::MultipleSequenceAlignment) = length(msa.sequences)
 Base.firstindex(msa::MultipleSequenceAlignment) = 1
 Base.lastindex(msa::MultipleSequenceAlignment) = lastindex(msa.sequences)
@@ -76,6 +79,20 @@ function Base.iterate(
 )
     i > lastindex(msa) && return nothing
     return getindex(msa, i), i + 1
+end
+
+function Base.sort(msa::MultipleSequenceAlignment, bysequence::Bool=true)
+    isempty(msa) && return msa
+    if bysequence
+        order = sortperm(map(record -> (record.sequencedata), msa))
+    else
+        order = sortperm(map(record -> (record.id.id), msa))
+    end
+    sortedmsa = MultipleSequenceAlignment(msa.name)
+    for index in order
+        addalignment!(sortedmsa, msa[index])
+    end
+    return sortedmsa
 end
 
 function countgaps(msa::MultipleSequenceAlignment)::Int
@@ -244,12 +261,16 @@ end
 
 function pool(
     files::AbstractString...;
-    name::AbstractString=""
+    name::AbstractString="", 
+    removeduplicates::Bool=true
 )::MultipleSequenceAlignment
     allsequences = Vector{SequenceRecord}()
     for file in files
+        (isfastafile(file) || isfastqfile(file)) || error("Can only pool fasta or fastq files.")
         tmp = readmsa(file)
         append!(allsequences, (ungap(tmp)).sequences)
     end
-    return MultipleSequenceAlignment(name, allsequences)
+    result = MultipleSequenceAlignment(name, allsequences)
+    removeduplicates && remove_duplicates!(result)
+    return result
 end
