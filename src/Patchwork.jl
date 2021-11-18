@@ -40,10 +40,11 @@ export
 
     # diamond
     FIELDS, OUTPUT_FORMAT, readblastTSV, writeblastTSV, diamond_blastx, diamond_makeblastdb, 
-    queryids, subjectids, isfastafile, isdiamonddatabase,
+    queryids, subjectids, isdiamonddatabase,
 
     # fasta
-    fastafiles, readmsa, get_fullseq, selectsequence, 
+    FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, isfastqfile,
+    fastq2fasta
 
     # filtering
     remove_duplicates, 
@@ -172,18 +173,22 @@ function parse_parameters()
     @add_arg_table! settings begin
         "--contigs"
             help = "Path to one or more sequences in FASTA format"
-            required = true
+            #required = true #Not required if reference is a .tsv
             arg_type = String
-            nargs = '+'
+            nargs = '*'
             metavar = "PATH"
         "--reference"
             help = "Either (1) a path to one or more sequences in FASTA format, (2) a
                     subject database (DIAMOND or BLAST database), or (3) a DIAMOND output
-                    file in tabular format."
+                    file in tabular format. For (3), set the `--tabular` flag."
             required = true
             arg_type = String
             nargs = '+'
             metavar = "PATH"
+        "--tabular"
+            help = "Set this flag if your provided reference is a DIAMOND output file in 
+                    tabular format."
+            action = :store_true
         "--output-dir"
             help = "Write output files to this directory"
             arg_type = String
@@ -250,10 +255,13 @@ function main()
     setdiamondflags!(args)
 
     if length(args["reference"]) == 1
-        references_file = args["reference"][1]
-    else                                                         # assume >1 .fa file provided
-        #references = pool(args["reference"]...)                 # MultipleSequenceAlignment
-        #references_file = mktemp_fasta(references)
+        references_file = args["reference"][1]              # 1 .fa, .dmnd, or .tsv
+    elseif args["tabular"]                                  # multiple .tsv files 
+        references_file, io = mktemp()
+        files = join(args["reference"], " ")
+        run(`cat $files \> $references_file`)
+        close(io)
+    else                                                    # multiple .fa files
         references_file = mktemp_fasta(pool(args["reference"]...))
     end
     queries = pool(args["contigs"]...)                      # MultipleSequenceAlignment
@@ -285,15 +293,19 @@ function main()
     mkpath(fastaoutput)
     mkpath(statsoutput)
 
-    println("Building DIAMOND database")
-    #reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
-    reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
-    diamondparams = collectdiamondflags(args)
-    println("Aligning query sequences against reference database")
-    diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
+    if !args["tabular"]
+        isempty(queries) && error("Please provide one or more query files if not running", 
+            " in `--tabluar` mode.")
+        println("Building DIAMOND database")
+        #reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
+        reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
+        diamondparams = collectdiamondflags(args)
+        println("Aligning query sequences against reference database")
+        diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
+    end
 
     println("Merging overlapping hits")
-    allhits = readblastTSV(diamondsearch)
+    allhits = args["tabular"] ? readblastTSV(references_file) : readblastTSV(diamondsearch)
     referenceids = unique(subjectids(allhits))
 
     for (index, id) in enumerate(referenceids)
