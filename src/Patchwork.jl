@@ -40,10 +40,11 @@ export
 
     # diamond
     FIELDS, OUTPUT_FORMAT, readblastTSV, writeblastTSV, diamond_blastx, diamond_makeblastdb, 
-    queryids, subjectids, isfastafile, isdiamonddatabase,
+    queryids, subjectids, isdiamonddatabase,
 
     # fasta
-    fastafiles, readmsa, get_fullseq, selectsequence, 
+    FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, isfastqfile,
+    fastq2fasta
 
     # filtering
     remove_duplicates, 
@@ -164,18 +165,22 @@ function parse_parameters()
     @add_arg_table! settings begin
         "--contigs"
             help = "Path to one or more sequences in FASTA format"
-            required = true
+            #required = true #Not required if reference is a .tsv
             arg_type = String
-            nargs = '+'
+            nargs = '*'
             metavar = "PATH"
         "--reference"
             help = "Either (1) a path to one or more sequences in FASTA format, (2) a
                     subject database (DIAMOND or BLAST database), or (3) a DIAMOND output
-                    file in tabular format."
+                    file in tabular format. For (3), set the `--tabular` flag."
             required = true
             arg_type = String
             nargs = '+'
             metavar = "PATH"
+        "--tabular"
+            help = "Set this flag if your provided reference is a DIAMOND output file in 
+                    tabular format."
+            action = :store_true
         "--output-dir"
             help = "Write output files to this directory"
             arg_type = String
@@ -282,7 +287,7 @@ function main()
     diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
 
     println("Merging overlapping hits")
-    allhits = readblastTSV(diamondsearch)
+    allhits = args["tabular"] ? readblastTSV(references_file) : readblastTSV(diamondsearch)
     referenceids = unique(subjectids(allhits))
 
     for (index, subjectid) in enumerate(referenceids)
