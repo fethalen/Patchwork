@@ -288,10 +288,8 @@ function main()
         end
         cleanfiles(alignmentoutput, statsoutput, fastaoutput)
     end
-    #mkpath(outdir)
-    mkpath(diamondoutput)
-    mkpath(fastaoutput)
-    mkpath(statsoutput)
+
+    map(mkpath, [diamondoutput, fastaoutput, statsoutput])
 
     if isnothing(args["search-results"])
         if isempty(queries) 
@@ -316,21 +314,22 @@ function main()
     allhits = readblastTSV(diamondsearch)
     referenceids = unique(subjectids(allhits))
 
-    for (index, subjectid) in enumerate(referenceids)
-        diamondhits = filter(hit -> isequal(subjectid.id, hit.subjectid.id), allhits)
-        writeblastTSV(*(diamondoutput, "/", subjectid.id, ".tsv"), diamondhits; header = true)
+    for (index, referenceid) in enumerate(referenceids)
+        diamondhits = filter(hit -> isequal(referenceid, hit.subjectid), allhits)
+        @assert length(diamondhits) != 0
+        writeblastTSV(*(diamondoutput, "/", referenceid.id, ".tsv"), diamondhits; header = true)
         #regions = AlignedRegionCollection(get_fullseq(args["reference"][index]), diamondhits)
-        regions = AlignedRegionCollection(selectsequence(references_file, subjectid.id), diamondhits)
+        regions = AlignedRegionCollection(selectsequence(references_file, referenceid), diamondhits)
         # assuming all queries belong to same species:
         mergedregions = mergeoverlaps(regions)
         concatenation = concatenate(mergedregions, args["species-delimiter"])
         finalalignment = maskgaps(concatenation).aln
 
-        write_alignmentfile(alignmentoutput, subjectid.id, length(regions), finalalignment, index)
+        write_alignmentfile(alignmentoutput, referenceid, length(regions), finalalignment, index)
         write_fasta(
-            *(fastaoutput, "/", sequencepart(subjectid), ".fa"),
+            *(fastaoutput, "/", sequencepart(referenceid), ".fa"),
             regions.records[1].queryid,
-            subjectid,
+            referenceid,
             finalalignment,
             args["species-delimiter"]
         )
