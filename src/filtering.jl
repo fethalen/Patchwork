@@ -9,24 +9,6 @@ function remove_duplicates!(searchresults::DataFrame)::DataFrame
     return searchresults
 end
 
-function remove_duplicates!(msa::MultipleSequenceAlignment)
-    msa = sort(msa)
-    i = 1
-    while i < lastindex(msa)
-        if isequal(msa[i].sequencedata, msa[i+1].sequencedata) 
-            deleteat!(msa, i)
-        else
-            i += 1
-        end
-    end
-    return msa
-end
-
-function remove_duplicates(msa::MultipleSequenceAlignment)
-    result = deepcopy(msa)
-    return remove_duplicates!(result)
-end
-
 # function remove_duplicates(msa::MultipleSequenceAlignment)
 #     collection = []
 #     for record in msa.sequences
