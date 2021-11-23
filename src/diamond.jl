@@ -81,10 +81,13 @@ function writeblastTSV(
     path::AbstractString,
     results::Array{DiamondSearchResult,1};
     delimiter='\t',
-    header=false
+    header=false, 
+    #omit::Vector{Symbol}=Symbol[]
 )::AbstractString
-    dataframe = select!(DataFrames.DataFrame(results), Not(:subjectid))
+    #dataframe = select!(DataFrames.DataFrame(results), Not(:subjectid))
+    dataframe = select!(DataFrames.DataFrame(results))#, Not(omit))
     dataframe[!, :queryid] = map(result -> result.queryid.id, results)
+    dataframe[!, :subjectid] = map(result -> result.subjectid.id, results)
     CSV.write(path, dataframe, delim=delimiter, writeheader=header)
     return path
 end
@@ -103,7 +106,7 @@ function merge!(
     sequences = queryalignment
 
     for result in searchresults
-        addalignment!(queryalignment, SequenceRecord(sotu, result.subjectid, result.subjectsequence))
+        push!(queryalignment, SequenceRecord(sotu, result.subjectid, result.subjectsequence))
     end
     return sequences::MultipleSequenceAlignment
 end
