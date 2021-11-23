@@ -1,6 +1,7 @@
 # Provides utilities and types for working with FASTA files
 
 using FASTX
+using CodecZlib
 using BioSequences
 using BioGenerics
 
@@ -47,18 +48,20 @@ function readmsa(file::String, removeduplicates::Bool=true)::MultipleSequenceAli
 
     if isfastafile(file)
         record = FASTA.Record()
-        reader = FASTA.Reader(file)
+        reader = isgzipcompressed(file) ? 
+            FASTA.Reader(GzipDecompressorStream(open(file))) : FASTA.Reader(open(file, "r"))
     elseif isfastqfile(file)
         record = FASTQ.Record()
-        reader = FASTQ.Reader(file)
+        reader = isgzipcompressed(file) ? 
+            FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file, "r"))
     else 
         error("incorrect file type.")
     end
 
     while !eof(reader)
         read!(reader, record)
-        alignment = SequenceRecord(identifier(record), sequence(record))
-        addalignment!(msa, alignment)
+        alignment = SequenceRecord(FASTX.identifier(record), FASTX.sequence(record))
+        push!(msa, alignment)
     end
     close(reader)
     removeduplicates && remove_duplicates!(msa)
@@ -131,28 +134,36 @@ function selectsequences(
             identifier = FASTA.identifier(record)
             if identifier in identifiers
                 alignment = SequenceRecord(identifier, FASTA.sequence(record))
-                addalignment!(msa, alignment)
+                push!(msa, alignment)
             end
         end
     end
     return msa
 end
 
+function isgzipcompressed(file::AbstractString)
+    extension = rsplit(file, ".", limit=1)
+    isequal(extension, "gz") && return true
+    return false
+end
+
 function isfastafile(
     path::AbstractString, 
-    ext::Vector{AbstractString}=FASTAEXTENSIONS
+    ext::AbstractVector{String}=FASTAEXTENSIONS
 )::Bool
     splits = split(path, ".")
     length(splits) > 1 && last(splits) in ext && return true
+    length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(path) && return true
     return false
 end
 
 function isfastqfile(
     file::AbstractString, 
-    ext::Vector{AbstractString}=FASTQEXTENSIONS
+    ext::AbstractVector{String}=FASTQEXTENSIONS
 )::Bool
     splits = split(file, ".")
     length(splits) > 1 && last(splits) in ext && return true
+    length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(file) && return true
     return false
 end
 
