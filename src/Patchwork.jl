@@ -44,14 +44,14 @@ export
 
     # fasta
     FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, isfastqfile,
-    fastq2fasta
+    fastq2fasta,
 
     # filtering
-    remove_duplicates, 
+    #remove_duplicates, 
 
     # multiplesequencealignment
     addalignment, removealignment, hasgaps, otus, otufrequencies, countotus, coverage, 
-    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, pool, 
+    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, remove_duplicates, pool, 
 
     # output
     #WIDTH, cleanfiles, warn_overwrite, write_alignmentfile, write_fasta, 
@@ -74,6 +74,7 @@ using Statistics
 include("sequenceidentifier.jl")
 include("sequencerecord.jl")
 include("multiplesequencealignment.jl")
+include("filtering.jl")
 include("diamond.jl")
 include("alignedregion.jl")
 include("alignedregioncollection.jl")
@@ -81,7 +82,6 @@ include("alignment.jl")
 include("alignmentconcatenation.jl")
 include("checkinput.jl")
 include("fasta.jl")
-include("filtering.jl")
 include("output.jl")
 
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
@@ -178,17 +178,30 @@ function parse_parameters()
             nargs = '*'
             metavar = "PATH"
         "--reference"
-            help = "Either (1) a path to one or more sequences in FASTA format, (2) a
-                    subject database (DIAMOND or BLAST database), or (3) a DIAMOND output
-                    file in tabular format. For (3), set the `--tabular` flag."
+            #help = "Either (1) a path to one or more sequences in FASTA format, (2) a
+            #        subject database (DIAMOND or BLAST database), or (3) a DIAMOND output
+            #        file in tabular format. For (3), set the `--tabular` flag."
+            help = "A path to one or more sequences in FASTA format. Additionally, you can 
+                    also provide a DIAMOND output file in tabular format (use --search-results)
+                    or a DIAMOND or BLAST database (use --database)."
             required = true
             arg_type = String
             nargs = '+'
             metavar = "PATH"
-        "--tabular"
-            help = "Set this flag if your provided reference is a DIAMOND output file in 
-                    tabular format."
-            action = :store_true
+        "--search-results"
+            help = "Provide a DIAMOND output file in tabular format. The first line of 
+                    such files is considered to be the header. Please adhere to Patchwork's
+                    DIAMOND output format: 
+                    6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send 
+                    evalue bitscore qframe sseq seq."
+            arg_type = String
+            nargs = '?' 
+            metavar = "PATH"
+        "--database"
+            help = "Provide a subject DIAMOND or BLAST database to search against."
+            arg_type = String
+            nargs = '?' 
+            metavar = "PATH"
         "--output-dir"
             help = "Write output files to this directory"
             arg_type = String
@@ -255,16 +268,11 @@ function main()
     setdiamondflags!(args)
 
     if length(args["reference"]) == 1
-        references_file = args["reference"][1]              # 1 .fa, .dmnd, or .tsv
-    elseif args["tabular"]                                  # multiple .tsv files 
-        references_file, io = mktemp()
-        files = join(args["reference"], " ")
-        run(`cat $files \> $references_file`)
-        close(io)
+        references_file = args["reference"][1]              # 1 .fa
     else                                                    # multiple .fa files
-        references_file = mktemp_fasta(pool(args["reference"]...))
+        references_file = mktemp_fasta(pool(args["reference"]))
     end
-    queries = pool(args["contigs"]...)                      # MultipleSequenceAlignment
+    queries = pool(args["contigs"])                      # MultipleSequenceAlignment
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT                # directory
@@ -293,24 +301,32 @@ function main()
     mkpath(fastaoutput)
     mkpath(statsoutput)
 
-    if !args["tabular"]
-        isempty(queries) && error("Please provide one or more query files if not running", 
-            " in `--tabluar` mode.")
-        println("Building DIAMOND database")
-        #reference_db = diamond_makeblastdb(references, outdir, args["makedb-flags"])
-        reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
+    if isnothing(args["search-results"])
+        if isempty(queries) 
+            println("Please provide one or more query files if not running with 
+                `--search-results` mode.")
+            return
+        end
+        if isnothing(args["database"])
+            println("Building DIAMOND database")
+            reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"]) 
+        else
+            reference_db = args["database"]
+        end
         diamondparams = collectdiamondflags(args)
         println("Aligning query sequences against reference database")
         diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
+    else
+        diamondsearch = args["search-results"]
     end
 
     println("Merging overlapping hits")
-    allhits = args["tabular"] ? readblastTSV(references_file) : readblastTSV(diamondsearch)
+    allhits = readblastTSV(diamondsearch)
     referenceids = unique(subjectids(allhits))
 
     for (index, id) in enumerate(referenceids)
         diamondhits = filter(hit -> isequal(id, hit.subjectid.id), allhits)
-        writeblastTSV(*(diamondoutput, "/", id, ".tsv"), diamondhits; header = true)
+        writeblastTSV(*(diamondoutput, "/", id, ".tsv"), diamondhits; header=true)
         #regions = AlignedRegionCollection(get_fullseq(args["reference"][index]), diamondhits)
         regions = AlignedRegionCollection(selectsequence(references_file, id), diamondhits)
         # assuming all queries belong to same species:
