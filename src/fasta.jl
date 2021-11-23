@@ -113,6 +113,24 @@ function selectsequence(
     end
 end
 
+function selectsequence(
+    fastafile::AbstractString,
+    identifier::SequenceIdentifier
+)
+    abs_fastafile = abspath(fastafile)
+    isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
+    record = FASTA.Record()
+    open(FASTA.Reader, fastafile) do reader
+        while !eof(reader)
+            read!(reader, record)
+            currentid = FASTA.identifier(record)
+            if isequal(currentid, identifier.id)
+                return SequenceRecord(currentid, FASTA.sequence(record))
+            end
+        end
+    end
+end
+
 """
     selectsequences(fastafile, identifiers)
 
