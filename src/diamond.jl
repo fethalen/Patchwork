@@ -82,7 +82,6 @@ function writeblastTSV(
     results::Array{DiamondSearchResult,1};
     delimiter='\t',
     header=false, 
-<<<<<<< HEAD
     omit::Vector{Symbol}=Symbol[]
 )::AbstractString
     #dataframe = select!(DataFrames.DataFrame(results), Not(:subjectid))
@@ -93,14 +92,6 @@ function writeblastTSV(
     if !in(:subjectid, omit) 
         dataframe[!, :subjectid] = map(result -> result.subjectid.id, results)
     end
-=======
-    #omit::Vector{Symbol}=Symbol[]
-)::AbstractString
-    #dataframe = select!(DataFrames.DataFrame(results), Not(:subjectid))
-    dataframe = select!(DataFrames.DataFrame(results))#, Not(omit))
-    dataframe[!, :queryid] = map(result -> result.queryid.id, results)
-    dataframe[!, :subjectid] = map(result -> result.subjectid.id, results)
->>>>>>> cd36276a826ef75547c278a91cfedd4e48db8343
     CSV.write(path, dataframe, delim=delimiter, writeheader=header)
     return path
 end
