@@ -56,7 +56,7 @@ function Base.getindex(
     msa::MultipleSequenceAlignment,
     index::Int
 )::SequenceRecord
-    return msa.sequences[ind]
+    return msa.sequences[index]
 end
 
 function Base.setindex!(
@@ -90,7 +90,7 @@ function Base.sort(msa::MultipleSequenceAlignment, bysequence::Bool=true)
     end
     sortedmsa = MultipleSequenceAlignment(msa.name)
     for index in order
-        addalignment!(sortedmsa, msa[index])
+        push!(sortedmsa, msa[index])
     end
     return sortedmsa
 end
@@ -259,8 +259,26 @@ function mktemp_fasta(
     return path
 end
 
+function remove_duplicates!(msa::MultipleSequenceAlignment)
+    msa = sort(msa)
+    i = 1
+    while i < lastindex(msa)
+        if isequal(msa[i].sequencedata, msa[i+1].sequencedata) 
+            deleteat!(msa, i)
+        else
+            i += 1
+        end
+    end
+    return msa
+end
+
+function remove_duplicates(msa::MultipleSequenceAlignment)
+    result = deepcopy(msa)
+    return remove_duplicates!(result)
+end
+
 function pool(
-    files::AbstractString...;
+    files::AbstractVector{String};
     name::AbstractString="", 
     removeduplicates::Bool=true
 )::MultipleSequenceAlignment
