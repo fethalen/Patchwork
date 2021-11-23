@@ -19,6 +19,7 @@ Base.lastindex(id::SequenceIdentifier) = length(id)
 Base.eachindex(id::SequenceIdentifier) = Base.OneTo(lastindex(id))
 Base.isequal(first::SequenceIdentifier, second::SequenceIdentifier) = Base.isequal(first.id, second.id)
 hasspaces(id::SequenceIdentifier) = return ' ' in id.id
+Base.unique(ids::AbstractVector{SequenceIdentifier}) = unique(map(id -> id.id, ids))
 
 """
     splitdescription(id; delimiter)
