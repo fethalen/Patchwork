@@ -5,61 +5,61 @@ module Patchwork
 
 export
     # types
-    SequenceIdentifier, 
+    SequenceIdentifier,
     SequenceRecord,
     MultipleSequenceAlignment,
-    DiamondSearchResult, 
-    AlignedRegion, 
-    AlignedRegionCollection, 
-    
+    DiamondSearchResult,
+    AlignedRegion,
+    AlignedRegionCollection,
+
     # alignedregion
     cleancigar, query_isreverse, query2subject, subject2query, subject2fullsubject,
-    subject2fullquery, fullsubject2subject, fullsubject2query, fullsubject2fullquery, 
-    query2fullquery, fullsubject_queryboundaries, subject_queryboundaries, slicealignment, 
-    query_leftposition, query_rightposition, subject_leftposition, subject_rightposition, 
-    subjectinterval, queryinterval, queryframe, isordered, precedes, #isoverlapping, 
-    samerange, identifier, sameid, samesequence, merge, leftintersection, rightintersection, 
-    overlap, beforeoverlap, afteroverlap, shadows, equalrange, totalrange, longest, 
-    isnucleotide, isaminoacid, 
+    subject2fullquery, fullsubject2subject, fullsubject2query, fullsubject2fullquery,
+    query2fullquery, fullsubject_queryboundaries, subject_queryboundaries, slicealignment,
+    query_leftposition, query_rightposition, subject_leftposition, subject_rightposition,
+    subjectinterval, queryinterval, queryframe, isordered, precedes, #isoverlapping,
+    samerange, identifier, sameid, samesequence, merge, leftintersection, rightintersection,
+    overlap, beforeoverlap, afteroverlap, shadows, equalrange, totalrange, longest,
+    isnucleotide, isaminoacid,
 
     # alignedregioncollection
-    sameids, uniquesequences, has_uniquesequences, hasoverlaps, show_subjectintervals, 
-    mergeoverlaps, isnucleotide, isaminoacid, queryids, 
+    sameids, uniquesequences, has_uniquesequences, hasoverlaps, show_subjectintervals,
+    mergeoverlaps, isnucleotide, isaminoacid, queryids,
 
     # alignment
-    DEFAULT_SCOREMODEL, pairalign_global, pairalign_local, order, realign, 
+    DEFAULT_SCOREMODEL, pairalign_global, pairalign_local, order, realign,
 
     # alignmentconcatenation
     createbridgealignment, concatenate, countmatches, occupancy, maskgaps, countgaps,
 
     # checkinput
-    MATRICES, GAPS, GAPDEFAULTS, #checkmatrixtype, getmatrixtype, setmatrixname, 
-    #read_custommatrix, getmatrix, setgapopen, setgapextend, checkgappenalty, 
-    #checkdiamondflags, checkmakedbflags, setpatchworkflags, setdiamondflags, 
+    MATRICES, GAPS, GAPDEFAULTS, #checkmatrixtype, getmatrixtype, setmatrixname,
+    #read_custommatrix, getmatrix, setgapopen, setgapextend, checkgappenalty,
+    #checkdiamondflags, checkmakedbflags, setpatchworkflags, setdiamondflags,
     #collectdiamondflags,
 
     # diamond
-    FIELDS, OUTPUT_FORMAT, readblastTSV, writeblastTSV, diamond_blastx, diamond_makeblastdb, 
+    FIELDS, OUTPUT_FORMAT, readblastTSV, writeblastTSV, diamond_blastx, diamond_makeblastdb,
     queryids, subjectids, isfastafile, isdiamonddatabase,
 
     # fasta
-    fastafiles, readmsa, get_fullseq, selectsequence, 
+    fastafiles, readmsa, get_fullseq, selectsequence,
 
     # filtering
-    remove_duplicates, 
+    remove_duplicates,
 
     # multiplesequencealignment
-    addalignment, removealignment, hasgaps, otus, otufrequencies, countotus, coverage, 
-    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, pool, 
+    addalignment, removealignment, hasgaps, otus, otufrequencies, countotus, coverage,
+    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, pool,
 
     # output
-    #WIDTH, cleanfiles, warn_overwrite, write_alignmentfile, write_fasta, 
+    #WIDTH, cleanfiles, warn_overwrite, write_alignmentfile, write_fasta,
 
     # sequenceidentifier
-    splitdescription, otupart, sequencepart, 
+    splitdescription, otupart, sequencepart,
 
     # sequencerecord
-    missingdata, gappositions, nongap_range, has_compoundregions, fillmissing, compoundregions, 
+    missingdata, gappositions, nongap_range, has_compoundregions, fillmissing, compoundregions,
     compoundranges, nongap_ranges
 
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
@@ -89,6 +89,7 @@ const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
 const ALIGNMENTOUTPUT = "alignments.txt"
 const FASTAOUTPUT = "query_sequences"
+const DEFAULT_FASTA_EXT = ".fas"
 const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 
@@ -186,6 +187,11 @@ function parse_parameters()
             arg_type = Vector{String}
             default = DIAMONDFLAGS
             metavar = "LIST"
+        "--fasta-extension"
+            help = "Filetype extension used for output FASTA files"
+            arg_type = String
+            default = DEFAULT_FASTA_EXT
+            metavar = "STRING"
         "--makedb-flags"
             help = "Flags sent to DIAMOND makedb"
             arg_type = Vector{String}
@@ -297,7 +303,7 @@ function main()
 
         write_alignmentfile(alignmentoutput, subjectid.id, length(regions), finalalignment, index)
         write_fasta(
-            *(fastaoutput, "/", sequencepart(subjectid), ".fa"),
+            *(fastaoutput, "/", sequencepart(subjectid), args["fasta-extension"]),
             regions.records[1].queryid,
             subjectid,
             finalalignment,
