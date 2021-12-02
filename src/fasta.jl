@@ -41,7 +41,7 @@ Takes the path to a multiple sequence alignment (MSA) as an input and returns a
 MultipleSequenceAlignment object. If `removeduplicates` is set, duplicate sequences
 will be removed before returning the object. 
 """
-function readmsa(file::String, removeduplicates::Bool=true)::MultipleSequenceAlignment
+function readmsa(file::String, removeduplicates::Bool=true, bysequence::Bool=true)::MultipleSequenceAlignment
     absfile = abspath(file)
     isfile(absfile) || error(*("cannot locate file ", file))
     msa = MultipleSequenceAlignment(absfile)
@@ -61,10 +61,16 @@ function readmsa(file::String, removeduplicates::Bool=true)::MultipleSequenceAli
     while !eof(reader)
         read!(reader, record)
         alignment = SequenceRecord(FASTX.identifier(record), FASTX.sequence(record))
-        push!(msa, alignment)
+        if length(msa) >= 1 && removeduplicates # remove duplicated sequences (and or IDs) while reading
+            !in(alignment.sequencedata, map(aln -> aln.sequencedata, msa.sequences)) && 
+            #!in(alignment.id, map(aln -> aln.id, msa.sequences)) && 
+            push!(msa, alignment)
+        else
+            push!(msa, alignment)
+        end
     end
     close(reader)
-    removeduplicates && remove_duplicates!(msa)
+    #removeduplicates && remove_duplicates!(msa, bysequence) # not necessary when removing duplicates while reading
     return msa
 end
 
@@ -160,7 +166,8 @@ function selectsequences(
 end
 
 function isgzipcompressed(file::AbstractString)
-    extension = rsplit(file, ".", limit=1)
+    occursin(".", file) || return false
+    extension = rsplit(file, ".", limit=2)[2]
     isequal(extension, "gz") && return true
     return false
 end

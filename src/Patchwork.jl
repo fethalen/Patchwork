@@ -44,7 +44,7 @@ export
 
     # fasta
     FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, isfastqfile,
-    fastq2fasta,
+    isgzipcompressed, fastq2fasta,
 
     # filtering
     #remove_duplicates, 
