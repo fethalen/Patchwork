@@ -305,9 +305,7 @@ function main()
         write_fasta(
             *(fastaoutput, "/", sequencepart(subjectid), args["fasta-extension"]),
             regions.records[1].queryid,
-            subjectid,
-            finalalignment,
-            args["species-delimiter"]
+            finalalignment
         )
         stats_row = [
             mergedregions.referencesequence.id.id,
