@@ -45,6 +45,7 @@ function removealignment!(
 end
 
 Base.push!(msa::MultipleSequenceAlignment, alignment::SequenceRecord) = push!(msa.sequences, alignment)
+Base.append!(alignments::AbstractVector{SequenceRecord}, msa::MultipleSequenceAlignment) = append!(msa.sequences, alignments)
 Base.deleteat!(msa::MultipleSequenceAlignment, index::Int64) = deleteat!(msa.sequences, index)
 
 Base.length(msa::MultipleSequenceAlignment) = length(msa.sequences)
@@ -81,13 +82,17 @@ function Base.iterate(
     return getindex(msa, i), i + 1
 end
 
-function Base.sort(msa::MultipleSequenceAlignment, bysequence::Bool=true)
+function Base.sort(msa::MultipleSequenceAlignment, bysequence::Bool=true, byid::Bool=!bysequence)
     isempty(msa) && return msa
-    if bysequence
+    !bysequence && !byid && error("Please specify if you want to sort by sequence or ID.")
+    if bysequence && byid
+        order = sortperm(map(record -> (record.id.id, record.sequencedata), msa))
+    elseif bysequence
         order = sortperm(map(record -> (record.sequencedata), msa))
     else
         order = sortperm(map(record -> (record.id.id), msa))
     end
+    #order = bysequence ? sortperm(map(record -> (record.sequencedata), msa)) : sortperm(map(record -> (record.id.id), msa))
     sortedmsa = MultipleSequenceAlignment(msa.name)
     for index in order
         push!(sortedmsa, msa[index])
@@ -259,36 +264,51 @@ function mktemp_fasta(
     return path
 end
 
-function remove_duplicates!(msa::MultipleSequenceAlignment)
-    msa = sort(msa)
-    i = 1
-    while i < lastindex(msa)
-        if isequal(msa[i].sequencedata, msa[i+1].sequencedata) 
-            deleteat!(msa, i)
-        else
-            i += 1
+function remove_duplicates!(msa::MultipleSequenceAlignment, bysequence::Bool=true, byid::Bool=!bysequence)
+    if bysequence 
+        msa = sort(msa, bysequence, false)
+        i = 1
+        while i < lastindex(msa)
+            if bysequence && isequal(msa[i].sequencedata, msa[i+1].sequencedata)
+                deleteat!(msa, i)
+            else
+                i += 1
+            end
+        end
+    end
+    if byid
+        msa = sort(msa, false, byid)
+        i = 1
+        while i < lastindex(msa)
+            if bysequence && isequal(msa[i].id, msa[i+1].id)
+                deleteat!(msa, i)
+            else
+                i += 1
+            end
         end
     end
     return msa
 end
 
-function remove_duplicates(msa::MultipleSequenceAlignment)
+function remove_duplicates(msa::MultipleSequenceAlignment, bysequence::Bool=true, byid::Bool=!bysequence)
     result = deepcopy(msa)
-    return remove_duplicates!(result)
+    return remove_duplicates!(result, bysequence, byid)
 end
 
 function pool(
     files::AbstractVector{String};
     name::AbstractString="", 
-    removeduplicates::Bool=true
+    removeduplicates::Bool=true,
+    bysequence::Bool=true, 
+    byid::Bool=false
 )::MultipleSequenceAlignment
-    allsequences = Vector{SequenceRecord}()
+    result = MultipleSequenceAlignment(name)
     for file in files
         (isfastafile(file) || isfastqfile(file)) || error("Can only pool fasta or fastq files.")
-        tmp = readmsa(file)
-        append!(allsequences, (ungap(tmp)).sequences)
+        tmp = readmsa(file, removeduplicates, bysequence, byid)
+        append!(result, (ungap(tmp)).sequences)
+        #removeduplicates && remove_duplicates!(result, bysequence) # higher time complexity but reduced memory usage?
     end
-    result = MultipleSequenceAlignment(name, allsequences)
-    removeduplicates && remove_duplicates!(result)
+    removeduplicates && remove_duplicates!(result, bysequence, byid) # not necessary when removing duplicates in the loop
     return result
 end
