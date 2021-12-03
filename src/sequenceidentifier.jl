@@ -12,6 +12,8 @@ mutable struct SequenceIdentifier
     end
 end
 
+id(id::SequenceIdentifier)::String = id.id
+
 Base.length(id::SequenceIdentifier) = length(id.id)
 Base.isempty(id::SequenceIdentifier) = length(id) >= 1
 Base.firstindex(id::SequenceIdentifier) = 1
@@ -19,6 +21,12 @@ Base.lastindex(id::SequenceIdentifier) = length(id)
 Base.eachindex(id::SequenceIdentifier) = Base.OneTo(lastindex(id))
 Base.isequal(first::SequenceIdentifier, second::SequenceIdentifier) = Base.isequal(first.id, second.id)
 hasspaces(id::SequenceIdentifier) = return ' ' in id.id
+
+function Base.unique(ids::AbstractVector{SequenceIdentifier})::Vector{SequenceIdentifier} 
+    idstrings = unique(map(id, ids))
+    uniqueids = map(SequenceIdentifier, idstrings)
+    return uniqueids
+end
 
 """
     splitdescription(id; delimiter)

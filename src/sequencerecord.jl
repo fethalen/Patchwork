@@ -42,6 +42,23 @@ Base.length(alignment::SequenceRecord) = length(alignment.sequencedata)
 Base.firstindex(alignment::SequenceRecord) = firstindex(alignment.sequencedata)
 Base.lastindex(alignment::SequenceRecord) = lastindex(alignment.sequencedata)
 
+function Base.sort(records::Vector{SequenceRecord}; bysequence=true, byid=true)
+    isempty(records) && return records
+    !bysequence && !byid && error("Please specify if you want to sort by sequence or ID.")
+    if bysequence && byid
+        order = sortperm(map(record -> (record.id.id, record.sequencedata), records))
+    elseif bysequence
+        order = sortperm(map(record -> (record.sequencedata), records))
+    else
+        order = sortperm(map(record -> (record.id.id), records))
+    end
+    sortedrecords = SequenceRecord[]
+    for index in order
+        push!(sortedrecords, records[index])
+    end
+    return sortedrecords
+end
+
 function BioSequences.ungap(alignment::SequenceRecord)::SequenceRecord
     return SequenceRecord(alignment.id,
                           ungap(alignment.sequencedata))
