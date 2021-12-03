@@ -51,7 +51,8 @@ export
 
     # multiplesequencealignment
     addalignment, removealignment, hasgaps, otus, otufrequencies, countotus, coverage, 
-    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, remove_duplicates, pool, 
+    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, remove_duplicates, 
+    remove_duplicates!, pool, 
 
     # output
     #WIDTH, cleanfiles, warn_overwrite, write_alignmentfile, write_fasta, 
@@ -262,9 +263,9 @@ function main()
     if length(args["reference"]) == 1
         references_file = args["reference"][1]              # 1 .fa
     else                                                    # multiple .fa files
-        references_file = mktemp_fasta(pool(args["reference"]))
+        references_file = mktemp_fasta(pool(args["reference"]; removeduplicates=false))
     end
-    queries = pool(args["contigs"])                      # MultipleSequenceAlignment
+    queries = pool(args["contigs"])                          # MultipleSequenceAlignment
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT
