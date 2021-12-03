@@ -41,10 +41,18 @@ Takes the path to a multiple sequence alignment (MSA) as an input and returns a
 MultipleSequenceAlignment object. If `removeduplicates` is set, duplicate sequences
 will be removed before returning the object. 
 """
-function readmsa(file::String, removeduplicates::Bool=true, bysequence::Bool=true)::MultipleSequenceAlignment
+function readmsa(
+    file::String; 
+    removeduplicates::Bool=true, 
+    bysequence::Bool=true, 
+    byid::Bool=true
+)::MultipleSequenceAlignment
     absfile = abspath(file)
     isfile(absfile) || error(*("cannot locate file ", file))
     msa = MultipleSequenceAlignment(absfile)
+
+    removeduplicates && !bysequence && !byid && error("Please choose whether duplicates " *
+        "should be removed based on sequence or ID.")
 
     if isfastafile(file)
         record = FASTA.Record()
@@ -62,15 +70,15 @@ function readmsa(file::String, removeduplicates::Bool=true, bysequence::Bool=tru
         read!(reader, record)
         alignment = SequenceRecord(FASTX.identifier(record), FASTX.sequence(record))
         if length(msa) >= 1 && removeduplicates # remove duplicated sequences (and or IDs) while reading
-            !in(alignment.sequencedata, map(aln -> aln.sequencedata, msa.sequences)) && 
-            #!in(alignment.id, map(aln -> aln.id, msa.sequences)) && 
+            (bysequence && in(alignment.sequencedata, map(aln -> aln.sequencedata, msa.sequences)) ||
+            byid && in(alignment.id.id, map(aln -> aln.id.id, msa.sequences))) && continue
             push!(msa, alignment)
         else
             push!(msa, alignment)
         end
     end
     close(reader)
-    #removeduplicates && remove_duplicates!(msa, bysequence) # not necessary when removing duplicates while reading
+    #removeduplicates && remove_duplicates!(msa, bysequence, byid) # not necessary when removing duplicates while reading
     return msa
 end
 
@@ -194,8 +202,10 @@ end
 
 function fastq2fasta(
     infile::AbstractString, 
-    ext::Vector{AbstractString}=FASTQEXTENSIONS, 
-    removeduplicates::Bool=true
+    ext::Vector{AbstractString}=FASTQEXTENSIONS; 
+    removeduplicates::Bool=true, 
+    bysequence::Bool=true, 
+    byid::Bool=true
 )::AbstractString
     isfastqfile(infile, ext) || error("Wrong file format; input must be a fastq file.")
     # outfile = *(rsplit(infile, ".", limit=1)[1], ".fasta")
@@ -208,16 +218,23 @@ function fastq2fasta(
     #     end
     # end
     # return outfile
-    msa = readmsa(infile, removeduplicates)
+    msa = readmsa(infile; removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
     #removeduplicates && remove_duplicates!(msa)
     return mktemp_fasta(msa)
 end
 
-function fastq2fasta(infiles::Vector{AbstractString})::Vector{AbstractString}
+function fastq2fasta(
+    infiles::Vector{AbstractString}, 
+    ext::Vector{AbstractString}=FASTQEXTENSIONS; 
+    removeduplicates::Bool=true, 
+    bysequence::Bool=true, 
+    byid::Bool=true
+)::Vector{AbstractString}
     output = String[]
     for file in infiles
-        outfile = fastq2fasta(file)
+        outfile = fastq2fasta(file, ext; removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
         push!(output, outfile)
     end
     return output
 end
+
