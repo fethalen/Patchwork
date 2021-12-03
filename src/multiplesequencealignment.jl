@@ -45,7 +45,7 @@ function removealignment!(
 end
 
 Base.push!(msa::MultipleSequenceAlignment, alignment::SequenceRecord) = push!(msa.sequences, alignment)
-Base.append!(alignments::AbstractVector{SequenceRecord}, msa::MultipleSequenceAlignment) = append!(msa.sequences, alignments)
+Base.append!(msa::MultipleSequenceAlignment, alignments::AbstractVector{SequenceRecord}) = append!(msa.sequences, alignments)
 Base.deleteat!(msa::MultipleSequenceAlignment, index::Int64) = deleteat!(msa.sequences, index)
 
 Base.length(msa::MultipleSequenceAlignment) = length(msa.sequences)
@@ -82,21 +82,22 @@ function Base.iterate(
     return getindex(msa, i), i + 1
 end
 
-function Base.sort(msa::MultipleSequenceAlignment, bysequence::Bool=true, byid::Bool=!bysequence)
+function Base.sort(msa::MultipleSequenceAlignment; bysequence::Bool=true, byid::Bool=true)
     isempty(msa) && return msa
     !bysequence && !byid && error("Please specify if you want to sort by sequence or ID.")
-    if bysequence && byid
-        order = sortperm(map(record -> (record.id.id, record.sequencedata), msa))
-    elseif bysequence
-        order = sortperm(map(record -> (record.sequencedata), msa))
-    else
-        order = sortperm(map(record -> (record.id.id), msa))
-    end
-    #order = bysequence ? sortperm(map(record -> (record.sequencedata), msa)) : sortperm(map(record -> (record.id.id), msa))
-    sortedmsa = MultipleSequenceAlignment(msa.name)
-    for index in order
-        push!(sortedmsa, msa[index])
-    end
+    # if bysequence && byid
+    #     order = sortperm(map(record -> (record.id.id, record.sequencedata), msa))
+    # elseif bysequence
+    #     order = sortperm(map(record -> (record.sequencedata), msa))
+    # else
+    #     order = sortperm(map(record -> (record.id.id), msa))
+    # end
+    # #order = bysequence ? sortperm(map(record -> (record.sequencedata), msa)) : sortperm(map(record -> (record.id.id), msa))
+    # sortedmsa = MultipleSequenceAlignment(msa.name)
+    # for index in order
+    #     push!(sortedmsa, msa[index])
+    # end
+    sortedmsa = MultipleSequenceAlignment(msa.name, sort(msa.sequences; bysequence=bysequence, byid=byid))
     return sortedmsa
 end
 
@@ -264,12 +265,12 @@ function mktemp_fasta(
     return path
 end
 
-function remove_duplicates!(msa::MultipleSequenceAlignment, bysequence::Bool=true, byid::Bool=!bysequence)
+function remove_duplicates!(msa::MultipleSequenceAlignment; bysequence::Bool=true, byid::Bool=true)
     if bysequence 
-        msa = sort(msa, bysequence, false)
+        msa = sort(msa; bysequence=true, byid=false)
         i = 1
         while i < lastindex(msa)
-            if bysequence && isequal(msa[i].sequencedata, msa[i+1].sequencedata)
+            if isequal(msa[i].sequencedata, msa[i+1].sequencedata)
                 deleteat!(msa, i)
             else
                 i += 1
@@ -277,10 +278,10 @@ function remove_duplicates!(msa::MultipleSequenceAlignment, bysequence::Bool=tru
         end
     end
     if byid
-        msa = sort(msa, false, byid)
+        msa = sort(msa; bysequence=false, byid=true)
         i = 1
         while i < lastindex(msa)
-            if bysequence && isequal(msa[i].id, msa[i+1].id)
+            if isequal(msa[i].id, msa[i+1].id)
                 deleteat!(msa, i)
             else
                 i += 1
@@ -290,9 +291,9 @@ function remove_duplicates!(msa::MultipleSequenceAlignment, bysequence::Bool=tru
     return msa
 end
 
-function remove_duplicates(msa::MultipleSequenceAlignment, bysequence::Bool=true, byid::Bool=!bysequence)
+function remove_duplicates(msa::MultipleSequenceAlignment; bysequence::Bool=true, byid::Bool=true)
     result = deepcopy(msa)
-    return remove_duplicates!(result, bysequence, byid)
+    return remove_duplicates!(result; bysequence=bysequence, byid=byid)
 end
 
 function pool(
@@ -300,15 +301,15 @@ function pool(
     name::AbstractString="", 
     removeduplicates::Bool=true,
     bysequence::Bool=true, 
-    byid::Bool=false
+    byid::Bool=true
 )::MultipleSequenceAlignment
     result = MultipleSequenceAlignment(name)
     for file in files
         (isfastafile(file) || isfastqfile(file)) || error("Can only pool fasta or fastq files.")
-        tmp = readmsa(file, removeduplicates, bysequence, byid)
+        tmp = readmsa(file; removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
         append!(result, (ungap(tmp)).sequences)
         #removeduplicates && remove_duplicates!(result, bysequence) # higher time complexity but reduced memory usage?
     end
-    removeduplicates && remove_duplicates!(result, bysequence, byid) # not necessary when removing duplicates in the loop
+    removeduplicates && remove_duplicates!(result; bysequence=bysequence, byid=byid) # not necessary when removing duplicates in the loop
     return result
 end
