@@ -46,6 +46,9 @@ export
     FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, isfastqfile,
     isgzipcompressed, fastq2fasta,
 
+    # fastq
+    splitfile, combinefiles,
+
     # filtering
     #remove_duplicates, 
 
@@ -83,6 +86,7 @@ include("alignment.jl")
 include("alignmentconcatenation.jl")
 include("checkinput.jl")
 include("fasta.jl")
+include("fastq.jl")
 include("output.jl")
 
 const EMPTY = String[]
@@ -334,7 +338,7 @@ function main()
 
         write_alignmentfile(alignmentoutput, referenceid, length(regions), finalalignment, index)
         write_fasta(
-            *(fastaoutput, "/", sequencepart(subjectid), args["fasta-extension"]),
+            *(fastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
             regions.records[1].queryid,
             finalalignment
         )
