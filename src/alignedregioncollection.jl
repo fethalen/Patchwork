@@ -230,7 +230,7 @@ function mergeoverlaps(
     regions::AlignedRegionCollection,
     sorted::Bool=false,
     iteration::Int64=1,
-    maxiterate::Int64=100
+    maxiterate::Int64=10000
 )
     if !sorted
         regions = sort(regions)
