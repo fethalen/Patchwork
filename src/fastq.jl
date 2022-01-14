@@ -10,16 +10,16 @@ function isfastqfile(
     # length(splits) > 1 && last(splits) in ext && return true
     # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(file) && return true
     # return false
-	try # in case the file is a tmp file without extension
-		reader = FASTQ.Reader(open(file))
-		record = FASTQ.Record()
-		read!(reader, record)
-	catch e
-		close(reader)
-		return false
-	end
-	close(reader)
-	return true
+    try # in case the file is a tmp file without extension
+        reader = FASTQ.Reader(open(file))
+        record = FASTQ.Record()
+        read!(reader, record)
+    catch e
+        close(reader)
+        return false
+    end
+    close(reader)
+    return true
 end
 
 function fastq2fasta(
@@ -64,7 +64,7 @@ function splitfile(path::AbstractString; recordsperfile::Int64=1000000)
     isfastqfile(path) || error("Incorrect file type.")
 
     # files = String[]
-	files = Tuple{String, Int64}[]
+    files = Tuple{String, Int64}[]
     record = FASTQ.Record()
     reader = isgzipcompressed(path) ? FASTQ.Reader(GzipDecompressorStream(open(path))) : FASTQ.Reader(open(path, "r"))
 
@@ -76,7 +76,7 @@ function splitfile(path::AbstractString; recordsperfile::Int64=1000000)
             remove_duplicates!(msa) # includes sorting by sequence and by ID
             tmpfile = mktemp_fasta(msa) # write
             # push!(files, tmpfile)
-			push!(files, (tmpfile, length(msa))) # keep the file length
+            push!(files, (tmpfile, length(msa))) # keep the file length
             msa = MultipleSequenceAlignment() # init
             count = 1
         end

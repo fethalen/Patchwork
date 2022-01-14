@@ -190,16 +190,16 @@ function isfastafile(
     # length(splits) > 1 && last(splits) in ext && return true
     # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(path) && return true
     # return false
-	try # in case the file is a tmp file without extension
-		reader = FASTA.Reader(open(path))
-		record = FASTA.Record()
-		read!(reader, record)
-	catch e
-		close(reader)
-		return false
-	end
-	close(reader)
-	return true
+    try # in case the file is a tmp file without extension
+        reader = FASTA.Reader(open(path))
+        record = FASTA.Record()
+        read!(reader, record)
+    catch e
+        close(reader)
+        return false
+    end
+    close(reader)
+    return true
 end
 
 # function clean_tmpfasta(file::AbstractString; bysequence::Bool=true, byid::Bool=true)
