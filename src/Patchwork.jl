@@ -43,11 +43,11 @@ export
     queryids, subjectids, isdiamonddatabase,
 
     # fasta
-    FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, isfastqfile,
-    isgzipcompressed, fastq2fasta,
+    FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, #isfastqfile,
+    isgzipcompressed, #fastq2fasta,
 
     # fastq
-    splitfile, combinefiles,
+    isfastqfile, fastq2fasta, splitfile, combinefiles,
 
     # filtering
     #remove_duplicates, 
@@ -86,7 +86,7 @@ include("alignment.jl")
 include("alignmentconcatenation.jl")
 include("checkinput.jl")
 include("fasta.jl")
-include("fastq.jl")
+#include("fastq.jl")
 include("output.jl")
 
 const EMPTY = String[]
@@ -275,6 +275,8 @@ function main()
     else                                                    # multiple .fa files
         references_file = mktemp_fasta(pool(args["reference"]; removeduplicates=false))
     end
+    # TODO: queries doesn't need to be stored as a MSA all the time!
+    # You just need 1 fasta file for DIAMOND.
     queries = pool(args["contigs"])                          # MultipleSequenceAlignment
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
