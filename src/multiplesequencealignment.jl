@@ -1,5 +1,6 @@
 # Utilities and types for working with multiple sequence alignments (MSAs)
 
+using BioSequences
 #include("sequencerecord.jl")
 
 """
@@ -60,6 +61,20 @@ function Base.getindex(
     return msa.sequences[index]
 end
 
+function Base.getindex(
+    msa::MultipleSequenceAlignment,
+    indices::Vector{Int64}
+)::Vector{SequenceRecord}
+    return msa.sequences[indices]
+end
+
+# function Base.getindex(
+#     msa::MultipleSequenceAlignment,
+#     indices::UnitRange
+# )::Vector{SequenceRecord}
+#     return msa.sequences[indices]
+# end
+
 function Base.setindex!(
     msa::MultipleSequenceAlignment,
     sequence::SequenceRecord,
@@ -85,20 +100,13 @@ end
 function Base.sort(msa::MultipleSequenceAlignment; bysequence::Bool=true, byid::Bool=true)
     isempty(msa) && return msa
     !bysequence && !byid && error("Please specify if you want to sort by sequence or ID.")
-    # if bysequence && byid
-    #     order = sortperm(map(record -> (record.id.id, record.sequencedata), msa))
-    # elseif bysequence
-    #     order = sortperm(map(record -> (record.sequencedata), msa))
-    # else
-    #     order = sortperm(map(record -> (record.id.id), msa))
-    # end
-    # #order = bysequence ? sortperm(map(record -> (record.sequencedata), msa)) : sortperm(map(record -> (record.id.id), msa))
-    # sortedmsa = MultipleSequenceAlignment(msa.name)
-    # for index in order
-    #     push!(sortedmsa, msa[index])
-    # end
     sortedmsa = MultipleSequenceAlignment(msa.name, sort(msa.sequences; bysequence=bysequence, byid=byid))
     return sortedmsa
+end
+
+function Base.sortperm(msa::MultipleSequenceAlignment; alg::Base.Algorithm=Base.DEFAULT_UNSTABLE, 
+    lt=isless, by=identity, rev::Bool=false, order::Base.Ordering=Base.Forward)
+    return sortperm(msa.sequences; alg=alg, lt=lt, by=by, rev=rev, order=order)
 end
 
 function countgaps(msa::MultipleSequenceAlignment)::Int
@@ -270,7 +278,8 @@ function remove_duplicates!(msa::MultipleSequenceAlignment; bysequence::Bool=tru
         msa = sort(msa; bysequence=true, byid=false)
         i = 1
         while i < lastindex(msa)
-            if isequal(msa[i].sequencedata, msa[i+1].sequencedata)
+            if isequal(msa[i].sequencedata, msa[i+1].sequencedata) ||
+                isequal(reverse_complement(msa[i].sequencedata), msa[i+1].sequencedata)
                 deleteat!(msa, i)
             else
                 i += 1
@@ -308,7 +317,7 @@ function pool(
         (isfastafile(file) || isfastqfile(file)) || error("Can only pool fasta or fastq files.")
         tmp = readmsa(file; removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
         append!(result, (ungap(tmp)).sequences)
-        #removeduplicates && remove_duplicates!(result, bysequence) # higher time complexity but reduced memory usage?
+        #removeduplicates && remove_duplicates!(result; bysequence=bysequence, byid=byid) # higher time complexity but reduced memory usage?
     end
     removeduplicates && remove_duplicates!(result; bysequence=bysequence, byid=byid) # not necessary when removing duplicates in the loop
     return result
