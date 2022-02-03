@@ -1,7 +1,7 @@
 # this script can be run on its own, e.g. from inside the Subsample directory: 
-# julia --trace-compile="src/precompiled.jl" src/Subsample.jl --contigs CONTIGSFILE --reference REFERENCEFILE
-# julia src/compile.jl . src/subsample_precompiled.jl build
-
+# julia --trace-compile="src/precompiled.jl" src/Subsample.jl --r1 ... 
+# julia --project=. src/compile.jl . src/subsample_precompiled.jl build
+# the executable is build/bin/subsample
 
 import Pkg 
 Pkg.add(name="PackageCompiler", version="1.7.1")
@@ -16,12 +16,12 @@ outdirectory = ARGS[3]
 println("Starting compilation process...")
 create_app(projectdirectory, outdirectory; precompile_statements_file = precompiled, force = true, app_name="subsample")
 println("Compilation finished.")
-println("Creating symlink to executable...")
-try
-	run(`cd $outdirectory`)
-	run(`ln -s bin/subsample subsample`)
-catch e
-	println("Failed to create symlink to executable. See below for error message. ")
-	println(e)
-end
+# println("Creating symlink to executable...")
+# try
+# 	run(`cd $outdirectory`)
+# 	run(`ln -s bin/subsample subsample`)
+# catch e
+# 	println("Failed to create symlink to executable. See below for error message. ")
+# 	println(e)
+# end
 println("Done.")
