@@ -1,9 +1,0 @@
-name = "Subsample"
-uuid = "705c0408-ff15-43df-b4eb-6e1b66ae61ad"
-authors = ["Clara Köhne <claragisela.koehne@uni-goettingen.de>"]
-version = "0.1.0"
-
-[deps]
-ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
-CodecZlib = "944b1d66-785c-5afd-91f1-9de20f533193"
-PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
