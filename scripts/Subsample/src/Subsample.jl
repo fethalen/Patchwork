@@ -226,19 +226,23 @@ function main()
 	end
 
 	if isnothing(out)
+		prefix1 = outdir * "/" * last(split(file_r1, "/"))
     	outfile_r1 = (isnothing(p) ? 
-			file_r1 * "_" * string(records) : file_r1 * "_" * string(p)) * ".fq"
+			prefix1 * "_" * string(records) : prefix1 * "_" * string(p)) * ".fq"
 		if paired
+			prefix2 = outdir * "/" * last(split(file_r2, "/"))
     		outfile_r2 = (isnothing(p) ? 
-				file_r2 * "_" * string(records) : file_r2 * "_" * string(p)) * ".fq"
+				prefix2 * "_" * string(records) : prefix2 * "_" * string(p)) * ".fq"
 		else
 			outfile_r2 = ""
 		end
 	else
-		outfile_r1 = isnothing(args["r2"]) ? outdir * "/" * out * ".fq" : outdir * "/" *out * "_1.fq"
+		prefix = outdir * "/" * out
 		if paired
-    		outfile_r2 = outdir * "/" * out * "_2.fq"
+			outfile_r1 = prefix * "_1.fq"
+    		outfile_r2 = prefix * "_2.fq"
 		else
+			outfile_r1 = prefix * ".fq"
 			outfile_r2 = ""
 		end
 	end
