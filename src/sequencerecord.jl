@@ -59,6 +59,15 @@ function Base.sort(records::Vector{SequenceRecord}; bysequence=true, byid=true)
     return sortedrecords
 end
 
+Base.isless(first::SequenceRecord, second::SequenceRecord) = isless(first.sequencedata, second.sequencedata)
+# function Base.isless(first::SequenceRecord, second::SequenceRecord; bysequence::Bool=true)
+#     if bysequence
+#         return isless(first.sequencedata, second.sequencedata)
+#     else
+#         return isless(first.id, second.id)
+#     end
+# end
+
 function BioSequences.ungap(alignment::SequenceRecord)::SequenceRecord
     return SequenceRecord(alignment.id,
                           ungap(alignment.sequencedata))

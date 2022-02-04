@@ -69,8 +69,10 @@ function readmsa(
     while !eof(reader)
         read!(reader, record)
         alignment = SequenceRecord(FASTX.identifier(record), FASTX.sequence(record))
-        if length(msa) >= 1 && removeduplicates # remove duplicated sequences (and or IDs) while reading
-            (bysequence && in(alignment.sequencedata, map(aln -> aln.sequencedata, msa.sequences)) ||
+        # remove duplicated sequences (including reverse complement) and or IDs while reading
+        if length(msa) >= 1 && removeduplicates 
+            (bysequence && (in(alignment.sequencedata, map(aln -> aln.sequencedata, msa.sequences)) ||
+            in(reverse_complement(alignment.sequencedata), map(aln -> aln.sequencedata, msa.sequences))) ||
             byid && in(alignment.id.id, map(aln -> aln.id.id, msa.sequences))) && continue
             push!(msa, alignment)
         else
@@ -184,57 +186,48 @@ function isfastafile(
     path::AbstractString, 
     ext::AbstractVector{String}=FASTAEXTENSIONS
 )::Bool
-    splits = split(path, ".")
-    length(splits) > 1 && last(splits) in ext && return true
-    length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(path) && return true
-    return false
-end
-
-function isfastqfile(
-    file::AbstractString, 
-    ext::AbstractVector{String}=FASTQEXTENSIONS
-)::Bool
-    splits = split(file, ".")
-    length(splits) > 1 && last(splits) in ext && return true
-    length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(file) && return true
-    return false
-end
-
-function fastq2fasta(
-    infile::AbstractString, 
-    ext::Vector{AbstractString}=FASTQEXTENSIONS; 
-    removeduplicates::Bool=true, 
-    bysequence::Bool=true, 
-    byid::Bool=true
-)::AbstractString
-    isfastqfile(infile, ext) || error("Wrong file format; input must be a fastq file.")
-    # outfile = *(rsplit(infile, ".", limit=1)[1], ".fasta")
-    # fastawriter = open(FASTA.Writer, outfile)
-    # open(FASTQ.Reader, infile) do reader
-    #     for record in reader
-    #         id = identifier(record)
-    #         seq = sequence(record) 
-    #         write(fastawriter, FASTA.Record(id, seq))
-    #     end
-    # end
-    # return outfile
-    msa = readmsa(infile; removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
-    #removeduplicates && remove_duplicates!(msa)
-    return mktemp_fasta(msa)
-end
-
-function fastq2fasta(
-    infiles::Vector{AbstractString}, 
-    ext::Vector{AbstractString}=FASTQEXTENSIONS; 
-    removeduplicates::Bool=true, 
-    bysequence::Bool=true, 
-    byid::Bool=true
-)::Vector{AbstractString}
-    output = String[]
-    for file in infiles
-        outfile = fastq2fasta(file, ext; removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
-        push!(output, outfile)
+    # splits = split(path, ".")
+    # length(splits) > 1 && last(splits) in ext && return true
+    # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(path) && return true
+    # return false
+    try # in case the file is a tmp file without extension
+        reader = FASTA.Reader(open(path))
+        record = FASTA.Record()
+        read!(reader, record)
+    catch e
+        close(reader)
+        return false
     end
-    return output
+    close(reader)
+    return true
 end
 
+# function clean_tmpfasta(file::AbstractString; bysequence::Bool=true, byid::Bool=true)
+#     isfasta = isfastafile(file)
+#     isfasta || isfastqfile(file) || error("Wrong file type: $file")
+
+#     tmpfile, tmpio = mktemp()
+#     type = isfasta ? FASTA : FASTQ
+#     reader = type.Reader(open(file))
+#     writer = type.Writer(tmpio)
+#     record = type.Record()
+#     lastrecord = type.Record()
+
+#     if eof(reader)
+#         close(reader)
+#         close(writer)
+#         return tmpfile
+#     end
+#     read!(reader, lastrecord)
+#     write(writer, lastrecord)
+#     while !eof(reader)
+#         read!(reader, record)
+#         (bysequence && isequal(FASTX.sequence(record), FASTX.sequence(lastrecord)) ||
+#             byid && isequal(FASTX.identifier(record), FASTX.identifier(lastrecord))) && continue
+#         write(writer, record)
+#         lastrecord = record
+#     end
+#     close(reader)
+#     close(writer)
+#     return tmpfile
+# end
