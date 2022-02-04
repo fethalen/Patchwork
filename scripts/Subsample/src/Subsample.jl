@@ -38,8 +38,15 @@ function parse_parameters()
 			arg_type = String
 			metavar = "PATH"
         "--out"
-			help = "Prefix for output file(s)."
+			help = "Prefix for output file(s). File type extension (.fq or .fq.gz) will be 
+				added automatically."
 			required = false
+			arg_type = String
+			metavar = "PATH"
+		"--outdir"
+			help = "Output directory."
+			required = false
+			default = "."
 			arg_type = String
 			metavar = "PATH"
         "--p"
@@ -137,7 +144,7 @@ function subsample(
 	iter = enumerate(eachline(reader))
 	i = 1
 	writing = false
-	@time begin
+	# @time begin
 		for (line, r) in iter
 			if !writing 
 				if written == length(positions)
@@ -157,7 +164,7 @@ function subsample(
 				end
 			end
 		end
-    end
+    # end
     close(reader)
     close(writer)
 	@assert written == count "written $written != $count"
@@ -194,6 +201,8 @@ function main()
     file_r2 = args["r2"]
 	paired = !isempty(file_r2)
     out = args["out"]
+	outdir = args["outdir"]
+	logwriter = open(outdir * "/" * args["log"], "w")
 	p = args["p"]
 	records = args["count"]
 	keeprecords = records
@@ -201,7 +210,6 @@ function main()
 	random = args["random"]
 	cov = args["cov"]
 	compress = args["gzip-out"]
-	logwriter = open(args["log"], "w")
 	loud = !args["quiet"]
 
 	if !xor(isnothing(p), isnothing(records))
@@ -227,9 +235,9 @@ function main()
 			outfile_r2 = ""
 		end
 	else
-		outfile_r1 = isnothing(args["r2"]) ? out * ".fq" : out * "_1.fq"
+		outfile_r1 = isnothing(args["r2"]) ? outdir * "/" * out * ".fq" : outdir * "/" *out * "_1.fq"
 		if paired
-    		outfile_r2 = out * "_2.fq"
+    		outfile_r2 = outdir * "/" * out * "_2.fq"
 		else
 			outfile_r2 = ""
 		end
