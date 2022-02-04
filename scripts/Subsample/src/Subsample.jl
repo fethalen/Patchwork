@@ -13,6 +13,7 @@ module Subsample
 
 using ArgParse
 using CodecZlib
+using StatsBase
 
 function parse_parameters()
     overview = """
@@ -64,9 +65,13 @@ function parse_parameters()
 			required = false
 			arg_type = String
 			default = "subsample.log"
-		"--random"
+		"--rstart"
 			help = "Select reads from a random position in the file(s). If not specified, 
 					reads will be selected from the beginning of the file(s)."
+			action = :store_true
+		"--random"
+			help = "Select all reads from random positions. If two (paired-end) input files
+				are given, corresponding mate pairs will be sampled from the files."
 			action = :store_true
 		"--gzip-out"
 			help = "Compress output file(s)."
@@ -99,8 +104,8 @@ function subsample(
 	# @time begin
 		for (line, (r1, r2)) in iter
 			if !in(line, misslines)
-				write(writer_r1, r1)
-				write(writer_r2, r2)
+				write(writer_r1, r1 * "\n")
+				write(writer_r2, r2 * "\n")
 				if line%4 == 0 # 1 record is 4 lines
 					written += 1
 				end
@@ -118,37 +123,46 @@ function subsample(
 	return written
 end
 
-# function subsample(
-# 	file::String, 
-# 	outfile::String,
-# 	count::Int64, 
-# 	miss::UnitRange, 
-# 	compress::Bool=true
-# )
-# 	misslines = (4 * first(miss)):(4 * last(miss))
-# 	endlines = last(misslines) + 1 + 4*count
-# 	reader = GzipDecompressorStream(open(file))
-#     writer = compress ? GzipCompressorStream(open(outfile, "w")) : open(outfile, "w")
-#     written = 0
-# 	iter = enumerate(eachline(reader_r1))
-# 	@time begin
-# 		for (line, r) in iter
-# 			if !in(line, misslines)
-# 				write(writer, r)
-# 				if line%4 == 0 # 1 record is 4 lines
-# 					written += 1
-# 				end
-# 			end
-# 			if line == endlines
-# 				break
-# 			end
-# 		end
-#     end
-#     close(reader)
-#     close(writer)
-# 	@assert written == count "written $written != $count"
-# 	return written
-# end
+function subsample(
+	file::String, 
+	outfile::String,
+	count::Int64, 
+	positions::Vector{Int64}, 
+	compress::Bool=true
+)
+	#positions = sort(pos)
+	reader = GzipDecompressorStream(open(file))
+    writer = compress ? GzipCompressorStream(open(outfile, "w")) : open(outfile, "w")
+    written = 0
+	iter = enumerate(eachline(reader))
+	i = 1
+	writing = false
+	@time begin
+		for (line, r) in iter
+			if !writing 
+				if written == length(positions)
+					break
+				elseif line == 4 * positions[written+1] - 3 
+					writing = true
+				else
+					continue
+				end
+			end
+			if writing
+				write(writer, r * "\n")
+				if line%4 == 0 # 1 record is 4 lines
+					written += 1
+					#i += 1
+					writing = false
+				end
+			end
+		end
+    end
+    close(reader)
+    close(writer)
+	@assert written == count "written $written != $count"
+	return written
+end
 
 function subsample(
 	file::String, 
@@ -183,6 +197,7 @@ function main()
 	p = args["p"]
 	records = args["count"]
 	keeprecords = records
+	randstart = args["rstart"]
 	random = args["random"]
 	cov = args["cov"]
 	compress = args["gzip-out"]
@@ -262,27 +277,37 @@ function main()
 	println(logwriter, "Subsampling $records reads from (each of) the input file(s).")
 
 	if random
-    	start = rand(1:countrecords)
-		loud && println("Subsampling $records reads from a random starting position in ", 
-			"the input file(s)...")
-		println(logwriter, "The random starting position in the file(s) is $start.")
-	else
-		start = 1
-		loud && 
-			println("Subsampling $records reads from the beginning of the input file(s)...")
-		println(logwriter, "The starting position in the file(s) is 1.")
-	end
-	# skip the records at these indices in the file:
-	miss = start > countrecords - records + 1 ? ((start-records):(start-1)) : (1:start-1)
-	random && println(logwriter, "Skipping reads ", first(miss), " to ", last(miss), 
-		", both included.")
-
-	# @time begin
-		subsample(file_r1, outfile_r1, records, miss, compress)
+		loud && println("Subsampling $records reads randomly from (each of) the input ", 
+			"files(s)")
+		println(logwriter, "Selecting reads randomly from the input file(s).")
+		positions = sort(sample(1:countrecords, records, replace = false))
+		subsample(file_r1, outfile_r1, records, positions, compress)
 		if paired
-			subsample(file_r2, outfile_r2, records, miss, compress)
+			subsample(file_r2, outfile_r2, records, positions, compress)
 		end
-	# end # ~ 30 minutes for paired, gzip being the most time-intensive step.
+	else
+		if randstart
+			start = rand(1:countrecords)
+			loud && println("Subsampling $records reads from a random starting position in ", 
+				"the input file(s)...")
+			println(logwriter, "The random starting position in the file(s) is $start.")
+		else
+			start = 1
+			loud && 
+				println("Subsampling $records reads from the beginning of the input file(s)...")
+			println(logwriter, "The starting position in the file(s) is 1.")
+		end
+		# skip the records at these indices in the file:
+		miss = start > countrecords - records + 1 ? ((start-records):(start-1)) : (1:start-1)
+		randstart && println(logwriter, "Skipping reads ", first(miss), " to ", last(miss), 
+			", both included.")
+		# @time begin
+			subsample(file_r1, outfile_r1, records, miss, compress)
+			if paired
+				subsample(file_r2, outfile_r2, records, miss, compress)
+			end
+		# end # ~ 30 minutes for paired, gzip being the most time-intensive step.
+	end
 
 	# if paired
 	# 	@time records = subsample(file_r1, file_r2, outfile_r1, outfile_r2, records, miss, 
