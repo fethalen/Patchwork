@@ -39,7 +39,7 @@ export
     #collectdiamondflags,
 
     # diamond
-    FIELDS, OUTPUT_FORMAT, readblastTSV, writeblastTSV, diamond_blastx, diamond_makeblastdb, 
+    FIELDS, OUTPUT_FORMAT, readblastTSV, writeblastTSV, diamond_blastx, diamond_makeblastdb,
     queryids, subjectids, isdiamonddatabase,
 
     # fasta
@@ -47,12 +47,12 @@ export
     isgzipcompressed, fastq2fasta,
 
     # filtering
-    #remove_duplicates, 
+    #remove_duplicates,
 
     # multiplesequencealignment
-    addalignment, removealignment, hasgaps, otus, otufrequencies, countotus, coverage, 
-    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, remove_duplicates, 
-    remove_duplicates!, pool, 
+    addalignment, removealignment, hasgaps, otus, otufrequencies, countotus, coverage,
+    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, remove_duplicates,
+    remove_duplicates!, pool,
 
     # output
     #WIDTH, cleanfiles, warn_overwrite, write_alignmentfile, write_fasta,
@@ -175,7 +175,7 @@ function parse_parameters()
             #help = "Either (1) a path to one or more sequences in FASTA format, (2) a
             #        subject database (DIAMOND or BLAST database), or (3) a DIAMOND output
             #        file in tabular format. For (3), set the `--tabular` flag."
-            help = "A path to one or more sequences in FASTA format. Additionally, you can 
+            help = "A path to one or more sequences in FASTA format. Additionally, you can
                     also provide a DIAMOND output file in tabular format (use --search-results)
                     or a DIAMOND or BLAST database (use --database)."
             required = true
@@ -183,18 +183,18 @@ function parse_parameters()
             nargs = '+'
             metavar = "PATH"
         "--search-results"
-            help = "Provide a DIAMOND output file in tabular format. The first line of 
+            help = "Provide a DIAMOND output file in tabular format. The first line of
                     such files is considered to be the header. Please adhere to Patchwork's
-                    DIAMOND output format: 
-                    6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send 
+                    DIAMOND output format:
+                    6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
                     evalue bitscore qframe sseq seq."
             arg_type = String
-            nargs = '?' 
+            nargs = '?'
             metavar = "PATH"
         "--database"
             help = "Provide a subject DIAMOND or BLAST database to search against."
             arg_type = String
-            nargs = '?' 
+            nargs = '?'
             metavar = "PATH"
         "--output-dir"
             help = "Write output files to this directory"
@@ -232,6 +232,9 @@ function parse_parameters()
             help = "Set gap extension penalty (positive integer)"
             arg_type = Int64
             metavar = "NUMBER"
+        "--retain-stops"
+            help = "Do not remove stop codons (`*`) in the output sequences"
+            action = :store_true
         "--threads"
             help = "Number of threads to utilize (default: all available)"
             default = Sys.CPU_THREADS
@@ -299,14 +302,14 @@ function main()
     map(mkpath, [diamondoutput, fastaoutput, statsoutput])
 
     if isnothing(args["search-results"])
-        if isempty(queries) 
-            println("Please provide one or more query files if not running with 
+        if isempty(queries)
+            println("Please provide one or more query files if not running with
                 `--search-results` mode.")
             return
         end
         if isnothing(args["database"])
             println("Building DIAMOND database")
-            reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"]) 
+            reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
         else
             reference_db = args["database"]
         end
