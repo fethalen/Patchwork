@@ -14,10 +14,10 @@ Create a `PairwiseAlignment` object with an empty (gap-only) query and the provi
 `reference`.
 """
 function createbridgealignment(
-    reference::LongSequence, 
+    reference::LongSequence,
     range::UnitRange
 )::BioAlignments.PairwiseAlignment
-    first(range) < 1 || last(range) > lastindex(reference) && 
+    first(range) < 1 || last(range) > lastindex(reference) &&
         error("The provided indices $range are out ouf bounds for this reference sequence.")
     gapquery = typeof(reference)()
     gapcigar = string(length(range)) * "D"
@@ -99,25 +99,25 @@ The `referencesequence` of the collection may not be empty. Regions in the refer
 are not covered by alignments to query sequences will be aligned to gaps (empty queries).
 """
 function concatenate(
-    regions::Patchwork.AlignedRegionCollection, 
+    regions::Patchwork.AlignedRegionCollection,
     delimiter::Char='@'
 )::BioAlignments.PairwiseAlignment
     @assert !hasoverlaps(regions) "Detected overlaps in regions."
     @assert !isempty(regions.referencesequence) "Reference sequence may not be empty."
     reference = regions.referencesequence.sequencedata
-    isempty(regions) && 
+    isempty(regions) &&
         return createbridgealignment(reference, 1:lastindex(regions.referencesequence))
 
     if regions[1].subjectfirst > 1
-        alignments = [createbridgealignment(reference, 1:regions[1].subjectfirst-1), 
+        alignments = [createbridgealignment(reference, 1:regions[1].subjectfirst-1),
             regions[1].pairwisealignment]
     else
         alignments = [regions[1].pairwisealignment]
     end
 
-    if lastindex(regions) == 1 
+    if lastindex(regions) == 1
         if regions[1].subjectlast < lastindex(regions.referencesequence)
-            push!(alignments, createbridgealignment(reference, 
+            push!(alignments, createbridgealignment(reference,
                 regions[1].subjectlast+1:lastindex(regions.referencesequence)))
         end
         return concatenate(alignments)
@@ -128,23 +128,23 @@ function concatenate(
     for i in 2:lastindex(regions)
         if !isempty(otu) # missing OTUs are always okay
             currentotu = otupart(regions[i].queryid, delimiter)
-            !isempty(currentotu) && @assert isequal(currentotu, otu) """Can only concatenate 
+            !isempty(currentotu) && @assert isequal(currentotu, otu) """Can only concatenate
                 contigs from same species."""
         else
             otu = otupart(regions[i].queryid, delimiter)
         end
-        @assert regions[i-1].subjectlast < regions[i].subjectfirst """Regions incorrectly 
+        @assert regions[i-1].subjectlast < regions[i].subjectfirst """Regions incorrectly
             sorted."""
         if regions[i].subjectfirst > regions[i-1].subjectlast + 1
-            push!(alignments, createbridgealignment(reference, 
-                regions[i-1].subjectlast+1:regions[i].subjectfirst-1), 
+            push!(alignments, createbridgealignment(reference,
+                regions[i-1].subjectlast+1:regions[i].subjectfirst-1),
                 regions[i].pairwisealignment)
         else
             push!(alignments, regions[i].pairwisealignment)
         end
         if (i == lastindex(regions)
             && regions[i].subjectlast < lastindex(regions.referencesequence))
-            push!(alignments, createbridgealignment(reference, 
+            push!(alignments, createbridgealignment(reference,
                 regions[i].subjectlast+1:length(regions.referencesequence)))
         end
     end
@@ -161,7 +161,7 @@ function countmatches(
     alignment::BioAlignments.PairwiseAlignment
 )::Int64
     isempty(alignment) && return 0
-    
+
     covered = 0
     anchors = alignment.a.aln.anchors
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
@@ -268,6 +268,5 @@ function maskgaps(
             maskedseq *= alignment.a.seq[from:to]
         end
     end
-    #println("DONE")
     return pairalign_global(maskedseq, alignment.b)
 end
