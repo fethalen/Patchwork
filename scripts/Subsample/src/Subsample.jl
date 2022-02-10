@@ -51,9 +51,15 @@ function parse_parameters()
 			metavar = "PATH"
         "--p"
 			help = "Percentage of reads you want to retain. The actual number of reads in 
-					output file(s) will be rounded."
+					output file(s) will be rounded. Overrides both `--count` and `--cov-out`."
 			required = false
 			arg_type = Float64
+			metavar = "NUMBER"
+		"--cov-out"
+			help = "The sequencing coverage for yout output file(s). Requires the coverage 
+					of the input file(s), to be given with `--cov`. Overrides `--count`."
+			required = false
+			arg_type = Int64
 			metavar = "NUMBER"
         "--count"
 			help = "Exact number of reads you want to retain. Use this option instead of 
@@ -66,6 +72,11 @@ function parse_parameters()
 			required = false
 			default = -1.0
 			arg_type = Float64
+			metavar = "NUMBER"
+		"--genome-size"
+			help = "Estimated genome size (in bases)."
+			required = false
+			arg_type = Int64
 			metavar = "NUMBER"
 		"--log"
 			help = "Store information about this subsampling run."
@@ -194,6 +205,24 @@ function subsample(
 	end
 end
 
+function computecoverage(file::AbstractString, genomesize::Int64)
+	io = GzipDecompressorStream(open(file))
+	readcount = 0 #convert(Int64, countlines(io) / 4) # zcat ERR4013119.sra_1.fastq.gz | wc -l 
+	avglength = 0
+	for (i, line) in enumerate(eachline(io))
+		i%4 != 2 && continue
+		avglength += length(line)
+		readcount += 1
+	end
+	close(io)
+	avglength /= readcount
+	return readcount * avglength / genomesize
+end
+
+function computecoverage(avglength::Int64, readcount::Int64, genomesize::Int64)
+	return readcount * avglength / genomesize
+end
+
 function main()
 	args = parse_parameters()
 
@@ -205,6 +234,8 @@ function main()
 	logwriter = open(outdir * "/" * args["log"], "w")
 	p = args["p"]
 	records = args["count"]
+	covout = args["cov-out"]
+	genomesize = args["genome-size"]
 	keeprecords = records
 	randstart = args["rstart"]
 	random = args["random"]
@@ -263,9 +294,26 @@ function main()
 	println(logwriter)
 
 	s = GzipDecompressorStream(open(file_r1))
-    countrecords = convert(Int64, countlines(s) / 4) # < 5 minutes for ~182 Million reads
-	println(logwriter, "Your input file(s) contain(s) $countrecords reads (each).")
-    close(s)
+	if !isnothing(genomesize) && cov <= 0.0 # compute coverage from genome size
+		#convert(Int64, countlines(io) / 4) # zcat ERR4013119.sra_1.fastq.gz | wc -l : 
+		countrecords = 0 
+		avglength = 0
+		for (i, line) in enumerate(eachline(s))
+			i%4 != 2 && continue
+			avglength += length(line)
+			countrecords += 1
+		end
+		avglength /= countrecords
+		cov = computecoverage(avglength, countrecords, genomesize)
+		println(logwriter, "Genome size is $genomesize.")
+		println(logwriter, "Average read length in $file_r1 is $avglength.")
+	else
+		countrecords = convert(Int64, countlines(s) / 4) # < 5 minutes for ~182 Million reads
+	end
+	close(s)
+	println(logwriter, "Your input file(s) contain(s) $countrecords reads (each).") 
+	# Will always be printed when genome size is printed: 
+	cov >= 0.0 && println(logwriter, "The estimated coverage of your sequencing run is $cov.")
 
 	if !isnothing(p)
 		loud && println("Computing absolute number of reads to be subsampled (from each ", 
@@ -273,6 +321,22 @@ function main()
 		keeprecords = round(Int64, p * countrecords)
     	power = 10^(floor(Int64, log10(keeprecords))) # order of magnitude
     	records = ceil(Int64, keeprecords / power) * power # round up to next "step" 
+	elseif !isnothing(covout)
+		loud && println("Computing absolute number of reads to be subsampled (from each ", 
+			"input file) for resulting coverage $covout...")
+		if cov <= 0.0
+			println("The option `--cov-out` requires either a coverage estimate of your ", 
+				"sequencing run, to be provided with `--cov`, or a genome size estimate, ", 
+				"to be provided with `--genome-size`.")
+			return
+		elseif covout >= cov
+			println("Your output coverage is equal to or larger than the estimated/computed ", 
+				"coverage of your sequencing run.")
+			return
+		end
+		# cov / countrecords == covout / records
+		records = round(Int64, covout * countrecords / cov)
+		keeprecords = records # for the next check, but shouldn't happen if covout < cov
 	end
 	if records >= countrecords # possible side effect of always rounding up
 		if keeprecords < countrecords # keep exact read number instead of rounded 
