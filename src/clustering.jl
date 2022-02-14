@@ -4,6 +4,9 @@ using BioSequences
 using BioAlignments
 using Patchwork
 
+# Subsample reads: 
+# julia --project=/home/clara/Patchwork/scripts/Subsample /home/clara/Patchwork/scripts/Subsample/src/Subsample.jl --r1 ~/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_1.fq.gz --r2 ~/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_2.fq.gz --count 40000000 --random --outdir ~/Data 
+
 # no internal gaps allowed --> look only at diagonals in alignment matrix
 # only diagonals that are long enough to meet the threshold t are considered
 # if inside such a diagonal, it is found that the sequences do not align well enough to meet t, 
@@ -16,9 +19,7 @@ function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
     matrix = zeros(Int64, length(s1), length(s2)) # s1 ^= rows, s2 ^= columns; 0st row/col ^= gap
     m = 1
     mm = 0
-    #x = 1
-    #y = 1
-    #shorter, pos = length(s1) <= length(s2) ? (length(s1), :x) : (length(s2), :y)
+    # pos is rownumber for s1, colnumber for s2
     shorter, pos = length(s1) <= length(s2) ? (length(s1), 1) : (length(s2), 2)
     thresholdposition = ceil(Int64, shorter * (1 - t))
     # iterate: thresholdpos row -> 1 -> thresholdpos col
@@ -32,15 +33,14 @@ function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
         for coords in diag
             x = coords[1]
             y = coords[2]
-            if x == 1 || y == 1
-                matrix[x, y] = isequal(s1[x], s2[y]) ? m : -mm # no internal gaps allowed
-            else
-                matrix[x, y] = isequal(s1[x], s2[y]) ? matrix[x-1, y-1] + m : matrix[x-1, y-1] - mm # no internal gaps allowed
+            if x == 1 || y == 1 # no internal gaps allowed
+                matrix[x, y] = isequal(s1[x], s2[y]) ? m : -mm 
+            else # no internal gaps allowed
+                matrix[x, y] = isequal(s1[x], s2[y]) ? matrix[x-1, y-1] + m : matrix[x-1, y-1] - mm 
             end
             if matrix[x, y] / shorter >= t # threshold met! 
                 return true
-                #elseif (matrix[x,y] + shorter-eval(pos)) / shorter < t # pos = rownumber for s1, colnumber for s2,
-            elseif (matrix[x, y] + shorter - coords[pos]) / shorter < t # pos = rownumber for s1, colnumber for s2,
+            elseif (matrix[x, y] + shorter - coords[pos]) / shorter < t 
                 break # mark this diagonal as done/look at next diagonal
             end # else continue in this diagonal because t can still be met
         end
@@ -298,6 +298,7 @@ end
 
 # THIS WOULD BE THE WHOLE WORKFLOW: #######################################################
 # filelength ist 1000000 reads.
+# else, get the filelength with countlines(GzipDecompressorStream(open(file))) / 4
 
 # file, filelength = splitfile("xxx")[1]
 # k = 14
