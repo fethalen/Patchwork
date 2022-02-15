@@ -243,29 +243,35 @@ function main()
 	compress = args["gzip-out"]
 	loud = !args["quiet"]
 
-	if !xor(isnothing(p), isnothing(records))
-		println("Please provide either a percentage or an exact number of reads you ", 
-			"would like to retain.")
+	if count([isnothing(p), isnothing(records), isnothing(covout)]) != 2 #!xor(isnothing(p), isnothing(records))
+		println("Please provide either a percentage, an output coverage, or an exact number of reads you ",
+				"would like to retain.")
 		return
 	elseif !isnothing(p) && (p < 0.0 || p > 1.0)
-    	println("Read Percentage should be between 0 and 1. For an exact read number, ", 
-			"please use `--count`.")
-		return
+			println("Read Percentage should be between 0 and 1. For an exact read number, ",
+					"please use `--count`.")
+			return
+	elseif !isnothing(covout) && covout <= 0
+			prinltn("Please provide a positive integer for `--cov-out`.")
+			return
 	elseif !isnothing(records) && records < 0
-		println("Please provide a positive integer for `--count`.")
-		return
+			println("Please provide a positive integer for `--count`.")
+			return
 	end
 
 	if isnothing(out)
-		prefix1 = outdir * "/" * last(split(file_r1, "/"))
-    	outfile_r1 = (isnothing(p) ? 
-			prefix1 * "_" * string(records) : prefix1 * "_" * string(p)) * ".fq"
-		if paired
-			prefix2 = outdir * "/" * last(split(file_r2, "/"))
-    		outfile_r2 = (isnothing(p) ? 
-				prefix2 * "_" * string(records) : prefix2 * "_" * string(p)) * ".fq"
+		if !isnothing(covout)
+			suffix = string(covout) * "x"
 		else
-			outfile_r2 = ""
+			suffix = isnothing(p) ? string(count) : string(p)
+		end
+		prefix1 = outdir * "/" * last(split(file_r1, "/"))
+		outfile_r1 = prefix1 * suffix * ".fq"
+		if paired
+				prefix2 = outdir * "/" * last(split(file_r2, "/"))
+		outfile_r2 = prefix2 * suffix * ".fq"
+		else
+				outfile_r2 = ""
 		end
 	else
 		prefix = outdir * "/" * out
