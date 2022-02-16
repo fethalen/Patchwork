@@ -94,12 +94,21 @@ function parse_parameters()
 		"--gzip-out"
 			help = "Compress output file(s)."
 			action = :store_true
+		"--fasta-out"
+			help = "Output file(s) in FASTA format."
+			action = :store_true
 		"--quiet"
 			help = "Suppress output on stdout."
 			action = :store_true
     end
 
     return ArgParse.parse_args(settings)
+end
+
+function tofastaheader(str::String)
+	newstr = str[nextind(str, 1):lastindex(str)]
+	newstr = replace(newstr, " " => "_")
+	return ">" * newstr
 end
 
 function subsample(
@@ -109,21 +118,31 @@ function subsample(
 	outfile_r2::String,
 	count::Int64, 
 	miss::UnitRange, 
+	fastaout::Bool=false,
 	compress::Bool=true
 )
 	misslines = (4 * first(miss)):(4 * last(miss))
 	endlines = last(misslines) + 1 + 4*count
-	reader_r1 = GzipDecompressorStream(open(file_r1))
+	reader_r1 = isgzipcompressed(file_r1) ? GzipDecompressorStream(open(file_r1)) : open(file_r1)
     writer_r1 = compress ? GzipCompressorStream(open(outfile_r1, "w")) : open(outfile_r1, "w")
-	reader_r2 = GzipDecompressorStream(open(file_r2))
+	reader_r2 = isgzipcompressed(file_r2) ? GzipDecompressorStream(open(file_r2)) : open(file_r2)
 	writer_r2 = compress ? GzipCompressorStream(open(outfile_r2, "w")) : open(outfile_r2, "w")
     written = 0
 	iter = enumerate(zip(eachline(reader_r1), eachline(reader_r2)))
 	# @time begin
 		for (line, (r1, r2)) in iter
 			if !in(line, misslines)
-				write(writer_r1, r1 * "\n")
-				write(writer_r2, r2 * "\n")
+				if !fastaout
+					write(writer_r1, r1 * "\n")
+					write(writer_r2, r2 * "\n")
+				elseif 1 <= line%4 <= 2 # fastaout
+					if line%4 == 1
+						r1 = tofastaheader(r1)
+						r2 = tofastaheader(r2)
+					end
+					write(writer_r1, r1 * "\n")
+					write(writer_r2, r2 * "\n")
+				end
 				if line%4 == 0 # 1 record is 4 lines
 					written += 1
 				end
@@ -143,13 +162,54 @@ end
 
 function subsample(
 	file::String, 
+	outfile::String, 
+	count::Int64, 
+	miss::UnitRange, 
+	fastaout::Bool=false,
+	compress::Bool=true
+)
+	misslines = (4 * first(miss)):(4 * last(miss))
+	endlines = last(misslines) + 1 + 4*count
+	reader = isgzipcompressed(file) ? GzipDecompressorStream(open(file)) : open(file)
+    writer = compress ? GzipCompressorStream(open(outfile, "w")) : open(outfile, "w")
+    written = 0
+	iter = enumerate(eachline(reader))
+	# @time begin
+		for (line, r) in iter
+			if !in(line, misslines)
+				if !fastaout
+					write(writer, r * "\n")
+				elseif 1 <= line%4 <= 2 # fastaout
+					if line%4 == 1
+						r = tofastaheader(r)
+					end
+					write(writer, r * "\n")
+				end
+				if line%4 == 0 # 1 record is 4 lines
+					written += 1
+				end
+			end
+			if line == endlines
+				break
+			end
+		end
+    # end
+    close(reader)
+    close(writer)
+	@assert written == count "written $written != $count"
+	return written
+end
+
+function subsample(
+	file::String, 
 	outfile::String,
 	count::Int64, 
 	positions::Vector{Int64}, 
+	fastaout::Bool=true,
 	compress::Bool=true
 )
 	#positions = sort(pos)
-	reader = GzipDecompressorStream(open(file))
+	reader = isgzipcompressed(file) ? GzipDecompressorStream(open(file)) : open(file)
     writer = compress ? GzipCompressorStream(open(outfile, "w")) : open(outfile, "w")
     written = 0
 	iter = enumerate(eachline(reader))
@@ -167,7 +227,14 @@ function subsample(
 				end
 			end
 			if writing
-				write(writer, r * "\n")
+				if !fastaout
+					write(writer, r * "\n")
+				elseif 1 <= line%4 <= 2
+					if line%4 == 1
+						r = tofastaheader(r)
+					end
+					write(writer, r * "\n")
+				end
 				if line%4 == 0 # 1 record is 4 lines
 					written += 1
 					#i += 1
@@ -241,6 +308,7 @@ function main()
 	random = args["random"]
 	cov = args["cov"]
 	compress = args["gzip-out"]
+	fastaout = args["fasta-out"]
 	loud = !args["quiet"]
 
 	if count([isnothing(p), isnothing(records), isnothing(covout)]) != 2 #!xor(isnothing(p), isnothing(records))
@@ -266,20 +334,20 @@ function main()
 			suffix = "_" * (isnothing(p) ? string(records) : string(p))
 		end
 		prefix1 = outdir * "/" * last(split(file_r1, "/"))
-		outfile_r1 = prefix1 * suffix * ".fq"
+		outfile_r1 = prefix1 * suffix * (fastaout ? ".fa" : ".fq")
 		if paired
-				prefix2 = outdir * "/" * last(split(file_r2, "/"))
-		outfile_r2 = prefix2 * suffix * ".fq"
+			prefix2 = outdir * "/" * last(split(file_r2, "/"))
+			outfile_r2 = prefix2 * suffix * (fastaout ? ".fa" : ".fq")
 		else
-				outfile_r2 = ""
+			outfile_r2 = ""
 		end
 	else
 		prefix = outdir * "/" * out
 		if paired
-			outfile_r1 = prefix * "_1.fq"
-    		outfile_r2 = prefix * "_2.fq"
+			outfile_r1 = prefix * (fastaout ? "_1.fa" : "_1.fq")
+    		outfile_r2 = prefix * (fastaout ? "_2.fa" : "_2.fq")
 		else
-			outfile_r1 = prefix * ".fq"
+			outfile_r1 = prefix * (fastaout ? ".fa" : ".fq")
 			outfile_r2 = ""
 		end
 	end
@@ -299,7 +367,7 @@ function main()
 	end
 	println(logwriter)
 
-	s = GzipDecompressorStream(open(file_r1))
+	s = isgzipcompressed(file_r1) ? GzipDecompressorStream(open(file_r1)) : open(file_r1)
 	if !isnothing(genomesize) && cov <= 0.0 # compute coverage from genome size
 		#convert(Int64, countlines(io) / 4) # zcat ERR4013119.sra_1.fastq.gz | wc -l : 
 		countrecords = 0 
@@ -363,9 +431,9 @@ function main()
 			"files(s)")
 		println(logwriter, "Selecting reads randomly from the input file(s).")
 		positions = sort(sample(1:countrecords, records, replace = false))
-		subsample(file_r1, outfile_r1, records, positions, compress)
+		subsample(file_r1, outfile_r1, records, positions, fastaout, compress)
 		if paired
-			subsample(file_r2, outfile_r2, records, positions, compress)
+			subsample(file_r2, outfile_r2, records, positions, fastaout, compress)
 		end
 	else
 		if randstart
@@ -384,9 +452,9 @@ function main()
 		randstart && println(logwriter, "Skipping reads ", first(miss), " to ", last(miss), 
 			", both included.")
 		# @time begin
-			subsample(file_r1, outfile_r1, records, miss, compress)
+			subsample(file_r1, outfile_r1, records, miss, fastaout, compress)
 			if paired
-				subsample(file_r2, outfile_r2, records, miss, compress)
+				subsample(file_r2, outfile_r2, records, miss, fastaout, compress)
 			end
 		# end # ~ 30 minutes for paired, gzip being the most time-intensive step.
 	end
