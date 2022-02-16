@@ -39,12 +39,12 @@ end
 
 Takes the path to a multiple sequence alignment (MSA) as an input and returns a
 MultipleSequenceAlignment object. If `removeduplicates` is set, duplicate sequences
-will be removed before returning the object. 
+will be removed before returning the object.
 """
 function readmsa(
-    file::String; 
-    removeduplicates::Bool=true, 
-    bysequence::Bool=true, 
+    file::String;
+    removeduplicates::Bool=true,
+    bysequence::Bool=true,
     byid::Bool=true
 )::MultipleSequenceAlignment
     absfile = abspath(file)
@@ -56,13 +56,13 @@ function readmsa(
 
     if isfastafile(file)
         record = FASTA.Record()
-        reader = isgzipcompressed(file) ? 
+        reader = isgzipcompressed(file) ?
             FASTA.Reader(GzipDecompressorStream(open(file))) : FASTA.Reader(open(file, "r"))
     elseif isfastqfile(file)
         record = FASTQ.Record()
-        reader = isgzipcompressed(file) ? 
+        reader = isgzipcompressed(file) ?
             FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file, "r"))
-    else 
+    else
         error("incorrect file type.")
     end
 
@@ -70,7 +70,7 @@ function readmsa(
         read!(reader, record)
         alignment = SequenceRecord(FASTX.identifier(record), FASTX.sequence(record))
         # remove duplicated sequences (including reverse complement) and or IDs while reading
-        if length(msa) >= 1 && removeduplicates 
+        if length(msa) >= 1 && removeduplicates
             (bysequence && (in(alignment.sequencedata, map(aln -> aln.sequencedata, msa.sequences)) ||
             in(reverse_complement(alignment.sequencedata), map(aln -> aln.sequencedata, msa.sequences))) ||
             byid && in(alignment.id.id, map(aln -> aln.id.id, msa.sequences))) && continue
@@ -183,7 +183,7 @@ function isgzipcompressed(file::AbstractString)
 end
 
 function isfastafile(
-    path::AbstractString, 
+    path::AbstractString,
     ext::AbstractVector{String}=FASTAEXTENSIONS
 )::Bool
     # splits = split(path, ".")
@@ -194,11 +194,11 @@ function isfastafile(
         reader = FASTA.Reader(open(path))
         record = FASTA.Record()
         read!(reader, record)
+        close(reader)
     catch e
         close(reader)
         return false
     end
-    close(reader)
     return true
 end
 
