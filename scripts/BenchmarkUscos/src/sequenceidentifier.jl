@@ -71,7 +71,3 @@ function sequencepart(id::SequenceIdentifier, delimiter::Char='@')::String
     delimiter in id.id && return last(splitdescription(id, delimiter))
     return id.id
 end
-
-function id(id::SequenceIdentifier)
-    return id.id
-end

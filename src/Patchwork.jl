@@ -341,7 +341,7 @@ function main()
         concatenation = concatenate(mergedregions, args["species-delimiter"])
         finalalignment = maskgaps(concatenation).aln
 
-        write_alignmentfile(alignmentoutput, referenceid, length(regions), finalalignment, index)
+        write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
         write_fasta(
             *(fastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
             regions.records[1].queryid,
