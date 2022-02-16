@@ -112,7 +112,7 @@ function tofastaheader(str::String)
 end
 
 function isfastafile(
-    path::AbstractString, 
+    path::AbstractString
 )::Bool
     # splits = split(path, ".")
     # length(splits) > 1 && last(splits) in ext && return true
@@ -131,7 +131,7 @@ function isfastafile(
 end
 
 function isfastqfile(
-    path::AbstractString, 
+    path::AbstractString
 )::Bool
     # splits = split(path, ".")
     # length(splits) > 1 && last(splits) in ext && return true
