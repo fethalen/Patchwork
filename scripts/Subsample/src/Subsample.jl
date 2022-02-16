@@ -261,9 +261,9 @@ function main()
 
 	if isnothing(out)
 		if !isnothing(covout)
-			suffix = string(covout) * "x"
+			suffix = "_" * string(covout) * "x"
 		else
-			suffix = isnothing(p) ? string(count) : string(p)
+			suffix = "_" * (isnothing(p) ? string(records) : string(p))
 		end
 		prefix1 = outdir * "/" * last(split(file_r1, "/"))
 		outfile_r1 = prefix1 * suffix * ".fq"
