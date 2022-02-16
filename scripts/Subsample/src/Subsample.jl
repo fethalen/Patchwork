@@ -111,6 +111,51 @@ function tofastaheader(str::String)
 	return ">" * newstr
 end
 
+function isfastafile(
+    path::AbstractString, 
+)::Bool
+    # splits = split(path, ".")
+    # length(splits) > 1 && last(splits) in ext && return true
+    # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(path) && return true
+    # return false
+	reader = FASTA.Reader(open(path))
+    record = FASTA.Record()
+    try # in case the file is a tmp file without extension
+        read!(reader, record)
+    catch e
+        close(reader)
+        return false
+    end
+    close(reader)
+    return true
+end
+
+function isfastqfile(
+    path::AbstractString, 
+)::Bool
+    # splits = split(path, ".")
+    # length(splits) > 1 && last(splits) in ext && return true
+    # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(path) && return true
+    # return false
+	reader = FASTQ.Reader(open(path))
+    record = FASTQ.Record()
+    try # in case the file is a tmp file without extension
+        read!(reader, record)
+    catch e
+        close(reader)
+        return false
+    end
+    close(reader)
+    return true
+end
+
+function isgzipcompressed(file::AbstractString)
+    occursin(".", file) || return false
+    extension = rsplit(file, ".", limit=2)[2]
+    isequal(extension, "gz") && return true
+    return false
+end
+
 function subsample(
 	file_r1::String, 
 	file_r2::String, 
