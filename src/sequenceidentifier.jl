@@ -21,7 +21,7 @@ Base.isequal(first::SequenceIdentifier, second::SequenceIdentifier) = Base.isequ
 Base.isless(first::SequenceIdentifier, second::SequenceIdentifier) = Base.isless(first.id, second.id)
 hasspaces(id::SequenceIdentifier) = return ' ' in id.id
 
-function Base.unique(ids::AbstractVector{SequenceIdentifier})::Vector{SequenceIdentifier} 
+function Base.unique(ids::AbstractVector{SequenceIdentifier})::Vector{SequenceIdentifier}
     idstrings = unique(map(id, ids))
     uniqueids = map(SequenceIdentifier, idstrings)
     return uniqueids
@@ -69,5 +69,9 @@ Example 1: `Drosophila_melanogaster@16S` becomes `16S`
 """
 function sequencepart(id::SequenceIdentifier, delimiter::Char='@')::String
     delimiter in id.id && return last(splitdescription(id, delimiter))
+    return id.id
+end
+
+function id(id::SequenceIdentifier)
     return id.id
 end
