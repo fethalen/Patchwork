@@ -190,7 +190,7 @@ function isfastafile(
     # length(splits) > 1 && last(splits) in ext && return true
     # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(path) && return true
     # return false
-	reader = FASTA.Reader(open(path))
+	reader = isgzipcompressed(path) ? FASTA.Reader(GzipDecompressorStream(open(path))) : FASTA.Reader(open(path))
     record = FASTA.Record()
     try # in case the file is a tmp file without extension
         read!(reader, record)
