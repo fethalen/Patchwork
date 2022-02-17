@@ -86,7 +86,7 @@ include("alignment.jl")
 include("alignmentconcatenation.jl")
 include("checkinput.jl")
 include("fasta.jl")
-#include("fastq.jl")
+include("fastq.jl")
 include("output.jl")
 
 const EMPTY = String[]
