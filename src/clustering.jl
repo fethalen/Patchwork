@@ -116,7 +116,7 @@ function buildkmertable(
     k::Int64, m::Int64, 
     filelength::Int64=10000000
 )
-    record = typeof(reader) == FASTA.Reader ? FASTA.Record() : FASTQ.Record
+    record = typeof(reader) == FASTA.Reader ? FASTA.Record() : FASTQ.Record()
     all_kmertable = repeat([Vector{KmerIndex}()], filelength)
     sequences = repeat([SequenceRecord()], filelength)
     eof(reader) && return kmertable
