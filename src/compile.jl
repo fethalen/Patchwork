@@ -16,7 +16,6 @@ outdirectory = ARGS[3]
 
 create_app(
     force = true,
-    app_name = "patchwork",
     projectdirectory,
     outdirectory
 )

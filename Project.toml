@@ -1,4 +1,4 @@
-name = "Patchwork"
+name = "patchwork"
 uuid = "5568df11-beb6-4e3e-8878-8f1e5127fa36"
 authors = ["Felix Thalen <felix.thalen@uni-goettingen.de>", "Clara Köhne <claragisela.koehne@uni-goettingen.de>"]
 version = "0.1.2"
