@@ -393,8 +393,10 @@ function julia_main()::Cint
     return 0
 end
 
-if length(ARGS) >= 2
-    julia_main()
-end
+# if length(ARGS) >= 1
+#     julia_main()
+# end
+
+julia_main()
 
 end # module
