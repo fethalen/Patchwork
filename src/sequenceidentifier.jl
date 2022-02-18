@@ -22,7 +22,7 @@ Base.isless(first::SequenceIdentifier, second::SequenceIdentifier) = Base.isless
 hasspaces(id::SequenceIdentifier) = return ' ' in id.id
 
 function Base.unique(ids::AbstractVector{SequenceIdentifier})::Vector{SequenceIdentifier} 
-    idstrings = unique(map(id, ids))
+    idstrings = unique(map(x -> x.id, ids))
     uniqueids = map(SequenceIdentifier, idstrings)
     return uniqueids
 end
