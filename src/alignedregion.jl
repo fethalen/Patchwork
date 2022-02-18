@@ -64,8 +64,9 @@ function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnch
     end
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
     for i in 2:lastindex(anchors)
-        positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
-                        anchors[i].refpos - anchors[i-1].refpos)
+        # positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
+        #                 anchors[i].refpos - anchors[i-1].refpos)
+		positions = anchors[i].alnpos - anchors[i-1].alnpos
         print(out, positions, anchors[i].op)
     end
     return String(take!(out))
@@ -370,8 +371,11 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
             if isdeleteop(toomuch.op)
                 subjectend = lastanchor.refpos
             else
-                push!(anchors, BioAlignments.AlignmentAnchor(subject2query(region, subjectend), 
-                    subjectend, toomuch.op))
+				seqposition = subject2query(region, subjectend)
+				alnposition = lastanchor.alnpos + max(seqposition - lastanchor.seqpos, 
+					subjectend - lastanchor.refpos)
+                push!(anchors, BioAlignments.AlignmentAnchor(seqposition, subjectend, 
+					alnposition, toomuch.op))
                 lastanchor = last(anchors)
             end
         end
@@ -389,9 +393,14 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     
     querystart = first(queryint)
     newanchors = [anchors[1]]
+	offset = anchors[2].alnpos - 
+		max(anchors[2].seqpos-querystart+1, anchors[2].refpos-subjectstart+1)
     for anchor in anchors[2:lastindex(anchors)]
-        push!(newanchors, BioAlignments.AlignmentAnchor(anchor.seqpos-querystart+1, 
-            anchor.refpos-subjectstart+1, anchor.op))
+		seqposition = anchor.seqpos-querystart+1
+		refposition = anchor.refpos-subjectstart+1
+		alnposition = anchor.alnpos-offset
+        push!(newanchors, BioAlignments.AlignmentAnchor(seqposition, refposition, 
+			alnposition, anchor.op))
     end
     sliced = BioAlignments.PairwiseAlignment(query[queryint], 
         subject[subjectstart:subjectend], cigar(newanchors))
