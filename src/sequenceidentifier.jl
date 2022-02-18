@@ -21,8 +21,13 @@ Base.isequal(first::SequenceIdentifier, second::SequenceIdentifier) = Base.isequ
 Base.isless(first::SequenceIdentifier, second::SequenceIdentifier) = Base.isless(first.id, second.id)
 hasspaces(id::SequenceIdentifier) = return ' ' in id.id
 
+<<<<<<< HEAD
 function Base.unique(ids::AbstractVector{SequenceIdentifier})::Vector{SequenceIdentifier}
     idstrings = unique(map(id, ids))
+=======
+function Base.unique(ids::AbstractVector{SequenceIdentifier})::Vector{SequenceIdentifier} 
+    idstrings = unique(map(x -> x.id, ids))
+>>>>>>> fix unique(SequenceIdentifier)
     uniqueids = map(SequenceIdentifier, idstrings)
     return uniqueids
 end
