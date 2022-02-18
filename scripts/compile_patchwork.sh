@@ -17,7 +17,6 @@ readonly PATCHWORK_SOURCEDIR="${PATCHWORK_BASEDIR}/src"
 readonly PATCHWORK_TESTDIR="${PATCHWORK_BASEDIR}/test"
 readonly CONTIGS="${PATCHWORK_TESTDIR}/c_australis_k55_node_82332.fa"
 readonly REFERENCE="${PATCHWORK_TESTDIR}/a_succinea_m_30.fa"
-test_run_out=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir')
 
 usage() { printf "%s" "\
 usage:
@@ -51,6 +50,7 @@ version_info() {
 }
 
 # Parse user-provided arguments
+[[ "$#" -lt 1 ]] && usage
 while [[ $# -gt 0 ]]; do
   key="$1"
 
@@ -96,9 +96,11 @@ test_run() {
 }
 
 main() {
+  test_run_out=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir')
+  julia "${PATCHWORK_SCRIPTDIR}/install_packages.jl"
   compile_patchwork
   test_run
+  rm -rf test_run_out
 }
 
-# [[ "$#" -lt 1 ]] && usage
 main "$@"

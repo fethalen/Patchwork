@@ -7,14 +7,16 @@
 # conda build .
 
 import Pkg
-Pkg.add(name="PackageCompiler", version="1.7.1")
+Pkg.add(name="PackageCompiler", version="2.0.5")
 using PackageCompiler
 
-println("START")
 projectdirectory = ARGS[1]
 precompiled = ARGS[2]
 outdirectory = ARGS[3]
 
-println("CREATE")
-create_app(projectdirectory, outdirectory, precompile_statements_file = precompiled,
-           force = true, app_name = "patchwork")
+create_app(
+    force = true,
+    app_name = "patchwork",
+    projectdirectory,
+    outdirectory
+)
