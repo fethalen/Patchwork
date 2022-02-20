@@ -53,11 +53,11 @@ end
 
 function write_fasta(
     file::AbstractString,
-    id::SequenceIdentifier,
+    id::AbstractString,
     alignment::PairwiseAlignment,
 )
     fastawriter = FASTA.Writer(open(file, "a"))
-    write(fastawriter, FASTA.Record(id.id, alignment.a.seq))
+    write(fastawriter, FASTA.Record(id, alignment.a.seq))
     close(fastawriter)
     return file
 end
@@ -69,13 +69,15 @@ function write_fasta(
 )
     fastawriter = FASTA.Writer(open(file, "a"))
     otu = otupart(id)
-	seqid = isempty(otu) ? id.id : otu
 
-    #isempty(otu) && return write_fasta(file, id, alignment)
+    if isempty(otu) 
+		close(fastawriter)
+		return write_fasta(file, id.id, alignment)
+	end
 
     write(
         fastawriter,
-        FASTA.Record(seqid, alignment.a.seq)
+        FASTA.Record(otu, alignment.a.seq)
     )
     close(fastawriter)
     return file
