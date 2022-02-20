@@ -70,7 +70,7 @@ function write_fasta(
     fastawriter = FASTA.Writer(open(file, "a"))
     otu = otupart(id)
 
-    isempty(otu) && return write_fasta(file, sequenceid, alignment)
+    isempty(otu) && return write_fasta(file, id, alignment)
 
     write(
         fastawriter,
