@@ -69,12 +69,13 @@ function write_fasta(
 )
     fastawriter = FASTA.Writer(open(file, "a"))
     otu = otupart(id)
+	seqid = isempty(otu) ? id.id : otu
 
-    isempty(otu) && return write_fasta(file, id, alignment)
+    #isempty(otu) && return write_fasta(file, id, alignment)
 
     write(
         fastawriter,
-        FASTA.Record(otu, alignment.a.seq)
+        FASTA.Record(seqid, alignment.a.seq)
     )
     close(fastawriter)
     return file
