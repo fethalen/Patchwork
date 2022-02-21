@@ -89,6 +89,7 @@ include("checkinput.jl")
 include("fasta.jl")
 #include("fastq.jl")
 include("output.jl")
+include("plotting.jl")
 
 const EMPTY = String[]
 const DIAMONDFLAGS = ["--mid-sensitive", "--iterate", "--evalue", "0.0001"]
@@ -99,6 +100,7 @@ const FASTAOUTPUT = "query_sequences"
 const DEFAULT_FASTA_EXT = ".fas"
 const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
+const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
 
 """
@@ -302,6 +304,7 @@ function main()
     fastaoutput = outdir * "/" * FASTAOUTPUT
     diamondoutput = outdir * "/" * DIAMONDOUTPUT
     statsoutput = outdir * "/" * STATSOUTPUT
+    plotsoutput = outdir * "/" * PLOTSOUTPUT
     statistics = DataFrame(id = String[],
         reference_len = Int[],
         query_len = Int[],
@@ -322,7 +325,7 @@ function main()
         cleanfiles(alignmentoutput, statsoutput, fastaoutput)
     end
 
-    map(mkpath, [diamondoutput, fastaoutput, statsoutput])
+    map(mkpath, [diamondoutput, fastaoutput, statsoutput, plotsoutput])
 
     if isnothing(args["search-results"])
         if isempty(queries)
@@ -390,6 +393,9 @@ function main()
     CSV.write(*(statsoutput, "/statistics.csv"), statistics, delim = ",")
     statssummary = select(describe(select(statistics, Not(:id))), Not([:nmissing, :eltype]))
     pretty_table(statssummary, nosubheader = true)
+
+    plot_querycover(statistics.query_coverage, *(plotsoutput, "/query_coverage.png"))
+    plot_percentident(statistics.identity, refseqs_count, *(plotsoutput, "/percent_identity.png"))
 
     CSV.write(*(statsoutput, "/average.csv"), statssummary, delim = ",")
 end
