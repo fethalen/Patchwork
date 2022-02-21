@@ -81,7 +81,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 compile_patchwork() {
-  julia --trace-compile="${PATCHWORK_SOURCEDIR}/precompiled.jl"\
+  julia --trace-compile="$precompiled"\
     "${PATCHWORK_SOURCEDIR}/Patchwork.jl"\
     --contigs "$CONTIGS"\
     --reference "$REFERENCE"\
@@ -91,16 +91,21 @@ compile_patchwork() {
 test_run() {
   julia "${PATCHWORK_SOURCEDIR}/compile.jl"\
     "$PATCHWORK_BASEDIR"\
-    "${PATCHWORK_SOURCEDIR}/precompiled.jl"\
+    "$precompiled"\
     "$outdir"
 }
 
+remove_temporary_dirs() {
+  rm -rf test_run_out
+  rm -rf precompiled
+}
+
 main() {
-  test_run_out=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir')
+  test_run_out="${outdir}/test_run_out"
+  precompiled="${outdir}/precompiled.jl"
   julia "${PATCHWORK_SCRIPTDIR}/install_packages.jl"
   compile_patchwork
   test_run
-  rm -rf test_run_out
 }
 
 main "$@"
