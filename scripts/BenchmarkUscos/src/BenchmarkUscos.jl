@@ -139,8 +139,8 @@ function main()
             isequal(answer, "n") && return
         end
         rm(outdir, recursive = true)
-        mkdir(outdir)
     end
+    mkdir(outdir)
 
     !isfile(queryseqs) && error("query file not found: $queryseqs")
     !isfile(referenceseqs) && println("reference file not found: $referenceseqs")
