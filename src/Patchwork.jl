@@ -55,7 +55,7 @@ export
     # multiplesequencealignment
     addalignment, removealignment, hasgaps, otus, otufrequencies, countotus, coverage,
     equal_length, gapmatrix, gapfrequencies, mktemp_fasta, remove_duplicates,
-    remove_duplicates!, pool,
+    remove_duplicates!, pool, cat,
 
     # output
     #WIDTH, cleanfiles, warn_overwrite, write_alignmentfile, write_fasta,
@@ -87,7 +87,7 @@ include("alignment.jl")
 include("alignmentconcatenation.jl")
 include("checkinput.jl")
 include("fasta.jl")
-#include("fastq.jl")
+include("fastq.jl")
 include("output.jl")
 include("plotting.jl")
 
@@ -298,7 +298,16 @@ function main()
     refseqs_count = countsequences(references_file)
     # TODO: queries doesn't need to be stored as a MSA all the time!
     # You just need 1 fasta file for DIAMOND.
-    queries = pool(args["contigs"])                          # MultipleSequenceAlignment
+    #queries = pool(args["contigs"])                          # MultipleSequenceAlignment
+	if length(args["contigs"]) > 1
+		if !(all(f -> isfastafile(f), args["contigs"]) || all(f -> isfastqfile(f), args["contigs"]))
+			println("Please provide all query files in the same format (FASTA or FASTQ).")
+			return
+		end
+		queries = cat(args["contigs"])
+	else
+		queries = args["contigs"]
+	end
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT
@@ -411,8 +420,10 @@ function julia_main()::Cint
     return 0
 end
 
-if length(ARGS) >= 2
+if length(ARGS) >= 1
     julia_main()
 end
+
+# julia_main()
 
 end # module
