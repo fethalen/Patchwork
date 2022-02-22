@@ -64,16 +64,24 @@ end
 
 function write_fasta(
     file::AbstractString,
+    id::String,
+    alignment::PairwiseAlignment,
+)
+    fastawriter = FASTA.Writer(open(file, "a"))
+    write(fastawriter, FASTA.Record(id, alignment.a.seq))
+    close(fastawriter)
+    return file
+end
+
+function write_fasta(
+    file::AbstractString,
     id::SequenceIdentifier,
     alignment::PairwiseAlignment,
 )
     fastawriter = FASTA.Writer(open(file, "a"))
     otu = otupart(id)
 
-    if isempty(otu) 
-		close(fastawriter)
-		return write_fasta(file, id.id, alignment)
-	end
+    isempty(otu) && return write_fasta(file, id.id, alignment)
 
     write(
         fastawriter,

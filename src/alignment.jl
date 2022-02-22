@@ -7,7 +7,7 @@ import Random
 
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
-    gap_open=-11, gap_extend=-1)
+    gap_open = -11, gap_extend = -1)
 
 """
     pairalign_global(seq, ref, scoremodel)
@@ -18,16 +18,16 @@ provided `scoremodel`.
 function pairalign_global(
     seq::SequenceRecord,
     ref::SequenceRecord,
-    scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
 )
     return BioAlignments.pairalign(BioAlignments.GlobalAlignment(), seq.sequencedata,
-                                   ref.sequencedata, scoremodel)
+        ref.sequencedata, scoremodel)
 end
 
 function pairalign_global(
     seq::BioSequences.LongSequence,
     ref::BioSequences.LongSequence,
-    scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
 )
     return BioAlignments.pairalign(BioAlignments.GlobalAlignment(), seq, ref, scoremodel)
 end
@@ -41,17 +41,17 @@ provided `scoremodel`.
 function pairalign_local(
     seq::SequenceRecord,
     ref::SequenceRecord,
-    scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
 )
     return BioAlignments.pairalign(BioAlignments.LocalAlignment(), seq.sequencedata,
-                                   ref.sequencedata, scoremodel)
+        ref.sequencedata, scoremodel)
 end
 
 
 function pairalign_local(
     seq::BioSequences.LongSequence,
     ref::BioSequences.LongSequence,
-    scoremodel=DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
 )
     return BioAlignments.pairalign(BioAlignments.LocalAlignment(), seq, ref, scoremodel)
 end
@@ -103,7 +103,7 @@ function realign(
     alignment = region.pairwisealignment
     queryinterval = BioAlignments.ref2seq(alignment, interval)
     subjectseq = alignment.b[interval]
-    isequal(queryinterval, 0:0) && 
+    isequal(queryinterval, 0:0) &&
         return pairalign_local(BioSequences.LongAminoAcidSeq(), subjectseq[interval])
     queryinterval = max(1, first(queryinterval)):last(queryinterval)
     queryseq = alignment.a.seq[queryinterval]
@@ -136,7 +136,7 @@ function BioAlignments.seq2ref(
     leftmost = min(firstposition, lastposition)
     rightmost = max(firstposition, lastposition)
     return UnitRange(first(BioAlignments.seq2ref(aln, leftmost)),
-                     first(BioAlignments.seq2ref(aln, rightmost)))
+        first(BioAlignments.seq2ref(aln, rightmost)))
 end
 
 function BioAlignments.ref2seq(
@@ -150,7 +150,7 @@ function BioAlignments.ref2seq(
     leftmost = min(firstposition, lastposition)
     rightmost = max(firstposition, lastposition)
     return UnitRange(first(BioAlignments.ref2seq(aln, leftmost)),
-                     first(BioAlignments.ref2seq(aln, rightmost)))
+        first(BioAlignments.ref2seq(aln, rightmost)))
 end
 
 Base.firstindex(aln::BioAlignments.PairwiseAlignment) = 1
@@ -179,3 +179,21 @@ end
 #         return getindex(aln, i), i + 1
 #     end
 # end
+
+"""
+    gapexcluded_identity(matches, mismatches, precision)
+
+Calculate the gap-excluded identity by calculating #matches / (#matches + #mismatches).
+The result is reported as a percentage, so 45% identity is reported as 45.0.
+"""
+function gapexcluded_identity(
+    matches::Int,
+    mismatches::Int,
+    precision::Int = 2
+)
+    if matches + mismatches == 0
+        return 0.0
+    end
+    percentidentity = round((matches / (matches + mismatches)) * 100.0, digits = precision)
+    return percentidentity
+end
