@@ -322,3 +322,16 @@ function pool(
     removeduplicates && remove_duplicates!(result; bysequence=bysequence, byid=byid) # not necessary when removing duplicates in the loop
     return result
 end
+
+function cat(files::AbstractVector{String})
+	tmpfile, tmpio = mktemp()
+	for file in files
+		if isgzipcompressed(file) 
+			run(pipeline(`gunzip -c $file`, stdout=tmpfile, append=true))
+		else
+			run(pipeline(`cat $file`, stdout=tmpfile, append = true))
+		end
+	end
+	close(tmpio)
+	return tmpfile
+end
