@@ -53,11 +53,11 @@ end
 
 function write_fasta(
     file::AbstractString,
-    id::SequenceIdentifier,
+    id::AbstractString,
     alignment::PairwiseAlignment,
 )
     fastawriter = FASTA.Writer(open(file, "a"))
-    write(fastawriter, FASTA.Record(id.id, alignment.a.seq))
+    write(fastawriter, FASTA.Record(id, alignment.a.seq))
     close(fastawriter)
     return file
 end
