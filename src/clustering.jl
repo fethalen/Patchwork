@@ -4,6 +4,9 @@ using BioSequences
 using BioAlignments
 using Patchwork
 
+# Subsample reads: 
+# julia --project=/home/clara/Patchwork/scripts/Subsample /home/clara/Patchwork/scripts/Subsample/src/Subsample.jl --r1 ~/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_1.fq.gz --r2 ~/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_2.fq.gz --count 40000000 --random --outdir ~/Data 
+
 # no internal gaps allowed --> look only at diagonals in alignment matrix
 # only diagonals that are long enough to meet the threshold t are considered
 # if inside such a diagonal, it is found that the sequences do not align well enough to meet t, 
@@ -16,9 +19,7 @@ function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
     matrix = zeros(Int64, length(s1), length(s2)) # s1 ^= rows, s2 ^= columns; 0st row/col ^= gap
     m = 1
     mm = 0
-    #x = 1
-    #y = 1
-    #shorter, pos = length(s1) <= length(s2) ? (length(s1), :x) : (length(s2), :y)
+    # pos is rownumber for s1, colnumber for s2
     shorter, pos = length(s1) <= length(s2) ? (length(s1), 1) : (length(s2), 2)
     thresholdposition = ceil(Int64, shorter * (1 - t))
     # iterate: thresholdpos row -> 1 -> thresholdpos col
@@ -32,15 +33,14 @@ function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
         for coords in diag
             x = coords[1]
             y = coords[2]
-            if x == 1 || y == 1
-                matrix[x, y] = isequal(s1[x], s2[y]) ? m : -mm # no internal gaps allowed
-            else
-                matrix[x, y] = isequal(s1[x], s2[y]) ? matrix[x-1, y-1] + m : matrix[x-1, y-1] - mm # no internal gaps allowed
+            if x == 1 || y == 1 # no internal gaps allowed
+                matrix[x, y] = isequal(s1[x], s2[y]) ? m : -mm 
+            else # no internal gaps allowed
+                matrix[x, y] = isequal(s1[x], s2[y]) ? matrix[x-1, y-1] + m : matrix[x-1, y-1] - mm 
             end
             if matrix[x, y] / shorter >= t # threshold met! 
                 return true
-                #elseif (matrix[x,y] + shorter-eval(pos)) / shorter < t # pos = rownumber for s1, colnumber for s2,
-            elseif (matrix[x, y] + shorter - coords[pos]) / shorter < t # pos = rownumber for s1, colnumber for s2,
+            elseif (matrix[x, y] + shorter - coords[pos]) / shorter < t 
                 break # mark this diagonal as done/look at next diagonal
             end # else continue in this diagonal because t can still be met
         end
@@ -112,11 +112,11 @@ Base.isempty(kmerindex::KmerIndex) = isempty(kmerindex.kmer)
 
 function buildkmertable(
     name::AbstractString, 
-    reader::FASTA.Reader, 
+    reader::Union{FASTA.Reader, FASTQ.Reader}, 
     k::Int64, m::Int64, 
     filelength::Int64=10000000
 )
-    record = FASTA.Record()
+    record = typeof(reader) == FASTA.Reader ? FASTA.Record() : FASTQ.Record()
     all_kmertable = repeat([Vector{KmerIndex}()], filelength)
     sequences = repeat([SequenceRecord()], filelength)
     eof(reader) && return kmertable
@@ -171,8 +171,15 @@ function buildkmertable(
     k::Int64, m::Int64, 
     filelength::Int64=10000000
 )
-    reader = FASTA.Reader(open(file))
-    return buildkmertable(file, reader, k, m, filelength)
+	if isfastafile(file) 
+		reader = isgzipcompressed(file) ? FASTA.Reader(GzipDecompressorStream(open(file))) : FASTA.Reader(open(file))
+	elseif isfastqfile(file)
+		reader = isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file))
+	else
+		println("File must be either in FASTA or FASTQ format (gzipped input is supported).")
+		return MultipleSequenceAlignment(), Vector{KmerIndex()}()
+	end
+	return buildkmertable(file, reader, k, m, filelength)
 end
 
 function mktemp_kmertable(kmertable::Vector{KmerIndex})
@@ -297,24 +304,31 @@ function greedyincremental_clustering(edgesfile::AbstractString, msa::MultipleSe
 end
 
 # THIS WOULD BE THE WHOLE WORKFLOW: #######################################################
-# filelength ist 1000000 reads.
 
-# file, filelength = splitfile("xxx")[1]
-# k = 14
-# m = 20
-# threshold = 0.95
+#file = "/scratch/users/koehne19/patchwork_benchmarking/data/ERR4013119_Dimorphilus_gyrociliatus_reads/subsampled_reads/ERR4013119.sra_1.fastq.gz_40000000.fq.gz"
+#println("count records:")
+#@time filelength = round(Int, countlines(GzipDecompressorStream(open(file))) / 4)
+#k = 14
+#m = 20
+#threshold = 0.95
 
-# @time msa, evolvingclusters = buildkmertable(file, k, m, filelength) 
-# # 202.322562 seconds (1.69 G allocations: 106.001 GiB, 28.16% gc time)
-# println("length of input msa: ", length(msa)) # 1000000
-# println("length of kmertable: ", length(evolvingclusters)) # m * length(msa) = 20000000
-# @time evolvingclusters, numlines = mktemp_kmertable(evolvingclusters) # file that contains all possible center/seq edges 
-# # 107.737633 seconds (20.89 M allocations: 960.595 MiB, 14.66% gc time)
-# @time evolvingclusters = gapfreealign_tocenter(evolvingclusters, numlines, msa, threshold) # file that contains all clusters center->s1,s2,s3..., sorted by cluster size
-# # 226.887146 seconds (142.79 M allocations: 996.792 GiB, 28.36% gc time, 0.20% compilation time)
-# @time msa = greedyincremental_clustering(evolvingclusters, msa) 
-# # 1.302488 seconds (6.69 M allocations: 546.244 MiB, 10.39% gc time, 12.41% compilation time)
-# println("length of output msa: ", length(msa)) # 890927
+#println("build kmer table:")
+#@time msa, evolvingclusters = buildkmertable(file, k, m, filelength) 
+## 202.322562 seconds (1.69 G allocations: 106.001 GiB, 28.16% gc time)
+#println("length of input msa: ", length(msa)) # 1000000
+#println("length of kmertable: ", length(evolvingclusters)) # m * length(msa) = 20000000
+#if !isempty(msa) # if isempty, print errormessage and return.
+#	println("save kmer table:")
+#	@time evolvingclusters, numlines = mktemp_kmertable(evolvingclusters) # file that contains all possible center/seq edges 
+#	# 107.737633 seconds (20.89 M allocations: 960.595 MiB, 14.66% gc time)
+#	println("gapfree alignment filter:")
+#	@time evolvingclusters = gapfreealign_tocenter(evolvingclusters, numlines, msa, threshold) # file that contains all clusters center->s1,s2,s3..., sorted by cluster size
+#	# 226.887146 seconds (142.79 M allocations: 996.792 GiB, 28.36% gc time, 0.20% compilation time)
+#	println("greedy incremental clustering:")
+#	@time msa = greedyincremental_clustering(evolvingclusters, msa) 
+#	# 1.302488 seconds (6.69 M allocations: 546.244 MiB, 10.39% gc time, 12.41% compilation time)
+#	println("length of output msa: ", length(msa)) # 890927
+#end
 
 # THAT STILL TAKES TOO LONG, BUT HEY IT'S BETTER THAN BEFORE AT LEAST.
 # --> ~=10 minutes for clustering 1000000 sequences
