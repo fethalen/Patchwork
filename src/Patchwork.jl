@@ -92,7 +92,9 @@ include("output.jl")
 include("plotting.jl")
 
 const EMPTY = String[]
-const DIAMONDFLAGS = ["--mid-sensitive", "--iterate", "--evalue", "0.0001"]
+# const DIAMONDFLAGS = ["--ultra-sensitive", "--iterate", "--evalue", "0.001", "--id", "40",
+#                       "--max-hsps", "1", "--max-target-seqs", "1"]
+const DIAMONDFLAGS = ["--mid-sensitive", "--iterate", "--evalue", "0.001", "--id", "20"]
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
 const ALIGNMENTOUTPUT = "alignments.txt"
@@ -228,17 +230,17 @@ function parse_parameters()
         help = "Set scoring matrix"
         arg_type = String
         metavar = "NAME"
-        "--min-identity"
-        help = "Discard markers with less identity than PERCENTAGE (for example, 45.01)"
+        "--id"
+        help = "Discard DIAMOND hits with less sequence identity than the given percentage"
         arg_type = Float64
         metavar = "PERCENTAGE"
-        "--min-query-cover"
-        help = "Discard markers with less query coverage than PERCENTAGE (for example, 45.01)"
+        "--query-cover"
+        help = "Discard DIAMOND hits with less query cover than the given percentage"
         arg_type = Float64
         metavar = "PERCENTAGE"
-        "--min-len"
-        help = "Discard markers that are shorter than NUMBER"
-        arg_type = Float64
+        "--len"
+        help = "Discard DIAMOND hits shorter than the provided length"
+        arg_type = Int
         metavar = "NUMBER"
         "--custom-matrix"
         help = "Use a custom scoring matrix"
