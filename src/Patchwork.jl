@@ -367,7 +367,6 @@ function main()
         diamondhits = filter(hit -> isequal(referenceid, hit.subjectid), allhits)
         @assert length(diamondhits) != 0
         writeblastTSV(*(diamondoutput, "/", referenceid.id, ".tsv"), diamondhits; header = true)
-        #regions = AlignedRegionCollection(get_fullseq(args["reference"][index]), diamondhits)
         regions = AlignedRegionCollection(selectsequence(references_file, referenceid), diamondhits)
         # assuming all queries belong to same species:
         mergedregions = mergeoverlaps(regions)
