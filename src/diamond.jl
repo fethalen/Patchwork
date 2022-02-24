@@ -7,8 +7,9 @@ using BioSequences
 const DATABASE = "database.dmnd"
 const DIAMONDDB_EXT = "dmnd"
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const FIELDS = ["qseqid", "qseq", "full_qseq", "qstart", "qend", "qframe", "sseqid",
-                "sseq", "sstart", "send", "cigar", "pident", "bitscore"]
+const FIELDS = ["qseqid", "qseq", "full_qseq", "qseq_translated", "qstart",
+                "qend", "qframe", "sseqid", "sseq", "sstart", "send", "cigar", "pident",
+                "bitscore"]
 const OUTPUT_FORMAT = [6; FIELDS]
 
 mutable struct DiamondSearchResult
