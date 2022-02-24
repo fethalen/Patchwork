@@ -1,8 +1,5 @@
 # Collection of zero or more AlignedRegions
 
-#include("alignedregion.jl")
-#include("diamond.jl")
-
 """
     struct AlignedRegionCollection
 
