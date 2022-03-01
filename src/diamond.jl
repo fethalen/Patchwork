@@ -7,14 +7,14 @@ using BioSequences
 const DATABASE = "database.dmnd"
 const DIAMONDDB_EXT = "dmnd"
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const FIELDS = ["qseqid", "qseq", "full_qseq", "qstart", "qend", "qframe", "sseqid",
-                "sseq", "sstart", "send", "cigar", "pident", "bitscore"]
+const FIELDS = ["qseqid", "qseq", "full_qseq", "qseq_translated", "qstart",
+                "qend", "qframe", "sseqid", "sseq", "sstart", "send", "cigar", "pident",
+                "bitscore"]
 const OUTPUT_FORMAT = [6; FIELDS]
 
 mutable struct DiamondSearchResult
     queryid::SequenceIdentifier
-    querysequence::LongDNASeq
-    full_querysequence::LongDNASeq
+    translated_querysequence::LongAminoAcidSeq
     querystart::Int64
     queryend::Int64
     queryframe::Int64
@@ -44,24 +44,17 @@ function readblastTSV(
     results = CSV.File(path; header=FIELDS, delim='\t') |> DataFrame
     unique!(results)
 
-    # qsplits = [(qotu=first, qid=last)
-    #     for (first, last) in splitdescription(Vector{String}(results.qseqid); delimiter)] |>
-    #     DataFrames.DataFrame
-    # ssplits = [(sotu=first, sid=last)
-    #     for (first, last) in splitdescription(Vector{String}(results.sseqid); delimiter)] |>
-    #     DataFrames.DataFrame
-    # select!(results, Not([:qseqid, :sseqid]))
-    # results = hcat(qsplits, ssplits, results)
-
     diamondsearchresults = []
     for row in eachrow(results)
         queryid = SequenceIdentifier(String(row.qseqid))
         subjectid = SequenceIdentifier(String(row.sseqid))
         result = DiamondSearchResult(
-            queryid, BioSequences.LongDNASeq(row.qseq),
-            BioSequences.LongDNASeq(row.full_qseq), row.qstart, row.qend, row.qframe,
-            subjectid, BioSequences.LongAminoAcidSeq(row.sseq), row.sstart, row.send,
-            row.cigar, row.pident, row.bitscore)
+            queryid,
+            BioSequences.LongAminoAcidSeq(row.qseq_translated), row.qstart,
+            row.qend, row.qframe, subjectid,
+            BioSequences.LongAminoAcidSeq(row.sseq), row.sstart, row.send,
+            row.cigar, row.pident, row.bitscore
+        )
         push!(diamondsearchresults, result)
     end
     return diamondsearchresults

@@ -267,6 +267,9 @@ function parse_parameters()
         default = '@'
         arg_type = Char
         metavar = "CHARACTER"
+        "--no-plots"
+        help = "Save time by skipping plots"
+        action = :store_true
         "--wrap-column"
         help = "Wrap output sequences at this column number (default: no wrap)"
         default = 0
@@ -308,7 +311,7 @@ function main()
 		end
 		queries = cat(args["contigs"])
 	else
-		queries = args["contigs"]
+		queries = only(args["contigs"])
 	end
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
@@ -361,15 +364,16 @@ function main()
     allhits = readblastTSV(diamondsearch)
     referenceids = unique(subjectids(allhits))
 
+    hit = allhits[1]
     queryseqs_count = 0
     for (index, referenceid) in enumerate(referenceids)
         queryseqs_count += 1
         diamondhits = filter(hit -> isequal(referenceid, hit.subjectid), allhits)
         @assert length(diamondhits) != 0
         writeblastTSV(*(diamondoutput, "/", referenceid.id, ".tsv"), diamondhits; header = true)
-        #regions = AlignedRegionCollection(get_fullseq(args["reference"][index]), diamondhits)
         regions = AlignedRegionCollection(selectsequence(references_file, referenceid), diamondhits)
         # assuming all queries belong to same species:
+
         mergedregions = mergeoverlaps(regions)
         concatenation = concatenate(mergedregions, args["species-delimiter"])
         finalalignment = maskgaps(concatenation).aln
@@ -405,8 +409,10 @@ function main()
     statssummary = select(describe(select(statistics, Not(:id))), Not([:nmissing, :eltype]))
     pretty_table(statssummary, nosubheader = true)
 
-    plot_querycover(statistics.query_coverage, *(plotsoutput, "/query_coverage.png"))
-    plot_percentident(statistics.identity, refseqs_count, *(plotsoutput, "/percent_identity.png"))
+    if !args["no-plots"]
+        plot_querycover(statistics.query_coverage, *(plotsoutput, "/query_coverage.png"))
+        plot_percentident(statistics.identity, refseqs_count, *(plotsoutput, "/percent_identity.png"))
+    end
 
     CSV.write(*(statsoutput, "/average.csv"), statssummary, delim = ",")
 end
