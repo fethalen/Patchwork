@@ -242,6 +242,7 @@ function countsequences(path::AbstractString)::Int
     !isfile(path) && error("path not found or not a file: $path")
     count = 0
     for line in readlines(path)
+        isempty(line) && continue
         if first(line) == '>'
             count += 1
         end

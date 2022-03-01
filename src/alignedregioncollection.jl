@@ -41,34 +41,6 @@ mutable struct AlignedRegionCollection
     end
 end
 
-function AlignedRegionCollection(
-    msa::MultipleSequenceAlignment,
-    searchresults::Array{DiamondSearchResult}
-)
-    querycount = length(msa)
-    merge!(msa, searchresults)
-    hitcount = length(msa) - querycount
-    alignment = mafft_linsi(msa, ["--thread", Sys.CPU_THREADS])
-    regions = AlignedRegionCollection()
-
-    for index in (querycount + 1):(querycount + hitcount)
-        record = alignment.sequences[index]
-        # search results don't contain alignment sequences
-        result = searchresults[index - querycount]
-
-        for compoundregion in compoundregions(record)
-            (leftmost, rightmost) = nongap_range(compoundregion)
-            compound_seqrecord = SequenceRecord(record.otu,
-                *(record.identifier, '_', string(leftmost), '-',
-                    string(rightmost)), compoundregion)
-            region = AlignedRegion(compound_seqrecord, leftmost, rightmost,
-                result.subjectframe, result.percentidentical)
-            push!(regions, region)
-        end
-    end
-    return regions
-end
-
 function Base.length(regions::AlignedRegionCollection)
     return length(regions.records)
 end
@@ -108,17 +80,6 @@ function Base.iterate(regions::AlignedRegionCollection, i::Int)
     i > lastindex(regions) && return nothing
     return getindex(regions, i), i + 1
 end
-
-# @inline function Base.iterate(
-#     regions::AlignedRegionCollection,
-#     i::Int = firstindex(regions)
-# )
-#     if i > lastindex(regions)
-#         return nothing
-#     else
-#         return getindex(regions, i), i + 1
-#     end
-# end
 
 """
     sameids(regions)

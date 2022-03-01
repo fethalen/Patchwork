@@ -31,7 +31,7 @@ function plot_percentident(
     aboveseventy = length(eachrow(filter(identity -> identity > 70.0, identities)))
     abovefifty = length(eachrow(filter(identity -> identity > 50.0, identities)))
     abovethirty = length(eachrow(filter(identity -> identity > 30.0, identities)))
-    belowthirty = querycount - abovefifty
+    belowthirty = querycount - abovethirty
     labels = ["missing", "≤ 30%", "> 30%", "> 50%", "> 70%", "> 90%"]
 
     missing = round(((subjectcount - querycount) / subjectcount) * 100.0, digits = 2)
