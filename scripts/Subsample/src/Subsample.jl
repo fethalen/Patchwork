@@ -331,7 +331,7 @@ function computecoverage(file::AbstractString, genomesize::Int64)
 	return readcount * avglength / genomesize
 end
 
-function computecoverage(avglength::Int64, readcount::Int64, genomesize::Int64)
+function computecoverage(avglength::Float64, readcount::Int64, genomesize::Int64)
 	return readcount * avglength / genomesize
 end
 
