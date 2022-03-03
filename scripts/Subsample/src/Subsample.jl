@@ -210,7 +210,7 @@ function subsample(
 	outfile::String, 
 	count::Int64, 
 	miss::UnitRange, 
-	fastaout::Bool=false,
+	fastaout::Bool,
 	compress::Bool=true
 )
 	misslines = (4 * first(miss)):(4 * last(miss))
@@ -250,7 +250,7 @@ function subsample(
 	outfile::String,
 	count::Int64, 
 	positions::Vector{Int64}, 
-	fastaout::Bool=true,
+	fastaout::Bool,
 	compress::Bool=true
 )
 	#positions = sort(pos)
@@ -294,28 +294,28 @@ function subsample(
 	return written
 end
 
-function subsample(
-	file::String, 
-	outfile::String, 
-	records::Int64, 
-	miss::UnitRange, 
-	compress::Bool=true
-)
-	lines = records * 4 # 4 lines are 1 record
-	if last(miss) + 1 > 1 # < 5 minutes
-		@assert !isequal(miss, 1:0)
-		beforemiss = (first(miss)-1) * 4
-		remaining = lines - beforemiss # (records - (first(miss)-1)) * 4
-		endposition = (last(miss)+1) * 4 + remaining
-		run(pipeline(`head -n $beforemiss`, stdin=pipeline(`gunzip -c $file`), stdout=outfile))
-		run(pipeline(`tail -n $remaining`, stdin=pipeline(`gunzip -c $file`, `head -n $endposition`), stdout=outfile, append=true))
-	else # < 1 minute
-		run(pipeline(`head -n $lines`, stdin=pipeline(`gunzip -c $file`) , stdout=outfile)) 
-	end
-	if compress
-		run(`gzip -q $outfile`) # < 11 minutes
-	end
-end
+#function subsample(
+#	file::String, 
+#	outfile::String, 
+#	records::Int64, 
+#	miss::UnitRange, 
+#	compress::Bool=true
+#)
+#	lines = records * 4 # 4 lines are 1 record
+#	if last(miss) + 1 > 1 # < 5 minutes
+#		@assert !isequal(miss, 1:0)
+#		beforemiss = (first(miss)-1) * 4
+#		remaining = lines - beforemiss # (records - (first(miss)-1)) * 4
+#		endposition = (last(miss)+1) * 4 + remaining
+#		run(pipeline(`head -n $beforemiss`, stdin=pipeline(`gunzip -c $file`), stdout=outfile))
+#		run(pipeline(`tail -n $remaining`, stdin=pipeline(`gunzip -c $file`, `head -n $endposition`), stdout=outfile, append=true))
+#	else # < 1 minute
+#		run(pipeline(`head -n $lines`, stdin=pipeline(`gunzip -c $file`) , stdout=outfile)) 
+#	end
+#	if compress
+#		run(`gzip -q $outfile`) # < 11 minutes
+#	end
+#end
 
 function computecoverage(file::AbstractString, genomesize::Int64)
 	io = GzipDecompressorStream(open(file))
