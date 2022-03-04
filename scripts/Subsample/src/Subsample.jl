@@ -476,10 +476,10 @@ function main()
 			"files(s)")
 		println(logwriter, "Selecting reads randomly from the input file(s).")
 		positions = sort(sample(1:countrecords, records, replace = false))
-		if compress; outfile_r1 = outfile_r1 * ".gz"; end
+		#if compress; outfile_r1 = outfile_r1 * ".gz"; end
 		subsample(file_r1, outfile_r1, records, positions, fastaout, compress)
 		if paired
-			if compress; outfile_r2 = outfile_r2 * ".gz"; end
+			#if compress; outfile_r2 = outfile_r2 * ".gz"; end
 			subsample(file_r2, outfile_r2, records, positions, fastaout, compress)
 		end
 	else
