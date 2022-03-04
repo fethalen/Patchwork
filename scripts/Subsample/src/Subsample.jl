@@ -396,12 +396,12 @@ function main()
 			outfile_r2 = ""
 		end
 	end
-	# if compress # only julia-internal subsample() without calling external/bash functions
-	# 	outfile_r1 = outfile_r1 * ".gz"
-	# 	if paired
-	# 		outfile_r2 = outfile_r2 * ".gz"
-	# 	end
-	# end
+	if compress # only julia-internal subsample() without calling external/bash functions
+		outfile_r1 = outfile_r1 * ".gz"
+		if paired
+			outfile_r2 = outfile_r2 * ".gz"
+		end
+	end
 
 	println(logwriter, "Subsample.")
 	if paired 
@@ -476,10 +476,10 @@ function main()
 			"files(s)")
 		println(logwriter, "Selecting reads randomly from the input file(s).")
 		positions = sort(sample(1:countrecords, records, replace = false))
-		if compress; outfile_r1 = outfile_r1 * ".gz"; end
+		#if compress; outfile_r1 = outfile_r1 * ".gz"; end
 		subsample(file_r1, outfile_r1, records, positions, fastaout, compress)
 		if paired
-			if compress; outfile_r2 = outfile_r2 * ".gz"; end
+			#if compress; outfile_r2 = outfile_r2 * ".gz"; end
 			subsample(file_r2, outfile_r2, records, positions, fastaout, compress)
 		end
 	else
@@ -515,13 +515,8 @@ function main()
 
 	println(logwriter)
 
-	if compress
-		str = "Subset of $file_r1 saved to $outfile_r1.gz."
-		str2 = "Subset of $file_r2 saved to $outfile_r2.gz."
-	else
-		str = "Subset of $file_r1 saved to $outfile_r1."
-		str2 = "Subset of $file_r2 saved to $outfile_r2."
-	end
+	str = "Subset of $file_r1 saved to $outfile_r1."
+	str2 = "Subset of $file_r2 saved to $outfile_r2."
 	if loud
 		println(str)
 		paired && println(str2)
