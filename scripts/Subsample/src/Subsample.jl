@@ -213,7 +213,7 @@ function subsample(
 	fastaout::Bool,
 	compress::Bool=true
 )
-	misslines = (4 * first(miss)):(4 * last(miss))
+	misslines = (4 * first(miss) - 3):(4 * last(miss))
 	endlines = last(misslines) + 1 + 4*count
 	reader = isgzipcompressed(file) ? GzipDecompressorStream(open(file)) : open(file)
     writer = compress ? GzipCompressorStream(open(outfile, "w")) : open(outfile, "w")
