@@ -2,9 +2,6 @@ import BioAlignments
 import BioSequences
 import Random
 
-#include("alignedregion.jl")
-#include("sequencerecord.jl")
-
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
     gap_open = -11, gap_extend = -1)
