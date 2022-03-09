@@ -269,7 +269,7 @@ function parse_parameters()
         help = "For the sliding window alignment trimming step, specifies the average
                 distance required"
         arg_type = Float64
-        default = 1.0
+        default = -2.0
         metavar = "NUMBER"
         "--threads"
         help = "Number of threads to utilize (default: all available)"
