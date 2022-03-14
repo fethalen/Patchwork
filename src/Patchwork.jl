@@ -98,8 +98,8 @@ const EMPTY = String[]
 const DIAMONDFLAGS = ["--iterate", "--evalue", "0.001", "--id", "20"]
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
-const ALIGNMENTOUTPUT = "alignments.txt"
-const TRIMMEDALIGNMENT_OUTPUT = "untrimmed_alignments.txt"
+const ALIGNMENTOUTPUT = "untrimmed_alignments.txt"
+const TRIMMEDALIGNMENT_OUTPUT = "trimmed_alignments.txt"
 const FASTAOUTPUT = "query_sequences"
 const DEFAULT_FASTA_EXT = ".fas"
 const DIAMONDOUTPUT = "diamond_out"
@@ -259,6 +259,9 @@ function parse_parameters()
         "--retain-stops"
         help = "Do not remove stop codons (`*`) in the output sequences"
         action = :store_true
+        "--retain-ambiguous"
+        help = "Do not remove ambiguous characters from the output sequences"
+        action = :store_true
         "--window-size"
         help = "For the sliding window alignment trimming step, specifices the number of
                 positions to average across (default: 4)"
@@ -281,8 +284,8 @@ function parse_parameters()
         default = '@'
         arg_type = Char
         metavar = "CHARACTER"
-        "--no-sliding-window"
-        help = "Do not perform sliding window trimming of alignments"
+        "--no-trimming"
+        help = "Do not perform sliding window-based trimming of alignments"
         action = :store_true
         "--no-plots"
         help = "Save time by skipping plots"
@@ -382,7 +385,7 @@ function main()
     allhits = readblastTSV(diamondsearch)
     referenceids = unique(subjectids(allhits))
 
-    if !args["no-sliding-window"]
+    if !args["no-trimming"]
         println("Trimming alignments...")
     end
 
@@ -398,15 +401,18 @@ function main()
 
         mergedregions = mergeoverlaps(regions)
         concatenation = concatenate(mergedregions, args["species-delimiter"])
-        finalalignment = maskgaps(concatenation).aln
-        finalalignment = pairalign_global(finalalignment.a.seq, finalalignment.b).aln
+
+        finalalignment = maskalignment(concatenation, DEFAULT_SCOREMODEL,
+            args["retain-stops"], args["retain-ambiguous"]).aln
+        println(finalalignment)
 
         write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
 
-        if !args["no-sliding-window"]
+        if !args["no-trimming"]
             finalalignment = slidingwindow(finalalignment, args["window-size"],
                 args["required-distance"], DEFAULT_SCOREMODEL)
             write_alignmentfile(trimmedalignment_output, referenceid, length(mergedregions), finalalignment, index)
+            println(finalalignment)
         end
 
         write_fasta(
