@@ -240,33 +240,31 @@ function occupancy(regions::AlignedRegionCollection)::Float64
 end
 
 """
-    maskgaps(alignment::BioAlignments.PairwiseAlignment)
+    maskalignment(alignment, scoremodel, retainstops, retainambiguous)
 
-Remove unaligned columns (i.e., insertions in the reference sequence) _in the query
-sequence_.
+Remove unaligned residues from the provided `alignment`. Also remove stop codons (`*`) and
+or ambigious characters if `retainstops` and or `retainambigiuous` are not set. Realign
+the resulting query sequences to the reference using the provided `scoremodel`.
 """
-function maskgaps(
-    alignment::BioAlignments.PairwiseAlignment
+function maskalignment(
+    alignment::BioAlignments.PairwiseAlignment,
+    scoremodel::BioAlignments.AbstractScoreModel,
+    retainstops::Bool=false,
+    retainambiguous::Bool=false
 )::BioAlignments.PairwiseAlignmentResult
-    # Iterate backwards, since we're deleting things.
-    # a is query, b is reference sequence
-    #println("MASK")
+    flagged = Int64[]
+    queryseq = alignment.a.seq
     anchors = alignment.a.aln.anchors
-    maskedseq = BioSequences.LongAminoAcidSeq()
-    from = 1
-    gapcount = 0
-    for i in 2:lastindex(anchors)
-        if isinsertop(anchors[i].op) # === BioAlignments.OP_INSERT
-            firstinsertion = anchors[i - 1].seqpos + 1
-            lastinsertion = anchors[i].seqpos
-            to = anchors[i - 1].seqpos
-            gapcount += lastinsertion - firstinsertion + 1
-            maskedseq *= alignment.a.seq[from:to]
-            from = anchors[i].seqpos + 1
-        elseif i == lastindex(anchors)
-            to = anchors[i].seqpos
-            maskedseq *= alignment.a.seq[from:to]
+    for anchor in anchors
+        anchor.seqpos == 0 && continue
+        queryletter = queryseq[anchor.seqpos]
+        if isinsertop(anchor.op) ||
+            (!retainstops && queryletter == AA_Term) ||
+            (!retainambiguous && isambiguous(queryletter))
+            push!(flagged, anchor.seqpos)
         end
     end
-    return pairalign_global(maskedseq, alignment.b)
+    # We reverse the list of indices as deleting from left shifts the next deletion
+    map(seqpos -> deleteat!(queryseq, seqpos), reverse(flagged))
+    return pairalign_global(queryseq, alignment.b, scoremodel)
 end
