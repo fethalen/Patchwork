@@ -100,7 +100,7 @@ are not covered by alignments to query sequences will be aligned to gaps (empty 
 """
 function concatenate(
     regions::Patchwork.AlignedRegionCollection,
-    delimiter::Char='@'
+    delimiter::Char = '@'
 )::BioAlignments.PairwiseAlignment
     @assert !hasoverlaps(regions) "Detected overlaps in regions."
     @assert !isempty(regions.referencesequence) "Reference sequence may not be empty."
@@ -137,13 +137,14 @@ function concatenate(
             sorted."""
         if regions[i].subjectfirst > regions[i-1].subjectlast + 1
             push!(alignments, createbridgealignment(reference,
-                regions[i-1].subjectlast+1:regions[i].subjectfirst-1),
+                    regions[i-1].subjectlast+1:regions[i].subjectfirst-1),
                 regions[i].pairwisealignment)
         else
             push!(alignments, regions[i].pairwisealignment)
         end
         if (i == lastindex(regions)
-            && regions[i].subjectlast < lastindex(regions.referencesequence))
+            &&
+            regions[i].subjectlast < lastindex(regions.referencesequence))
             push!(alignments, createbridgealignment(reference,
                 regions[i].subjectlast+1:length(regions.referencesequence)))
         end
@@ -236,7 +237,39 @@ reference sequence. This function concatenates `regions` before computing occupa
 the occupancy score based on the entire reference sequence of the collection.
 """
 function occupancy(regions::AlignedRegionCollection)::Float64
-	return occupancy(concatenate(regions))
+    return occupancy(concatenate(regions))
+end
+
+
+"""
+    maskgaps(alignment::BioAlignments.PairwiseAlignment)
+Remove unaligned columns (i.e., insertions in the reference sequence) _in the query
+sequence_.
+"""
+function maskgaps(
+    alignment::BioAlignments.PairwiseAlignment
+)::BioAlignments.PairwiseAlignmentResult
+    # Iterate backwards, since we're deleting things.
+    # a is query, b is reference sequence
+    #println("MASK")
+    anchors = alignment.a.aln.anchors
+    maskedseq = BioSequences.LongAminoAcidSeq()
+    from = 1
+    gapcount = 0
+    for i in 2:lastindex(anchors)
+        if isinsertop(anchors[i].op) # === BioAlignments.OP_INSERT
+            firstinsertion = anchors[i-1].seqpos + 1
+            lastinsertion = anchors[i].seqpos
+            to = anchors[i-1].seqpos
+            gapcount += lastinsertion - firstinsertion + 1
+            maskedseq *= alignment.a.seq[from:to]
+            from = anchors[i].seqpos + 1
+        elseif i == lastindex(anchors)
+            to = anchors[i].seqpos
+            maskedseq *= alignment.a.seq[from:to]
+        end
+    end
+    return pairalign_global(maskedseq, alignment.b)
 end
 
 """
@@ -249,19 +282,21 @@ the resulting query sequences to the reference using the provided `scoremodel`.
 function maskalignment(
     alignment::BioAlignments.PairwiseAlignment,
     scoremodel::BioAlignments.AbstractScoreModel,
-    retainstops::Bool=false,
-    retainambiguous::Bool=false
+    retainstops::Bool = false,
+    retainambiguous::Bool = false
 )::BioAlignments.PairwiseAlignmentResult
     flagged = Int64[]
     queryseq = alignment.a.seq
     anchors = alignment.a.aln.anchors
-    for anchor in anchors
-        anchor.seqpos == 0 && continue
-        queryletter = queryseq[anchor.seqpos]
-        if isinsertop(anchor.op) ||
-            (!retainstops && queryletter == AA_Term) ||
-            (!retainambiguous && isambiguous(queryletter))
-            push!(flagged, anchor.seqpos)
+    alignmentend = last(anchors).refpos
+
+    for (position, letters) in enumerate(alignment)
+        (queryletter, refletter) = letters
+        if ((!retainstops && queryletter == AA_Term) ||
+            (!retainambiguous && isambiguous(queryletter)) ||
+            (refletter == AA_Gap)
+        )
+            push!(flagged, position)
         end
     end
     # We reverse the list of indices as deleting from left shifts the next deletion
