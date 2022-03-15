@@ -402,18 +402,25 @@ function main()
         mergedregions = mergeoverlaps(regions)
         concatenation = concatenate(mergedregions, args["species-delimiter"])
 
-        finalalignment = maskalignment(concatenation, DEFAULT_SCOREMODEL,
+        # Mask inserts
+        finalalignment = maskgaps(concatenation).aln
+        # Mask stop codons and ambiguous characters
+        finalalignment = maskalignment(finalalignment, DEFAULT_SCOREMODEL,
             args["retain-stops"], args["retain-ambiguous"]).aln
-        println(finalalignment)
 
         write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
 
+        println(finalalignment)
+        # Alignment trimming
         if !args["no-trimming"]
             finalalignment = slidingwindow(finalalignment, args["window-size"],
                 args["required-distance"], DEFAULT_SCOREMODEL)
             write_alignmentfile(trimmedalignment_output, referenceid, length(mergedregions), finalalignment, index)
-            println(finalalignment)
         end
+        println(finalalignment)
+        exit()
+
+        println(finalalignment)
 
         write_fasta(
             *(fastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
