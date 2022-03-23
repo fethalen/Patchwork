@@ -151,7 +151,7 @@ function BioAlignments.ref2seq(
 end
 
 Base.firstindex(aln::BioAlignments.PairwiseAlignment) = 1
-Base.lastindex(aln::BioAlignments.PairwiseAlignment) = length(aln)
+Base.lastindex(aln::BioAlignments.PairwiseAlignment) = last(aln.a.aln.anchors).refpos
 Base.eachindex(aln::BioAlignments.PairwiseAlignment) = Base.OneTo(lastindex(aln))
 
 function Base.getindex(

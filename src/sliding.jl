@@ -68,7 +68,6 @@ function slidingwindow(
 
     anchors = alignment.a.aln.anchors
     alignmentend = last(anchors).refpos
-
     windowstart = 1
     windowstop = alignmentend - windowsize + windowstart
     flagged = Tuple{Int64,Int64}[]

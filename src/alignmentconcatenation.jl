@@ -288,9 +288,10 @@ function maskalignment(
     flagged = Int64[]
     queryseq = alignment.a.seq
     anchors = alignment.a.aln.anchors
-    alignmentend = last(anchors).refpos
+    alignmentend = last(anchors).seqpos
 
     for (position, letters) in enumerate(alignment)
+        position > alignmentend && break
         (queryletter, refletter) = letters
         if ((!retainstops && queryletter == AA_Term) ||
             (!retainambiguous && isambiguous(queryletter)) ||
