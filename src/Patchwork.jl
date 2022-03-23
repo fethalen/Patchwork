@@ -407,20 +407,17 @@ function main()
         # Mask stop codons and ambiguous characters
         finalalignment = maskalignment(finalalignment, DEFAULT_SCOREMODEL,
             args["retain-stops"], args["retain-ambiguous"]).aln
-
         write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
 
-        println(finalalignment)
+        index == 20 println("before trimming", '\n', finalalignment)
         # Alignment trimming
         if !args["no-trimming"]
             finalalignment = slidingwindow(finalalignment, args["window-size"],
                 args["required-distance"], DEFAULT_SCOREMODEL)
             write_alignmentfile(trimmedalignment_output, referenceid, length(mergedregions), finalalignment, index)
         end
-        println(finalalignment)
-        exit()
-
-        println(finalalignment)
+        index == 20 println("after trimming", '\n', finalalignment)
+        index == 20 && exit()
 
         write_fasta(
             *(fastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
