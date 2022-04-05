@@ -29,11 +29,11 @@ description:
   Run Patchwork on the provided set of files and combine the outputs into one.
 
 recommended usage:
-  - Display input files using \`--files-only\` to verify paths and species IDs
+  - Display input files using '--files-only' to verify paths and species IDs
   - Once your happy with the input, do a normal run. Remember that
-    \`--reference\` and \`--outdir\` are always required
-  - _If_ you need to perform multiple runs, set \`--skip-combine\`
-  - After performing _multiple runs_, set \`--combine-only\` to combine outputs
+    '--reference' and 'DIRECTORY' are always required
+  - _If_ you need to perform multiple runs, set '--skip-combine'
+  - After performing _multiple runs_, set '--combine-only' to combine outputs
     separately
 
 options:
@@ -185,7 +185,7 @@ run_patchwork() {
 # Returns all FASTQ files found in the provided `path`
 fastq_files() {
   local path="$1"
-  find "$path" -type f \( -iname \*.fastq.gz -o -iname \*.fq.gz \) |\
+  find "$path" -type f \( --iname \*.fastq.gz -o -iname \*.fq.gz \) |\
     sort
 }
 
@@ -254,10 +254,13 @@ main() {
   [[ -z "$reference" ]] && error "missing mandatory argument --reference"
   [[ ! -d "$basedir" ]] && error "provided directory not found: $basedir"
   [[ ! -f "$reference" ]] && error "provided file not found: $reference"
-  mkdir -p "$outdir"
-  mkdir -p "${outdir}/${COMBINED_DIR}"
+  if (( ! files_only ))
+  then
+    mkdir -p "$outdir"
+    mkdir -p "${outdir}/${COMBINED_DIR}"
+  fi
   readarray -d '' assemblies <\
-    <(find "$basedir" -type f -name "final_contigs.fasta" -print0)
+    <(find "$basedir" -type f -name "final_contigs.fasta" -not -wholename "*/work/*" -print0 )
   local smallest_contigs=( "$( get_smallest_contigs "${assemblies[@]}" )" )
 
   if (( files_only ))

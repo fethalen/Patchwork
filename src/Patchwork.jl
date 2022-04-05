@@ -272,7 +272,7 @@ function parse_parameters()
         help = "For the sliding window alignment trimming step, specifies the average
                 distance required"
         arg_type = Float64
-        default = -2.0
+        default = -5.0
         metavar = "NUMBER"
         "--threads"
         help = "Number of threads to utilize (default: all available)"
@@ -409,15 +409,12 @@ function main()
             args["retain-stops"], args["retain-ambiguous"]).aln
         write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
 
-        index == 20 println("before trimming", '\n', finalalignment)
         # Alignment trimming
         if !args["no-trimming"]
             finalalignment = slidingwindow(finalalignment, args["window-size"],
                 args["required-distance"], DEFAULT_SCOREMODEL)
             write_alignmentfile(trimmedalignment_output, referenceid, length(mergedregions), finalalignment, index)
         end
-        index == 20 println("after trimming", '\n', finalalignment)
-        index == 20 && exit()
 
         write_fasta(
             *(fastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
