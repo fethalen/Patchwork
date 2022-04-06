@@ -171,15 +171,15 @@ function buildkmertable(
     k::Int64, m::Int64, 
     filelength::Int64=10000000
 )
-	if isfastafile(file) 
-		reader = isgzipcompressed(file) ? FASTA.Reader(GzipDecompressorStream(open(file))) : FASTA.Reader(open(file))
-	elseif isfastqfile(file)
-		reader = isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file))
-	else
-		println("File must be either in FASTA or FASTQ format (gzipped input is supported).")
-		return MultipleSequenceAlignment(), Vector{KmerIndex()}()
-	end
-	return buildkmertable(file, reader, k, m, filelength)
+    if isfastafile(file) 
+        reader = isgzipcompressed(file) ? FASTA.Reader(GzipDecompressorStream(open(file))) : FASTA.Reader(open(file))
+    elseif isfastqfile(file)
+        reader = isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file))
+    else
+        println("File must be either in FASTA or FASTQ format (gzipped input is supported).")
+        return MultipleSequenceAlignment(), Vector{KmerIndex()}()
+    end
+    return buildkmertable(file, reader, k, m, filelength)
 end
 
 function mktemp_kmertable(kmertable::Vector{KmerIndex})
@@ -318,16 +318,16 @@ end
 #println("length of input msa: ", length(msa)) # 1000000
 #println("length of kmertable: ", length(evolvingclusters)) # m * length(msa) = 20000000
 #if !isempty(msa) # if isempty, print errormessage and return.
-#	println("save kmer table:")
-#	@time evolvingclusters, numlines = mktemp_kmertable(evolvingclusters) # file that contains all possible center/seq edges 
-#	# 107.737633 seconds (20.89 M allocations: 960.595 MiB, 14.66% gc time)
-#	println("gapfree alignment filter:")
-#	@time evolvingclusters = gapfreealign_tocenter(evolvingclusters, numlines, msa, threshold) # file that contains all clusters center->s1,s2,s3..., sorted by cluster size
-#	# 226.887146 seconds (142.79 M allocations: 996.792 GiB, 28.36% gc time, 0.20% compilation time)
-#	println("greedy incremental clustering:")
-#	@time msa = greedyincremental_clustering(evolvingclusters, msa) 
-#	# 1.302488 seconds (6.69 M allocations: 546.244 MiB, 10.39% gc time, 12.41% compilation time)
-#	println("length of output msa: ", length(msa)) # 890927
+#    println("save kmer table:")
+#    @time evolvingclusters, numlines = mktemp_kmertable(evolvingclusters) # file that contains all possible center/seq edges 
+#    # 107.737633 seconds (20.89 M allocations: 960.595 MiB, 14.66% gc time)
+#    println("gapfree alignment filter:")
+#    @time evolvingclusters = gapfreealign_tocenter(evolvingclusters, numlines, msa, threshold) # file that contains all clusters center->s1,s2,s3..., sorted by cluster size
+#    # 226.887146 seconds (142.79 M allocations: 996.792 GiB, 28.36% gc time, 0.20% compilation time)
+#    println("greedy incremental clustering:")
+#    @time msa = greedyincremental_clustering(evolvingclusters, msa) 
+#    # 1.302488 seconds (6.69 M allocations: 546.244 MiB, 10.39% gc time, 12.41% compilation time)
+#    println("length of output msa: ", length(msa)) # 890927
 #end
 
 # THAT STILL TAKES TOO LONG, BUT HEY IT'S BETTER THAN BEFORE AT LEAST.
