@@ -18,10 +18,10 @@ create_app(projectdirectory, outdirectory; precompile_statements_file = precompi
 println("Compilation finished.")
 # println("Creating symlink to executable...")
 # try
-# 	run(`cd $outdirectory`)
-# 	run(`ln -s bin/subsample subsample`)
+#     run(`cd $outdirectory`)
+#     run(`ln -s bin/subsample subsample`)
 # catch e
-# 	println("Failed to create symlink to executable. See below for error message. ")
-# 	println(e)
+#     println("Failed to create symlink to executable. See below for error message. ")
+#     println(e)
 # end
 println("Done.")

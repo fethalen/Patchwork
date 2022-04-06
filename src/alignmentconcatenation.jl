@@ -236,7 +236,7 @@ reference sequence. This function concatenates `regions` before computing occupa
 the occupancy score based on the entire reference sequence of the collection.
 """
 function occupancy(regions::AlignedRegionCollection)::Float64
-	return occupancy(concatenate(regions))
+    return occupancy(concatenate(regions))
 end
 
 """
