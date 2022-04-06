@@ -326,15 +326,15 @@ function main()
     # TODO: queries doesn't need to be stored as a MSA all the time!
     # You just need 1 fasta file for DIAMOND.
     #queries = pool(args["contigs"])                          # MultipleSequenceAlignment
-	if length(args["contigs"]) > 1
-		if !(all(f -> isfastafile(f), args["contigs"]) || all(f -> isfastqfile(f), args["contigs"]))
-			println("Please provide all query files in the same format (FASTA or FASTQ).")
-			return
-		end
-		queries = cat(args["contigs"])
-	else
-		queries = only(args["contigs"])
-	end
+    if length(args["contigs"]) > 1
+        if !(all(f -> isfastafile(f), args["contigs"]) || all(f -> isfastqfile(f), args["contigs"]))
+            println("Please provide all query files in the same format (FASTA or FASTQ).")
+            return
+        end
+        queries = cat(args["contigs"])
+    else
+        queries = only(args["contigs"])
+    end
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT
