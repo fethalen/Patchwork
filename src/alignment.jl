@@ -2,9 +2,6 @@ import BioAlignments
 import BioSequences
 import Random
 
-#include("alignedregion.jl")
-#include("sequencerecord.jl")
-
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
     gap_open = -11, gap_extend = -1)
@@ -154,7 +151,7 @@ function BioAlignments.ref2seq(
 end
 
 Base.firstindex(aln::BioAlignments.PairwiseAlignment) = 1
-Base.lastindex(aln::BioAlignments.PairwiseAlignment) = length(aln)
+Base.lastindex(aln::BioAlignments.PairwiseAlignment) = last(aln.a.aln.anchors).refpos
 Base.eachindex(aln::BioAlignments.PairwiseAlignment) = Base.OneTo(lastindex(aln))
 
 function Base.getindex(

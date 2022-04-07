@@ -90,14 +90,16 @@ include("fasta.jl")
 include("fastq.jl")
 include("output.jl")
 include("plotting.jl")
+include("sliding.jl")
 
 const EMPTY = String[]
-# const DIAMONDFLAGS = ["--ultra-sensitive", "--iterate", "--evalue", "0.001", "--id", "40",
+# const DIAMONDFLAGS = ["--ultra-sensitive", "--iterate", "--evalue", "0.001",
 #                       "--max-hsps", "1", "--max-target-seqs", "1"]
-const DIAMONDFLAGS = ["--mid-sensitive", "--iterate", "--evalue", "0.001", "--id", "20"]
+const DIAMONDFLAGS = ["--iterate", "--evalue", "0.001"]
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
-const ALIGNMENTOUTPUT = "alignments.txt"
+const ALIGNMENTOUTPUT = "untrimmed_alignments.txt"
+const TRIMMEDALIGNMENT_OUTPUT = "trimmed_alignments.txt"
 const FASTAOUTPUT = "query_sequences"
 const DEFAULT_FASTA_EXT = ".fas"
 const DIAMONDOUTPUT = "diamond_out"
@@ -257,6 +259,21 @@ function parse_parameters()
         "--retain-stops"
         help = "Do not remove stop codons (`*`) in the output sequences"
         action = :store_true
+        "--retain-ambiguous"
+        help = "Do not remove ambiguous characters from the output sequences"
+        action = :store_true
+        "--window-size"
+        help = "For the sliding window alignment trimming step, specifices the number of
+                positions to average across (default: 4)"
+        arg_type = Int64
+        default = 4
+        metavar = "NUMBER"
+        "--required-distance"
+        help = "For the sliding window alignment trimming step, specifies the average
+                distance required"
+        arg_type = Float64
+        default = -5.0
+        metavar = "NUMBER"
         "--threads"
         help = "Number of threads to utilize (default: all available)"
         default = Sys.CPU_THREADS
@@ -267,6 +284,9 @@ function parse_parameters()
         default = '@'
         arg_type = Char
         metavar = "CHARACTER"
+        "--no-trimming"
+        help = "Do not perform sliding window-based trimming of alignments"
+        action = :store_true
         "--no-plots"
         help = "Save time by skipping plots"
         action = :store_true
@@ -329,6 +349,7 @@ function main()
         deletions = Int[],
         query_coverage = Float64[],
         identity = Float64[])
+    trimmedalignment_output = outdir * "/" * TRIMMEDALIGNMENT_OUTPUT
 
     if (isfile(alignmentoutput) || isdir(statsoutput) && !isempty(readdir(statsoutput))
         || (isdir(fastaoutput) && !isempty(readdir(fastaoutput))))
@@ -348,21 +369,25 @@ function main()
             return
         end
         if isnothing(args["database"])
-            println("Building DIAMOND database")
+            println("Building DIAMOND database...")
             reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
         else
             reference_db = args["database"]
         end
         diamondparams = collectdiamondflags(args)
-        println("Aligning query sequences against reference database")
+        println("Aligning query sequences against reference database...")
         diamondsearch = diamond_blastx(queries, reference_db, outdir, diamondparams)
     else
         diamondsearch = args["search-results"]
     end
 
-    println("Merging overlapping hits")
+    println("Merging overlapping hits...")
     allhits = readblastTSV(diamondsearch)
     referenceids = unique(subjectids(allhits))
+
+    if !args["no-trimming"]
+        println("Trimming alignments...")
+    end
 
     hit = allhits[1]
     queryseqs_count = 0
@@ -376,9 +401,21 @@ function main()
 
         mergedregions = mergeoverlaps(regions)
         concatenation = concatenate(mergedregions, args["species-delimiter"])
-        finalalignment = maskgaps(concatenation).aln
 
+        # Mask inserts
+        finalalignment = maskgaps(concatenation).aln
+        # Mask stop codons and ambiguous characters
+        finalalignment = maskalignment(finalalignment, DEFAULT_SCOREMODEL,
+            args["retain-stops"], args["retain-ambiguous"]).aln
         write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
+
+        # Alignment trimming
+        if !args["no-trimming"]
+            finalalignment = slidingwindow(finalalignment, args["window-size"],
+                args["required-distance"], DEFAULT_SCOREMODEL)
+            write_alignmentfile(trimmedalignment_output, referenceid, length(mergedregions), finalalignment, index)
+        end
+
         write_fasta(
             *(fastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
             regions.records[1].queryid,
