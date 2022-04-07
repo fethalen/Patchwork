@@ -93,9 +93,9 @@ include("plotting.jl")
 include("sliding.jl")
 
 const EMPTY = String[]
-# const DIAMONDFLAGS = ["--ultra-sensitive", "--iterate", "--evalue", "0.001", "--id", "40",
+# const DIAMONDFLAGS = ["--ultra-sensitive", "--iterate", "--evalue", "0.001",
 #                       "--max-hsps", "1", "--max-target-seqs", "1"]
-const DIAMONDFLAGS = ["--iterate", "--evalue", "0.001", "--id", "20"]
+const DIAMONDFLAGS = ["--iterate", "--evalue", "0.001"]
 const MIN_DIAMONDVERSION = "2.0.3"
 const MATRIX = "BLOSUM62"
 const ALIGNMENTOUTPUT = "untrimmed_alignments.txt"
