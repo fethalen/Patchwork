@@ -1,3 +1,4 @@
+#!/usr/bin/env julia
 # this script can be run on its own, e.g. from inside the Patchwork directory:
 # julia --trace-compile="src/precompiled.jl" src/Patchwork.jl --contigs CONTIGSFILE --reference REFERENCEFILE
 # julia src/compile.jl . src/precompiled.jl ../patchwork

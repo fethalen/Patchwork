@@ -5,6 +5,7 @@
 import BioSequences
 import BioAlignments
 import BioGenerics
+import Pkg
 
 #include("diamond.jl")
 #include("sequencerecord.jl")
@@ -59,9 +60,13 @@ function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnch
     end
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
     for i in 2:lastindex(anchors)
-        # positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
-        #                 anchors[i].refpos - anchors[i-1].refpos)
-		positions = anchors[i].alnpos - anchors[i-1].alnpos
+        # `alnpos` is required when the version of BioAlignments.jl >= 2.1.0
+        if packageversion("BioAlignments") >= 210
+		    positions = anchors[i].alnpos - anchors[i-1].alnpos
+        else
+            positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
+                            anchors[i].refpos - anchors[i-1].refpos)
+        end
         print(out, positions, anchors[i].op)
     end
     return String(take!(out))
@@ -366,11 +371,16 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
             if isdeleteop(toomuch.op)
                 subjectend = lastanchor.refpos
             else
-				seqposition = subject2query(region, subjectend)
-				alnposition = lastanchor.alnpos + max(seqposition - lastanchor.seqpos,
-					subjectend - lastanchor.refpos)
-                push!(anchors, BioAlignments.AlignmentAnchor(seqposition, subjectend,
-					alnposition, toomuch.op))
+                if packageversion("BioAlignments") >= 210
+                    seqposition = subject2query(region, subjectend)
+                    alnposition = lastanchor.alnpos + max(seqposition - lastanchor.seqpos,
+                        subjectend - lastanchor.refpos)
+                    push!(anchors, BioAlignments.AlignmentAnchor(seqposition, subjectend,
+                        alnposition, toomuch.op))
+                else
+                    push!(anchors, BioAlignments.AlignmentAnchor(subject2query(region, subjectend),
+                    subjectend, toomuch.op))
+                end
                 lastanchor = last(anchors)
             end
         end
@@ -386,16 +396,26 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     #queryint = max(1, first(queryint)):last(queryint)
     @assert first(queryint) != 0
 
+
+    latest_bioalignments = packageversion("BioAlignments") >= 210
+
     querystart = first(queryint)
     newanchors = [anchors[1]]
-	offset = anchors[2].alnpos -
-		max(anchors[2].seqpos-querystart+1, anchors[2].refpos-subjectstart+1)
+    if latest_bioalignments
+	    offset = anchors[2].alnpos -
+	    	max(anchors[2].seqpos-querystart+1, anchors[2].refpos-subjectstart+1)
+    end
     for anchor in anchors[2:lastindex(anchors)]
-		seqposition = anchor.seqpos-querystart+1
-		refposition = anchor.refpos-subjectstart+1
-		alnposition = anchor.alnpos-offset
-        push!(newanchors, BioAlignments.AlignmentAnchor(seqposition, refposition,
-			alnposition, anchor.op))
+        if latest_bioalignments
+            seqposition = anchor.seqpos - querystart + 1
+            refposition = anchor.refpos - subjectstart + 1
+            alnposition = anchor.alnpos - offset
+            push!(newanchors, BioAlignments.AlignmentAnchor(seqposition, refposition,
+                alnposition, anchor.op))
+        else
+            push!(newanchors, BioAlignments.AlignmentAnchor(anchor.seqpos - querystart + 1,
+                anchor.refpos - subjectstart + 1, anchor.op))
+        end
     end
     sliced = BioAlignments.PairwiseAlignment(query[queryint],
         subject[subjectstart:subjectend], cigar(newanchors))
@@ -819,4 +839,18 @@ Returns true if this record's `record` consists of amino acids.
 """
 function isaminoacid(region::AlignedRegion)
     return isaminoacid(region.record)
+end
+
+"""
+    packageversion(name)
+
+Returns the version number depedency with the provided `name` in the form of an integer.
+For example, a package with version number 2.0.1 will be returned as 201.
+"""
+function packageversion(name::AbstractString)
+    dependencies = [entry.second for entry in Pkg.dependencies()]
+    match = only(filter(dependency -> dependency.name == name, dependencies))
+    versionstring = string(match.version)
+    versionnumber = parse(Int64, replace(versionstring, '.' => ""))
+    return versionnumber
 end
