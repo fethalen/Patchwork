@@ -72,7 +72,7 @@ version_info() {
 error() {
   local message="$1"
   local status="${2-1}" # default exit status: 1
-  echo "ega_wrapper: error: $message"
+  echo "multi_patchwork: error: $message"
   exit "$status"
 }
 
@@ -146,7 +146,7 @@ insert_species_prefix() {
 get_sequence_ids() {
   local filename="$1"
   local seq_ids=()
-  readarray -d '' seq_ids < <( grep '^>' "$filename" | sed 's/>[^>]*@//' )
+  readarray -d '' seq_ids < <( grep '^>' "$filename" | tr -d '>' )
   echo "${seq_ids[@]}"
 }
 
@@ -170,6 +170,7 @@ combine_output() {
   ids_from_output "$multi_patchwork_out"
   for seq_id in $( get_sequence_ids "$reference" )
   do
+    echo "$seq_id"
     rm -f "${outdir}/${COMBINED_DIR}/${seq_id}.fa"
     readarray -d '' matches <\
       <(find "$multi_patchwork_out" -type f -name "${seq_id}.fa*" -print0)
