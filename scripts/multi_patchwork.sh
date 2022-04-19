@@ -72,7 +72,7 @@ version_info() {
 error() {
   local message="$1"
   local status="${2-1}" # default exit status: 1
-  echo "ega_wrapper: error: $message"
+  echo "multi_patchwork: error: $message"
   exit "$status"
 }
 
@@ -146,23 +146,39 @@ insert_species_prefix() {
 get_sequence_ids() {
   local filename="$1"
   local seq_ids=()
-  readarray -d '' seq_ids < <( grep '^>' "$filename" | sed 's/>[^>]*@//' )
+  readarray -d '' seq_ids < <( grep '^>' "$filename" | tr -d '>' )
   echo "${seq_ids[@]}"
+}
+
+ids_from_output() {
+  local output="$1"
+  local species_list="${output}/species_ids.txt"
+  rm -f "$species_list"
+  touch "$species_list"
+  readarray -d '' matches <\
+    <(find "$output" -type d -name "*_patchwork_out" -print0)
+  for match in "${matches[@]}"
+  do
+    basename "$match" | sed 's/_patchwork_out//' >> "$species_list"
+  done
+  echo "$species_list"
 }
 
 combine_output() {
   local multi_patchwork_out="$1"
   marker_count=0
+  ids_from_output "$multi_patchwork_out"
   for seq_id in $( get_sequence_ids "$reference" )
   do
+    echo "$seq_id"
     rm -f "${outdir}/${COMBINED_DIR}/${seq_id}.fa"
     readarray -d '' matches <\
-      <(find "$multi_patchwork_out" -type f -name "${seq_id}.fa" -print0)
+      <(find "$multi_patchwork_out" -type f -name "${seq_id}.fa*" -print0)
     for match in "${matches[@]}"
     do
-      cat "$match" >> "${outdir}/${COMBINED_DIR}/${seq_id}.fa"
-      (( marker_count++ ))
+      cat "$match" >> "${outdir}/${COMBINED_DIR}/${seq_id}.fas"
     done
+    [[ ${#matches[@]} -ne 0 ]] && (( marker_count++ ))
   done
   echo "$marker_count"
 }
