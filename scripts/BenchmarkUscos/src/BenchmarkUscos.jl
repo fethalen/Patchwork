@@ -11,6 +11,9 @@ from different datasets.
 """
 module BenchmarkUscos
 
+export
+    otupart, sequencepart, splitdescription,otupart, sequencepart
+
 using ArgParse
 using CSV
 using DataFrames
@@ -161,20 +164,20 @@ function main()
         percent_identity = Float64[]
     )
 
-    sort!(alignmentstats, :percent_identity, rev=true)
+    sort!(alignmentstats, :percent_identity, rev = true)
     alignmentfile = outdir * "/" * "alignments.txt"
 
     for (count, hitrow) in enumerate(eachrow(uniquehits(blastout)))
         (alignment, alignmentscore) = scorealignment(hitrow.full_querysequence, hitrow.full_subjectsequence)
         push!(alignmentstats, alignmentscore)
         write_alignmentfile(count, alignmentfile, hitrow.queryid, hitrow.subjectid,
-                            alignmentscore, alignment.aln)
+            alignmentscore, alignment.aln)
     end
 
-    plot_percentident(alignmentstats, refseqs_count, outdir)
-    plot_querycover(alignmentstats, outdir)
+    plot_percentident(alignmentstats.percent_identity, refseqs_count, outdir)
+    plot_querycover(alignmentstats.query_cover, outdir)
 
-   summary = select(describe(alignmentstats), Not([:nmissing, :eltype]))
+    summary = select(describe(alignmentstats), Not([:nmissing, :eltype]))
     statsfile = outdir * "/" * "marker_stats.csv"
     summaryfile = outdir * "/" * "summary_stats.csv"
     println(summary)
