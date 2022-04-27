@@ -266,7 +266,7 @@ function parse_parameters()
         help = "For the sliding window alignment trimming step, specifices the number of
                 positions to average across (default: 4)"
         arg_type = Int64
-        default = 4
+        default = 5
         metavar = "NUMBER"
         "--required-distance"
         help = "For the sliding window alignment trimming step, specifies the average
