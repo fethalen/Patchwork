@@ -170,8 +170,7 @@ combine_output() {
   ids_from_output "$multi_patchwork_out"
   for seq_id in $( get_sequence_ids "$reference" )
   do
-    echo "$seq_id"
-    rm -f "${outdir}/${COMBINED_DIR}/${seq_id}.fa"
+    rm -f "${outdir}/${COMBINED_DIR}/${seq_id}.fas" # remove previous files
     readarray -d '' matches <\
       <(find "$multi_patchwork_out" -type f -name "${seq_id}.fa*" -print0)
     for match in "${matches[@]}"
