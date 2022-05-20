@@ -178,7 +178,7 @@ function parse_parameters()
     whole-genome sequencing data
     """
     settings = ArgParseSettings(description = overview,
-        version = "0.1.0",
+        version = "0.5.0",
         add_version = true)
     @add_arg_table! settings begin
         "--contigs"
