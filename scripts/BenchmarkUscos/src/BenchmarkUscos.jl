@@ -174,8 +174,8 @@ function main()
             alignmentscore, alignment.aln)
     end
 
-    plot_percentident(alignmentstats.percent_identity, refseqs_count, outdir)
-    plot_querycover(alignmentstats.query_cover, outdir)
+    plot_percentident(alignmentstats.percent_identity, refseqs_count, outdir * "/percent_identity.png")
+    plot_querycover(alignmentstats.query_cover, outdir * "/query_coverage.png")
 
     summary = select(describe(alignmentstats), Not([:nmissing, :eltype]))
     statsfile = outdir * "/" * "marker_stats.csv"
