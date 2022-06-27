@@ -1,4 +1,6 @@
 <img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_logo_500px.png" alt="Patchwork logo" width="225"/>
+![GPLv3](http://www.gnu.org/graphics/gplv3-88x31.png)
+[GNU General Public License, GPLv3](http://www.gnu.org/copyleft/gpl.html)
 
 Patchwork is an alignment-based program for retrieving and concatenating phylogenetic markers from whole-genome sequencing (WGS) data. The program searches the provided DNA query contigs against one or more amino acid reference sequences. Multiple, overlapping hits are merged to derive a single, continuous sequence for each reference sequence.
 
