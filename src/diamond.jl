@@ -14,12 +14,12 @@ const OUTPUT_FORMAT = [6; FIELDS]
 
 mutable struct DiamondSearchResult
     queryid::SequenceIdentifier
-    translated_querysequence::LongAminoAcidSeq
+    translated_querysequence::LongAA
     querystart::Int64
     queryend::Int64
     queryframe::Int64
     subjectid::SequenceIdentifier
-    subjectsequence::LongAminoAcidSeq
+    subjectsequence::LongAA
     subjectstart::Int64
     subjectend::Int64
     cigar::AbstractString
@@ -50,9 +50,9 @@ function readblastTSV(
         subjectid = SequenceIdentifier(String(row.sseqid))
         result = DiamondSearchResult(
             queryid,
-            BioSequences.LongAminoAcidSeq(row.qseq_translated), row.qstart,
+            BioSequences.LongAA(row.qseq_translated), row.qstart,
             row.qend, row.qframe, subjectid,
-            BioSequences.LongAminoAcidSeq(row.sseq), row.sstart, row.send,
+            BioSequences.LongAA(row.sseq), row.sstart, row.send,
             row.cigar, row.pident, row.bitscore
         )
         push!(diamondsearchresults, result)
