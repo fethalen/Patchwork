@@ -101,7 +101,7 @@ function realign(
     queryinterval = BioAlignments.ref2seq(alignment, interval)
     subjectseq = alignment.b[interval]
     isequal(queryinterval, 0:0) &&
-        return pairalign_local(BioSequences.LongAminoAcidSeq(), subjectseq[interval])
+        return pairalign_local(BioSequences.LongAA(), subjectseq[interval])
     queryinterval = max(1, first(queryinterval)):last(queryinterval)
     queryseq = alignment.a.seq[queryinterval]
     pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
