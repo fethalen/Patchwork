@@ -33,8 +33,8 @@ struct AlignedRegion
     queryframe::Int64
 
     function AlignedRegion()
-        emptyaln = BioAlignments.PairwiseAlignment(BioSequences.LongAminoAcidSeq(),
-            BioSequences.LongAminoAcidSeq(), "")
+        emptyaln = BioAlignments.PairwiseAlignment(BioSequences.LongAA(),
+            BioSequences.LongAA(), "")
         return new(emptyaln, 0, -1, SequenceIdentifier(), 0, -1, 0)
     end
 
@@ -100,9 +100,9 @@ function BioSequences.translate(region::AlignedRegion)
 end
 
 function BioSequences.translate(
-    sequence::BioSequences.LongDNASeq,
+    sequence::BioSequences.LongDNA,
     cigar::AbstractString
-)::BioSequences.LongAminoAcidSeq
+)::BioSequences.LongAA
     anchors = collect(eachmatch(r"[/\\MIDNSHP=X]", cigar))
     positions = collect(eachmatch(r"\d+", cigar))
     index = 1
@@ -122,7 +122,7 @@ function BioSequences.translate(
         end
     end
 
-    return BioSequences.translate(BioSequences.LongDNASeq(String(take!(buffer))))
+    return BioSequences.translate(BioSequences.LongDNA(String(take!(buffer))))
 end
 
 function Base.show(
@@ -327,7 +327,7 @@ function Base.getindex(
     queryinterval = BioAlignments.ref2seq(aln, indices)
     subjectseq = aln.b[indices]
     isequal(queryinterval, 0:0) &&
-        return pairalign_global(BioSequences.LongAminoAcidSeq(), subjectseq)
+        return pairalign_global(BioSequences.LongAA(), subjectseq)
     queryinterval = max(1, first(queryinterval)):last(queryinterval)
     queryseq = aln.a.seq[queryinterval]
     return pairalign_global(queryseq, subjectseq)
