@@ -4,7 +4,7 @@ import BioAlignments
 import BioSequences
 
 function cutalignment(
-    alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAminoAcidSeq,BioSequences.LongAminoAcidSeq},
+    alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAA,BioSequences.LongAA},
     cuttingpoints::Vector{Tuple{Int64,Int64}}
 )
     keep = []
@@ -14,7 +14,7 @@ function cutalignment(
     keepbegin = 1
     anchors = alignment.a.aln.anchors
     alignmentend = last(anchors).refpos
-    sequence = LongAminoAcidSeq()
+    sequence = LongAA()
 
     # If the first cut starts after the first position, include everything up until that
     # point
@@ -55,7 +55,7 @@ provided `alignment` where the average distance within the window falls below th
 `distancethreshold`. Returns a vector of starts and stops where the
 """
 function slidingwindow(
-    alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAminoAcidSeq,BioSequences.LongAminoAcidSeq},
+    alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAA,BioSequences.LongAA},
     windowsize::Int64,
     distancethreshold::Float64,
     scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
