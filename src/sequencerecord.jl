@@ -208,11 +208,11 @@ function fillmissing(
     filledsequence = *(gapsbefore, string(sequence), gapsafter)
 
     if eltype(sequence) == AminoAcid
-        return BioSequences.LongAminoAcidSeq(filledsequence)
+        return BioSequences.LongAA(filledsequence)
     elseif eltype(sequence) == DNA
-        return BioSequences.LongDNASeq(filledsequence)
+        return BioSequences.LongDNA(filledsequence)
     elseif eltype(sequence) == RNA
-        return BioSequences.LongRNASeq(filledsequence)
+        return BioSequences.LongRNA(filledsequence)
     end
 end
 
