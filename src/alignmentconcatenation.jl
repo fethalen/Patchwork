@@ -253,7 +253,7 @@ function maskgaps(
     # a is query, b is reference sequence
     #println("MASK")
     anchors = alignment.a.aln.anchors
-    maskedseq = BioSequences.LongAminoAcidSeq()
+    maskedseq = BioSequences.LongAA()
     from = 1
     gapcount = 0
     for i in 2:lastindex(anchors)
