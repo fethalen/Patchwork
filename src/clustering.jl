@@ -58,7 +58,7 @@ end
 # (MORE OR LESS) COPIED FROM LINCLUST SUPPLEMENTARY MATERIAL ------------------------------
 rotateleft(val, bits) = xor(val << bits, val >> (16 - bits))
 
-function circularhash(kmer::LongDNASeq, k::Int64)
+function circularhash(kmer::LongDNA, k::Int64)
     # fixed 16bit randoms
     rands = Dict(DNA_A => 0x4567, DNA_C => 0x23c6, DNA_G => 0x9869, DNA_T => 0x4873, 
         DNA_M => 0xdc51, DNA_R => 0x5cff, DNA_W => 0x944a, DNA_S => 0x58ec, DNA_Y => 0x1f29, 
@@ -74,7 +74,7 @@ function circularhash(kmer::LongDNASeq, k::Int64)
 end
 
 # rolling hash variant for previous hash function
-function circularhash_next(seq::LongDNASeq, k::Int64, prevbase::DNA, h::UInt16)
+function circularhash_next(seq::LongDNA, k::Int64, prevbase::DNA, h::UInt16)
     rands = Dict(DNA_A => 0x4567, DNA_C => 0x23c6, DNA_G => 0x9869, DNA_T => 0x4873, 
         DNA_M => 0xdc51, DNA_R => 0x5cff, DNA_W => 0x944a, DNA_S => 0x58ec, DNA_Y => 0x1f29, 
         DNA_K => 0x7ccd, DNA_V => 0x58ba, DNA_H => 0xd7ab, DNA_D => 0x41f2, DNA_B => 0x1efb, 
@@ -87,21 +87,21 @@ end
 #------------------------------------------------------------------------------------------
 
 mutable struct KmerIndex
-    kmer::LongDNASeq
+    kmer::LongDNA
     seqlen::Int64
     kmerpos::Int64
     msaindex::Int64 # reference to id and sequence in corresponding msa
 
-    function KmerIndex(kmer::LongDNASeq, seqlen::Int64, kmerpos::Int64, msaindex::Int64)
+    function KmerIndex(kmer::LongDNA, seqlen::Int64, kmerpos::Int64, msaindex::Int64)
         return new(kmer, seqlen, kmerpos, msaindex)
     end
 end
 
 function KmerIndex()
-    return KmerIndex(LongDNASeq(), 0, 0, 0)
+    return KmerIndex(LongDNA(), 0, 0, 0)
 end
 
-function KmerIndex(kmer::LongDNASeq, seq::LongDNASeq, kmerpos::Int64, msaindex::Int64)
+function KmerIndex(kmer::LongDNA, seq::LongDNA, kmerpos::Int64, msaindex::Int64)
     return KmerIndex(kmer, length(seq), kmerpos, msaindex)
 end
 
@@ -134,7 +134,7 @@ function buildkmertable(
         #kmertable = repeat([KmerIndex()], num_kmers)
         kmertable = Vector{KmerIndex}(undef, num_kmers)
         # [(kmer, hash, kmerpos),...]
-        seq_kmers = Vector{Tuple{LongDNASeq, UInt16, Int64}}(undef, seqlen - k + 1)
+        seq_kmers = Vector{Tuple{LongDNA, UInt16, Int64}}(undef, seqlen - k + 1)
         seq_kmers[1] = (seq[1:k], circularhash(seq[1:k], k), 1)
 
         for i in 2:seqlen - k + 1 # compute hashes for all kmers
