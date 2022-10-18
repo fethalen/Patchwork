@@ -86,3 +86,22 @@ function diamond_blastp(
     run(diamond_cmd)
     return readblastTSV(blastout)
 end
+
+"""
+Runs `diamond blastx` on the provided `query` and `subject` paths. May include optional
+`flags` such as `["--threads", 6]`.
+"""
+function diamond_blastx(
+    query::AbstractString,
+    subject::AbstractString,
+    outdir::AbstractString,
+    flags=[]
+)::Array{DiamondSearchResult,1}
+    logfile = outdir * "/diamond_blastx.log"
+    blastout = outdir * "/blastx_out.tsv"
+    diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
+                            --outfmt $OUTPUT_FORMAT --out $blastout`, stdout=logfile,
+                            stderr=logfile)
+    run(diamond_cmd)
+    return readblastTSV(blastout)
+end
