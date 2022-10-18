@@ -106,6 +106,10 @@ function parse_parameters()
             required = true
             arg_type = String
             metavar = "PATH"
+        "--dna"
+            help = "Query sequences are DNA. If this flag is not set, query sequences are assumed to be proteins."
+            required = false
+            action = :store_true 
         "--reference"
             help = "Path to the file containing the single-copy orthologs in FASTA format"
             default = "../data/helobdella_robusta_uscos.faa"
@@ -148,8 +152,13 @@ function main()
     !isfile(queryseqs) && error("query file not found: $queryseqs")
     !isfile(referenceseqs) && println("reference file not found: $referenceseqs")
 
-    blastout = diamond_blastp(
-        queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir)
+    if args["dna"]
+        blastout = diamond_blastx(
+            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir)
+    else
+        blastout = diamond_blastp(
+            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir)
+    end
     refseqs_count = countsequences(referenceseqs)
 
     alignmentstats = DataFrame(
