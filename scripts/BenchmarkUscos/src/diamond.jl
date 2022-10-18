@@ -13,11 +13,11 @@ const OUTPUT_FORMAT = [6; FIELDS]
 
 mutable struct DiamondSearchResult
     queryid::SequenceIdentifier
-    querysequence::LongAminoAcidSeq
-    full_querysequence::LongAminoAcidSeq
+    querysequence::LongAA
+    full_querysequence::LongAA
     subjectid::SequenceIdentifier
-    subjectsequence::LongAminoAcidSeq
-    full_subjectsequence::LongAminoAcidSeq
+    subjectsequence::LongAA
+    full_subjectsequence::LongAA
     cigar::AbstractString
     percentidentical::Float64
     bitscore::Float64
@@ -42,8 +42,8 @@ function readblastTSV(path::AbstractString)::Array{DiamondSearchResult,1}
         queryid = SequenceIdentifier(String(row.qseqid))
         subjectid = SequenceIdentifier(String(row.sseqid))
         result = DiamondSearchResult(
-            queryid, LongAminoAcidSeq(row.qseq), LongAminoAcidSeq(row.full_qseq),
-            subjectid, LongAminoAcidSeq(row.sseq), LongAminoAcidSeq(row.full_sseq),
+            queryid, LongAA(row.qseq), LongAA(row.full_qseq),
+            subjectid, LongAA(row.sseq), LongAA(row.full_sseq),
             row.cigar, row.pident, row.bitscore
         )
         push!(diamondsearchresults, result)
