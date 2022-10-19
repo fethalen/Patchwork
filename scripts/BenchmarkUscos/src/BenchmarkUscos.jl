@@ -108,7 +108,6 @@ function parse_parameters()
             metavar = "PATH"
         "--dna"
             help = "Query sequences are DNA. If this flag is not set, query sequences are assumed to be proteins."
-            required = false
             action = :store_true 
         "--reference"
             help = "Path to the file containing the single-copy orthologs in FASTA format"
