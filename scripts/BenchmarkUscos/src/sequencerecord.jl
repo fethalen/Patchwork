@@ -1,7 +1,7 @@
 import BioSequences
 import Base
 
-include("sequenceidentifier.jl")
+# include("sequenceidentifier.jl")
 
 """
 A `SequenceRecord` represents a record in a multiple sequence alignment
