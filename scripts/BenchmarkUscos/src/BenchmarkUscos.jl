@@ -3,6 +3,13 @@
 # --output-dir test\
 # --threads 28
 
+# Note that AliBaSeq does the alignments the other way round, i.e. the "query" (they call it 
+# "target", that would be Dimorphilus) is used as a database, and the "reference" (they call it 
+# "bait", that would be Helobdella) is used as a query in the BLAST search. I don't know if 
+# therefore AliBaSeq should also be evaluated the other way round...
+
+# julia src/BenchmarkUscos.jl --query /media/clara/Elements/benchmarking/alibaseq_concatenated/data/all_1x_noN.fas --reference data/helobdella_robusta_uscos.faa --output-dir /media/clara/Elements/benchmarking/alibaseq_test --dna --overwrite
+
 """
     Consensus
 
@@ -11,16 +18,17 @@ from different datasets.
 """
 module BenchmarkUscos
 
-export
-    otupart, sequencepart, splitdescription,otupart, sequencepart
-
 using ArgParse
 using CSV
 using DataFrames
 
+export
+    otupart, sequencepart, splitdescription, SequenceRecord, SequenceIdentifier, DiamondSearchResult
+
+include("sequenceidentifier.jl")
+include("sequencerecord.jl")
 include("alignment.jl")
 include("diamond.jl")
-include("sequenceidentifier.jl")
 include("simplestats.jl")
 
 const WIDTH = 80
