@@ -3,7 +3,7 @@ import BioSequences
 import DataFrames
 import Random
 
-include("sequencerecord.jl")
+# include("sequencerecord.jl")
 
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
