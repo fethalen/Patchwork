@@ -186,7 +186,7 @@ function parse_parameters()
         "--contigs"
         help = "Path to one or more sequences in FASTA format"
         arg_type = String
-        nargs = '*'
+        nargs = '+'
         metavar = "PATH"
         "--reference"
         help = """A path to one or more sequences in FASTA format. Additionally, you can
@@ -203,12 +203,10 @@ function parse_parameters()
                 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
                 evalue bitscore qframe sseq seq."""
         arg_type = String
-        nargs = '?'
         metavar = "PATH"
         "--database"
         help = "Provide a subject DIAMOND or BLAST database to search against."
         arg_type = String
-        nargs = '?'
         metavar = "PATH"
         "--output-dir"
         help = "Write output files to this directory"
@@ -393,8 +391,9 @@ function main()
             return
         end
         queries = cat(args["contigs"])
-    else
+    elseif length(args["contigs"]) == 1
         queries = only(args["contigs"])
+    # else: provided --search-results
     end
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
