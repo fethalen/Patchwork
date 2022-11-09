@@ -1,3 +1,5 @@
 test/**
 patchwork_output
 archive
+Manifest_main.toml.bk
+Manifest.toml.bk

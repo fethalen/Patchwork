@@ -3,6 +3,13 @@
 # --output-dir test\
 # --threads 28
 
+# Note that AliBaSeq does the alignments the other way round, i.e. the "query" (they call it 
+# "target", that would be Dimorphilus) is used as a database, and the "reference" (they call it 
+# "bait", that would be Helobdella) is used as a query in the BLAST search. I don't know if 
+# therefore AliBaSeq should also be evaluated the other way round...
+
+# julia src/BenchmarkUscos.jl --query /media/clara/Elements/benchmarking/alibaseq_concatenated/data/all_1x_noN.fas --reference data/helobdella_robusta_uscos.faa --output-dir /media/clara/Elements/benchmarking/alibaseq_test --dna --overwrite
+
 """
     Consensus
 
@@ -11,16 +18,17 @@ from different datasets.
 """
 module BenchmarkUscos
 
-export
-    otupart, sequencepart, splitdescription,otupart, sequencepart
-
 using ArgParse
 using CSV
 using DataFrames
 
+export
+    otupart, sequencepart, splitdescription, SequenceRecord, SequenceIdentifier, DiamondSearchResult
+
+include("sequenceidentifier.jl")
+include("sequencerecord.jl")
 include("alignment.jl")
 include("diamond.jl")
-include("sequenceidentifier.jl")
 include("simplestats.jl")
 
 const WIDTH = 80
@@ -106,6 +114,9 @@ function parse_parameters()
             required = true
             arg_type = String
             metavar = "PATH"
+        "--dna"
+            help = "Query sequences are DNA. If this flag is not set, query sequences are assumed to be proteins."
+            action = :store_true 
         "--reference"
             help = "Path to the file containing the single-copy orthologs in FASTA format"
             default = "../data/helobdella_robusta_uscos.faa"
@@ -148,8 +159,13 @@ function main()
     !isfile(queryseqs) && error("query file not found: $queryseqs")
     !isfile(referenceseqs) && println("reference file not found: $referenceseqs")
 
-    blastout = diamond_blastp(
-        queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir)
+    if args["dna"]
+        blastout = diamond_blastx(
+            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir)
+    else
+        blastout = diamond_blastp(
+            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir)
+    end
     refseqs_count = countsequences(referenceseqs)
 
     alignmentstats = DataFrame(

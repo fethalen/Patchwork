@@ -25,6 +25,13 @@ const GAPS = Dict("BLOSUM45"=>[(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13,
 const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(11, 1),
                          "BLOSUM80"=>(10, 1), "BLOSUM90"=>(10, 1), "PAM30"=>(9, 1),
                          "PAM70"=>(10, 1), "PAM250"=>(14, 2))
+const AVAIL_DIAMOND = ["sensitivity", "iterate", "frameshift", "evalue", "min-score", 
+    "max-target-seqs", "top", "max-hsps", "id", "query-cover", "subject-cover", 
+    "query-gencode", "strand", "min-orf"]
+const DIAMONDSTRANDS = ["both", "plus", "minus"]
+const DIAMONDMODES = ["fast", "mid-sensitive", "sensitive", "more-sensitive", 
+    "very-sensitive", "ultra-sensitive"]
+const DMND_ITERATE = ["PATCHWORK_OFF"]
 
 # FUNCTIONS ###############################################################################
 
@@ -200,54 +207,54 @@ end
 #    end
 #end
 
-"""
-    checkdiamondflags(args::Dict{String, Any})
+# """
+#     checkdiamondflags(args::Dict{String, Any})
 
-Ensure that no conflicts are caused by command line arguments provided in `--diamond-flags`,
-i.e. that parameters used and set by `Patchwork` are not also provided to `DIAMOND` in a
-separate place.
-"""
-function checkdiamondflags(args::Dict{String, Any})
-    flags = args["diamond-flags"]
-    #isempty(flags) && return
-    patchworkflags = ["matrix", "custom-matrix", "gapopen", "gapextend", "threads"]
-    for flag in patchworkflags
-        if flag in flags
-            error("Please use Patchwork's own --$flag option instead.")
-        end
-    end
-    if "--query" in flags || "-q" in flags
-        error("You should not explicitly provide a DIAMOND query.",
-              "The file provided to Patchwork as --contigs will be used as DIAMOND query.")
-    end
-    if "--db" in flags || "-d" in flags
-        error("You should not explicitly provide a DIAMOND database.",
-              "The file or database provided with --reference will be used by DIAMOND.",
-              "If you are providing a database, please make sure to also set --database.")
-    end
-    if "--outfmt" in flags || "-f" in flags
-        error("The DIAMOND output format is built into Patchwork and cannot be changed.")
-    end
-    if "--out" in flags || "-o" in flags
-        error("The DIAMOND results file is built into Patchwork and cannot be changed.")
-    end
-end
+# Ensure that no conflicts are caused by command line arguments provided in `--diamond-flags`,
+# i.e. that parameters used and set by `Patchwork` are not also provided to `DIAMOND` in a
+# separate place.
+# """
+# function checkdiamondflags(args::Dict{String, Any})
+#     flags = args["diamond-flags"]
+#     #isempty(flags) && return
+#     patchworkflags = ["matrix", "custom-matrix", "gapopen", "gapextend", "threads"]
+#     for flag in patchworkflags
+#         if flag in flags
+#             error("Please use Patchwork's own --$flag option instead.")
+#         end
+#     end
+#     if "--query" in flags || "-q" in flags
+#         error("You should not explicitly provide a DIAMOND query.",
+#               "The file provided to Patchwork as --contigs will be used as DIAMOND query.")
+#     end
+#     if "--db" in flags || "-d" in flags
+#         error("You should not explicitly provide a DIAMOND database.",
+#               "The file or database provided with --reference will be used by DIAMOND.",
+#               "If you are providing a database, please make sure to also set --database.")
+#     end
+#     if "--outfmt" in flags || "-f" in flags
+#         error("The DIAMOND output format is built into Patchwork and cannot be changed.")
+#     end
+#     if "--out" in flags || "-o" in flags
+#         error("The DIAMOND results file is built into Patchwork and cannot be changed.")
+#     end
+# end
 
-function checkmakedbflags(args::Dict{String, Any})
-    flags = args["makedb-flags"]
-    isempty(flags) && return
-    if "--in" in flags
-        error("Please use Patchwork's --reference option instead. ",
-              "It willl be used to construct your DIAMOND database.")
-    end
-    if "--db" in flags || "-d" in flags
-        error("The creation of your DIAMOND database will be internally handled. ",
-              "You should not explicitly provide an output database filename.")
-    end
-    if "--threads"  in flags
-        error("Please use Patchwork's own --threads option instead.")
-    end
-end
+# function checkmakedbflags(args::Dict{String, Any})
+#     flags = args["makedb-flags"]
+#     isempty(flags) && return
+#     if "--in" in flags
+#         error("Please use Patchwork's --reference option instead. ",
+#               "It willl be used to construct your DIAMOND database.")
+#     end
+#     if "--db" in flags || "-d" in flags
+#         error("The creation of your DIAMOND database will be internally handled. ",
+#               "You should not explicitly provide an output database filename.")
+#     end
+#     if "--threads"  in flags
+#         error("Please use Patchwork's own --threads option instead.")
+#     end
+# end
 
 # Check and Collect all DIAMOND Flags in an Array #########################################
 
@@ -266,34 +273,83 @@ function setpatchworkflags!(args::Dict{String, Any})     # Run this fct. before 
     checkgappenalty(args[getmatrixtype(args)], args["gapopen"], args["gapextend"])
 end
 
-"""
-    setdiamondflags!(args::Dict{String, Any})
+# """
+#     setdiamondflags!(args::Dict{String, Any})
 
-Ensure that no conflicts are caused by combinations of, or missing, command line arguments.
-Set `DIAMOND` frameshift and mode correctly, modifying `args`. This function throws an
-error if any conflicts are detected.
-"""
-function setdiamondflags!(args::Dict{String, Any})      # Run this fct. before the next.
-    checkdiamondflags(args)
-    #set_diamondframeshift!(args)
-    #set_diamondmode!(args)
-    checkmakedbflags(args)
-    if length(args["reference"]) > 1 || !isdiamonddatabase(args["reference"]...)
-        push!(args["makedb-flags"], "--threads", string(args["threads"]))
-        #isfastafile(args["reference"]) && push!(args["makedb-flags"], "-d",
-        #            args["output-dir"] * DATABASE)
-    end
-end
+# Ensure that no conflicts are caused by combinations of, or missing, command line arguments.
+# Set `DIAMOND` frameshift and mode correctly, modifying `args`. This function throws an
+# error if any conflicts are detected.
+# """
+# function setdiamondflags!(args::Dict{String, Any})      # Run this fct. before the next.
+#     checkdiamondflags(args)
+#     #set_diamondframeshift!(args)
+#     #set_diamondmode!(args)
+#     checkmakedbflags(args)
+#     if length(args["reference"]) > 1 || !isdiamonddatabase(args["reference"]...)
+#         push!(args["makedb-flags"], "--threads", string(args["threads"]))
+#         #isfastafile(args["reference"]) && push!(args["makedb-flags"], "-d",
+#         #            args["output-dir"] * DATABASE)
+#     end
+# end
 
-"""
-    collectdiamondflags(args::Dict{String, Any})::Vector{String}
+# """
+#     collectdiamondflags(args::Dict{String, Any})::Vector{String}
 
-Build the complete vector of parameters for running `DIAMOND`.
-"""
+# Build the complete vector of parameters for running `DIAMOND`.
+# """
+# function collectdiamondflags(args::Dict{String, Any})::Vector{String}
+#     @assert !isnothing(args["gapopen"]) && !isnothing(args["gapextend"]) """set gap
+#     penalties with setpatchworkflags!(args) before calling this function"""
+#     return [args["diamond-flags"]..., "--" * getmatrixtype(args), args[getmatrixtype(args)],
+#             "--gapopen", string(args["gapopen"]), "--gapextend", string(args["gapextend"]),
+#             "--threads", string(args["threads"])]
+# end
+
 function collectdiamondflags(args::Dict{String, Any})::Vector{String}
+    #setpatchworkflags!(args)
     @assert !isnothing(args["gapopen"]) && !isnothing(args["gapextend"]) """set gap
-    penalties with setpatchworkflags!(args) before calling this function"""
-    return [args["diamond-flags"]..., "--" * getmatrixtype(args), args[getmatrixtype(args)],
-            "--gapopen", string(args["gapopen"]), "--gapextend", string(args["gapextend"]),
-            "--threads", string(args["threads"])]
+        penalties with setpatchworkflags!(args) before calling this function"""
+    diamondflags = ["--" * getmatrixtype(args), args[getmatrixtype(args)],
+        "--gapopen", string(args["gapopen"]), "--gapextend", string(args["gapextend"]),
+        "--threads", string(args["threads"])]
+
+    if !isnothing(args["strand"])
+        !in(args["strand"], DIAMONDSTRANDS) && error("Only values 'both', 'plus', and 'minus' 
+            are allowed for the --strand option.")
+    end
+    if !isnothing(args["sensitivity"])
+        !in(args["sensitivity"], DIAMONDMODES) && error("""Only values 'fast', 'mid-sensitive', 
+            'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive' are 
+            allowed for the --sensitivity option.""")
+        push!(diamondflags, "--" * args["sensitivity"])
+    end
+    if !isequal(args["iterate"], DMND_ITERATE) 
+        if !isempty(args["iterate"])
+            !min_diamondversion("2.0.12") && error("""DIAMOND version must be at least 2.0.12
+            to support providing a list of sensitivities with the --iterate option.""")
+            # if in("default", args["iterate"]) && length(args["iterate"]) > 1
+            #     error("'default' may not be used in combination with other values when setting 
+            #         --iterate.")
+            # end
+            # if !isequal(args["iterate"][1], "default")
+            for val in args["iterate"]
+                (!in(val, DIAMONDMODES) && !isequal(val, "default")) && error("""The only 
+                    values allowed for the --iterate option are 'default', a combination of 
+                    the values 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive', 
+                    'very-sensitive', and 'ultra-sensitive', provided as a space-separated 
+                    list, or nothing at all.""")
+            end
+            # end
+        end
+        push!(diamondflags, "--iterate", args["iterate"]...)
+    end
+
+    for opt in AVAIL_DIAMOND
+        (isequal(opt, "sensitivity") || isequal(opt, "iterate")) && continue
+        if !isnothing(args[opt])
+            push!(diamondflags, "--" * opt, string(args[opt]))
+        end
+    end
+    # println(diamondflags)
+    return diamondflags
 end

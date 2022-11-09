@@ -10,7 +10,7 @@ function isfastqfile(
     # length(splits) > 1 && last(splits) in ext && return true
     # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(file) && return true
     # return false
-	reader = isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file))
+    reader = isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file))
     record = FASTQ.Record()
     try # in case the file is a tmp file without extension
         read!(reader, record)
