@@ -50,8 +50,10 @@ function concatenate(
     @assert Alphabet(firstquery) == Alphabet(secondquery) """Can only concatenate
         alignments of same type (i.e. two protein-protein alignments)."""
 
-    joinedquery = typeof(firstquery)(firstquery, secondquery)
-    joinedreference = typeof(firstquery)(firstreference, secondreference)
+    # joinedquery = typeof(firstquery)(firstquery, secondquery)
+    # joinedreference = typeof(firstquery)(firstreference, secondreference)
+    joinedquery = firstquery * typeof(firstquery)(secondquery)
+    joinedreference = typeof(firstquery)(firstreference) * typeof(firstquery)(secondreference)
     cigar = BioAlignments.cigar(first.a.aln) * BioAlignments.cigar(second.a.aln)
     return BioAlignments.PairwiseAlignment(joinedquery, joinedreference, cigar)
 end
@@ -77,8 +79,10 @@ function concatenate(
     @assert eltype(queries) == typeof(queries[1]) """Can only concatenate alignments of
         same type (i.e. a collection of protein-protein alignments)."""
 
-    joinedquery = typeof(queries[1])(queries...)
-    joinedreference = typeof(queries[1])(references...)
+    # joinedquery = typeof(queries[1])(queries...)
+    # joinedreference = typeof(queries[1])(references...)
+    joinedquery = typeof(queries[1])(join(queries))
+    joinedreference = typeof(queries[1])(join(references))
     out = IOBuffer()
     for alignment in alignments
         print(out, BioAlignments.cigar(alignment))

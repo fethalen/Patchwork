@@ -1,4 +1,5 @@
 # julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultra-sensitive" --output-dir "../test/patchwork-output"
+# julia --project=. src/Patchwork.jl --contigs "test/07673_lcal.fa" --reference "test/07673_Alitta_succinea.fa" --frameshift 15 --sensitivity ultra-sensitive --iterate fast mid-sensitive --output-dir "test/patchwork-output" --overwrite
 # diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
@@ -33,7 +34,7 @@ export
     createbridgealignment, concatenate, countmatches, occupancy, maskgaps, countgaps,
 
     # checkinput
-    MATRICES, GAPS, GAPDEFAULTS, #checkmatrixtype, getmatrixtype, setmatrixname,
+    MATRICES, GAPS, GAPDEFAULTS, DMND_ITERATE, #checkmatrixtype, getmatrixtype, setmatrixname,
     #read_custommatrix, getmatrix, setgapopen, setgapextend, checkgappenalty,
     #checkdiamondflags, checkmakedbflags, setpatchworkflags, setdiamondflags,
     #collectdiamondflags,
@@ -96,7 +97,6 @@ const EMPTY = String[]
 # const DIAMONDFLAGS = ["--ultra-sensitive", "--iterate", "--evalue", "0.001",
 #                       "--max-hsps", "1", "--max-target-seqs", "1"]
 # const DIAMONDFLAGS = ["--evalue", "0.001"] # ["--iterate", "--evalue", "0.001"]
-# const MIN_DIAMONDVERSION = "2.0.3" # 2.0.10 for --iterate option
 const DIAMONDFLAGS = ["--iterate", "--evalue", "0.001"]
 const MIN_DIAMONDVERSION = "2.0.10" # for --iterate option
 const MATRIX = "BLOSUM62"
@@ -186,54 +186,107 @@ function parse_parameters()
         "--contigs"
         help = "Path to one or more sequences in FASTA format"
         arg_type = String
-        nargs = '*'
+        nargs = '+'
         metavar = "PATH"
         "--reference"
-        help = "A path to one or more sequences in FASTA format. Additionally, you can
+        help = """A path to one or more sequences in FASTA format. Additionally, you can
                 also provide a DIAMOND output file in tabular format (use --search-results)
-                or a DIAMOND or BLAST database (use --database)."
+                or a DIAMOND or BLAST database (use --database)."""
         required = true
         arg_type = String
         nargs = '+'
         metavar = "PATH"
         "--search-results"
-        help = "Provide a DIAMOND output file in tabular format. The first line of
+        help = """Provide a DIAMOND output file in tabular format. The first line of
                 such files is considered to be the header. Please adhere to Patchwork's
                 DIAMOND output format:
                 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
-                evalue bitscore qframe sseq seq."
+                evalue bitscore qframe sseq seq."""
         arg_type = String
-        nargs = '?'
         metavar = "PATH"
         "--database"
         help = "Provide a subject DIAMOND or BLAST database to search against."
         arg_type = String
-        nargs = '?'
         metavar = "PATH"
         "--output-dir"
         help = "Write output files to this directory"
         arg_type = String
         default = "patchwork_output"
         metavar = "PATH"
-        "--diamond-flags"
-        help = "Flags sent to DIAMOND"
-        arg_type = Vector{String}
-        default = DIAMONDFLAGS
-        metavar = "LIST"
         "--fasta-extension"
         help = "Filetype extension used for output FASTA files"
         arg_type = String
         default = DEFAULT_FASTA_EXT
         metavar = "STRING"
-        "--makedb-flags"
-        help = "Flags sent to DIAMOND makedb"
-        arg_type = Vector{String}
-        default = EMPTY
-        metavar = "LIST"
         "--matrix"
         help = "Set scoring matrix"
         arg_type = String
         metavar = "NAME"
+
+        # DIAMOND BLASTX options ##########################################################
+        "--query-gencode"
+        help = """The genetic code DIAMOND uses for translation of query sequences. All 
+            allowed values can be found on the NCBI website. The Standard Code is used by 
+            default"""
+        arg_type = Int64
+        metavar = "NUMBER"
+        "--strand"
+        help = """Set the query strand that DIAMOND uses for alignments. Allowed values are: 
+            'both', 'plus', and 'minus'. By default, both strands are searched"""
+        arg_type = String
+        metavar = "STRING"
+        "--min-orf"
+        help = """DIAMOND ignores translated sequences with smaller open reading frames. 
+            Default is: disabled for sequences smaller than 30, 20 fro sequences smaller 
+            than 100, and 40 otherwise. Set to 1 to disable"""
+        arg_type = Int64
+        metavar = "NUMBER"
+        "--sensitivity"
+        help = """Set DIAMOND sensitivity mode. Allowed values are: 'fast', 'mid-sensitive', 
+            'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive'. Without 
+            this option, DIAMOND will be run in its default mode"""
+        arg_type = String
+        metavar = "MODE"
+        # ATTENTION: error when combining iterate and frameshift (GitHub issue #593)
+        "--iterate" # iterate with list requires diamond v. 2.0.12
+        help = """Set DIAMOND option --iterate. In version 2.0.12 or higher, you can 
+            optionally specify a space-separated list of sensitivity modes to iterate over. 
+            Allowed values are 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive', 
+            'very-sensitive', 'ultra-sensitive', 'default' and none"""
+        arg_type = String
+        default = DMND_ITERATE
+        metavar = "MODE"
+        nargs = '*'
+        "--frameshift"
+        help = """Allow frameshift in DIAMOND and set frameshift penalty. Without this 
+            option, frameshift is disabled entirely"""
+        arg_type = Int64
+        metavar = "NUMBER"
+        "--evalue"
+        help = "Only report DIAMOND hits with lower e-values than the given value"
+        arg_type = Float64
+        metavar = "NUMBER"
+        "--min-score"
+        help = "Only report DIAMOND hits with bitscores >= the given value. Overrides
+            the --evalue option"
+        arg_type = Float64
+        metavar = "NUMBER"
+        "--max-target-seqs"
+        help = """The maximum number of subject sequences that DIAMOND may report per 
+            query. Default is 25; setting it to 0 will report all hits"""
+        arg_type = Int64
+        metavar = "NUMBER"
+        "--top"
+        help = """Discard DIAMOND hits outside the given percentage range of the top 
+            alignment score. This option overrides --max-target-seqs"""
+        arg_type = Int64
+        metavar = "NUMBER"
+        "--max-hsps"
+        help = """Maximum number of HSPs DIAMOND may report per target sequence for each
+            query. Default is reporting only the highest-scoring HSP. Setting this option 
+            to 0 will report all alternative HSPs"""
+        arg_type = Int64
+        metavar = "NUMBER"
         "--id"
         help = "Discard DIAMOND hits with less sequence identity than the given percentage"
         arg_type = Float64
@@ -242,9 +295,15 @@ function parse_parameters()
         help = "Discard DIAMOND hits with less query cover than the given percentage"
         arg_type = Float64
         metavar = "PERCENTAGE"
+        "--subject-cover"
+        help = "Discard DIAMOND hits with less subject cover than the given percentage"
+        arg_type = Float64
+        metavar = "PERCENTAGE"
+        # end of DIAMOND options ##########################################################
+
         "--len"
         help = "Discard DIAMOND hits shorter than the provided length"
-        arg_type = Int
+        arg_type = Int64
         metavar = "NUMBER"
         "--custom-matrix"
         help = "Use a custom scoring matrix"
@@ -265,14 +324,14 @@ function parse_parameters()
         help = "Do not remove ambiguous characters from the output sequences"
         action = :store_true
         "--window-size"
-        help = "For the sliding window alignment trimming step, specifices the number of
-                positions to average across (default: 4)"
+        help = """For the sliding window alignment trimming step, specifices the number of
+                positions to average across (default: 4)"""
         arg_type = Int64
         default = 4
         metavar = "NUMBER"
         "--required-distance"
-        help = "For the sliding window alignment trimming step, specifies the average
-                distance required (default: -7.0)"
+        help = """For the sliding window alignment trimming step, specifies the average
+                distance required (default: -7.0)"""
         arg_type = Float64
         default = -7.0
         metavar = "NUMBER"
@@ -315,7 +374,7 @@ function main()
     printinfo(get_diamondversion(), args["threads"])
 
     setpatchworkflags!(args)
-    setdiamondflags!(args)
+    # setdiamondflags!(args)
 
     if length(args["reference"]) == 1
         references_file = args["reference"][1]              # 1 .fa
@@ -326,15 +385,16 @@ function main()
     # TODO: queries doesn't need to be stored as a MSA all the time!
     # You just need 1 fasta file for DIAMOND.
     #queries = pool(args["contigs"])                          # MultipleSequenceAlignment
-	if length(args["contigs"]) > 1
-		if !(all(f -> isfastafile(f), args["contigs"]) || all(f -> isfastqfile(f), args["contigs"]))
-			println("Please provide all query files in the same format (FASTA or FASTQ).")
-			return
-		end
-		queries = cat(args["contigs"])
-	else
-		queries = only(args["contigs"])
-	end
+    if length(args["contigs"]) > 1
+        if !(all(f -> isfastafile(f), args["contigs"]) || all(f -> isfastqfile(f), args["contigs"]))
+            println("Please provide all query files in the same format (FASTA or FASTQ).")
+            return
+        end
+        queries = cat(args["contigs"])
+    elseif length(args["contigs"]) == 1
+        queries = only(args["contigs"])
+    # else: provided --search-results
+    end
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT
@@ -372,7 +432,7 @@ function main()
         end
         if isnothing(args["database"])
             println("Building DIAMOND database...")
-            reference_db = diamond_makeblastdb(references_file, outdir, args["makedb-flags"])
+            reference_db = diamond_makeblastdb(references_file, outdir)
         else
             reference_db = args["database"]
         end

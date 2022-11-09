@@ -1,7 +1,7 @@
 name = "Patchwork"
 uuid = "5568df11-beb6-4e3e-8878-8f1e5127fa36"
-authors = ["Felix Thalen <felix.thalen@uni-goettingen.de>", "Clara Köhne <claragisela.koehne@uni-goettingen.de>"]
-version = "0.5.0"
+authors = ["Felix Thalen <felix.thalen@uni-goettingen.de>", "Clara G. Köhne <claragisela.koehne@uni-goettingen.de>"]
+version = "0.5.1"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
@@ -17,6 +17,7 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FASTX = "c2308a5c-f048-11e8-3e8a-31650f418d12"
 GFF3 = "af1dc308-cb6b-11e8-32f0-31192efa90f6"
 GenomicFeatures = "899a7d2d-5c61-547b-bef9-6698a8d05446"
+PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
