@@ -61,12 +61,12 @@ function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnch
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
     for i in 2:lastindex(anchors)
         # `alnpos` is required when the version of BioAlignments.jl >= 2.1.0
-        if packageversion("BioAlignments") >= 210
+        #if packageversion("BioAlignments") >= 210
 		    positions = anchors[i].alnpos - anchors[i-1].alnpos
-        else
-            positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
-                            anchors[i].refpos - anchors[i-1].refpos)
-        end
+        #else
+        #    positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
+        #                    anchors[i].refpos - anchors[i-1].refpos)
+        #end
         print(out, positions, anchors[i].op)
     end
     return String(take!(out))
@@ -371,16 +371,16 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
             if isdeleteop(toomuch.op)
                 subjectend = lastanchor.refpos
             else
-                if packageversion("BioAlignments") >= 210
+                #packageversion("BioAlignments") >= 210
                     seqposition = subject2query(region, subjectend)
                     alnposition = lastanchor.alnpos + max(seqposition - lastanchor.seqpos,
                         subjectend - lastanchor.refpos)
                     push!(anchors, BioAlignments.AlignmentAnchor(seqposition, subjectend,
                         alnposition, toomuch.op))
-                else
-                    push!(anchors, BioAlignments.AlignmentAnchor(subject2query(region, subjectend),
-                    subjectend, toomuch.op))
-                end
+                #else
+                #    push!(anchors, BioAlignments.AlignmentAnchor(subject2query(region, subjectend),
+                #    subjectend, toomuch.op))
+                #end
                 lastanchor = last(anchors)
             end
         end
@@ -397,25 +397,25 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     @assert first(queryint) != 0
 
 
-    latest_bioalignments = packageversion("BioAlignments") >= 210
+    #latest_bioalignments = packageversion("BioAlignments") >= 210
 
     querystart = first(queryint)
     newanchors = [anchors[1]]
-    if latest_bioalignments
+    #if latest_bioalignments
 	    offset = anchors[2].alnpos -
 	    	max(anchors[2].seqpos-querystart+1, anchors[2].refpos-subjectstart+1)
-    end
+    #end
     for anchor in anchors[2:lastindex(anchors)]
-        if latest_bioalignments
+        #if latest_bioalignments
             seqposition = anchor.seqpos - querystart + 1
             refposition = anchor.refpos - subjectstart + 1
             alnposition = anchor.alnpos - offset
             push!(newanchors, BioAlignments.AlignmentAnchor(seqposition, refposition,
                 alnposition, anchor.op))
-        else
-            push!(newanchors, BioAlignments.AlignmentAnchor(anchor.seqpos - querystart + 1,
-                anchor.refpos - subjectstart + 1, anchor.op))
-        end
+        #else
+        #    push!(newanchors, BioAlignments.AlignmentAnchor(anchor.seqpos - querystart + 1,
+        #        anchor.refpos - subjectstart + 1, anchor.op))
+        #end
     end
     sliced = BioAlignments.PairwiseAlignment(query[queryint],
         subject[subjectstart:subjectend], cigar(newanchors))
