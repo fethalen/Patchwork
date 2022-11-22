@@ -8,7 +8,7 @@
 # "bait", that would be Helobdella) is used as a query in the BLAST search. I don't know if 
 # therefore AliBaSeq should also be evaluated the other way round...
 
-# julia src/BenchmarkUscos.jl --query /media/clara/Elements/benchmarking/alibaseq_concatenated/data/all_1x_noN.fas --reference data/helobdella_robusta_uscos.faa --output-dir /media/clara/Elements/benchmarking/alibaseq_test --dna --overwrite
+# julia /home/clara/Data/GAU/Work/Projects/Patchwork/scripts/BenchmarkUscos/src/BenchmarkUscos.jl --query /media/clara/Elements/benchmarking/alibaseq_concatenated/data/all_1x_noN.fas --reference data/helobdella_robusta_uscos.faa --output-dir /media/clara/Elements/benchmarking/alibaseq_test --dna --overwrite
 
 """
     Consensus
@@ -32,6 +32,8 @@ include("diamond.jl")
 include("simplestats.jl")
 
 const WIDTH = 80
+const DIAMONDPFLAGS = ["--ultra-sensitive"]
+const DIAMONDXFLAGS = vcat(DIAMONDPFLAGS, ["--frameshift", "15"])
 
 function warn_overwrite()::String
     print("WARNING: found output from a previous run, overwrite old files? (y/n):")
@@ -161,10 +163,12 @@ function main()
 
     if args["dna"]
         blastout = diamond_blastx(
-            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir)
+            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir, 
+            DIAMONDXFLAGS)
     else
         blastout = diamond_blastp(
-            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir)
+            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir, 
+            DIAMONDPFLAGS)
     end
     refseqs_count = countsequences(referenceseqs)
 
