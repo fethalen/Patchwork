@@ -403,6 +403,7 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     end
     sliced = BioAlignments.PairwiseAlignment(query[queryint],
         subject[subjectstart:subjectend], cigar(newanchors))
+    queryfirst, querylast = subject_queryboundaries(region, subjectstart:subjectend)
     return AlignedRegion(sliced, region.full_querysequence, 
         subject2fullsubject(region, subjectstart), subject2fullsubject(region, subjectend), 
         region.queryid, queryfirst, querylast, region.queryframe)
