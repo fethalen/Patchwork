@@ -54,10 +54,10 @@ end
 function write_fasta(
     file::AbstractString,
     id::AbstractString,
-    alignment::PairwiseAlignment,
+    sequence::Union{BioSequences.LongAA, BioSequences.LongDNA},
 )
     fastawriter = FASTA.Writer(open(file, "a"))
-    write(fastawriter, FASTA.Record(id, alignment.a.seq))
+    write(fastawriter, FASTA.Record(id, sequence))
     close(fastawriter)
     return file
 end
@@ -65,10 +65,10 @@ end
 function write_fasta(
     file::AbstractString,
     id::String,
-    alignment::PairwiseAlignment,
+    sequence::Union{BioSequences.LongAA, BioSequences.LongDNA},
 )
     fastawriter = FASTA.Writer(open(file, "a"))
-    write(fastawriter, FASTA.Record(id, alignment.a.seq))
+    write(fastawriter, FASTA.Record(id, sequence))
     close(fastawriter)
     return file
 end
@@ -76,16 +76,16 @@ end
 function write_fasta(
     file::AbstractString,
     id::SequenceIdentifier,
-    alignment::PairwiseAlignment,
+    sequence::Union{BioSequences.LongAA, BioSequences.LongDNA},
 )
     fastawriter = FASTA.Writer(open(file, "a"))
     otu = otupart(id)
 
-    isempty(otu) && return write_fasta(file, id.id, alignment)
+    isempty(otu) && return write_fasta(file, id.id, sequence)
 
     write(
         fastawriter,
-        FASTA.Record(otu, alignment.a.seq)
+        FASTA.Record(otu, sequence)
     )
     close(fastawriter)
     return file
@@ -102,7 +102,7 @@ function write_fasta(
     otu = otupart(queryid)
     sequenceid = sequencepart(subjectid)
 
-    isempty(otu) && return write_fasta(file, sequenceid, alignment)
+    isempty(otu) && return write_fasta(file, sequenceid, alignment.a.seq)
 
     write(
         fastawriter,
