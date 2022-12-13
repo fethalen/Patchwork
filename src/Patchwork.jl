@@ -1,5 +1,5 @@
 # julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultra-sensitive" --output-dir "../test/patchwork-output"
-# julia --project=. src/Patchwork.jl --contigs "test/07673_lcal.fa" --reference "test/07673_Alitta_succinea.fa" --frameshift 15 --sensitivity ultra-sensitive --iterate fast mid-sensitive --output-dir "test/patchwork-output" --overwrite
+# julia --project=. src/Patchwork.jl --contigs "test/07673_lcal.fa" --reference "test/07673_Alitta_succinea.fa" --frameshift 15 --sensitivity ultra-sensitive --output-dir "test/patchwork-output" --overwrite
 # diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
@@ -40,8 +40,8 @@ export
     #collectdiamondflags,
 
     # diamond
-    FIELDS, OUTPUT_FORMAT, readblastTSV, writeblastTSV, diamond_blastx, diamond_makeblastdb,
-    queryids, subjectids, isdiamonddatabase,
+    FIELDS, OUTPUT_FORMAT, readblastTSV, frameshift, writeblastTSV, diamond_blastx, 
+    diamond_makeblastdb, queryids, subjectids, isdiamonddatabase,
 
     # fasta
     FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, #isfastqfile,
@@ -103,6 +103,7 @@ const MATRIX = "BLOSUM62"
 const ALIGNMENTOUTPUT = "untrimmed_alignments.txt"
 const TRIMMEDALIGNMENT_OUTPUT = "trimmed_alignments.txt"
 const FASTAOUTPUT = "query_sequences"
+const DNAFASTAOUTPUT = "dna_query_sequences"
 const DEFAULT_FASTA_EXT = ".fas"
 const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
@@ -398,6 +399,7 @@ function main()
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT
+    dnafastaoutput = outdir * "/" * DNAFASTAOUTPUT
     diamondoutput = outdir * "/" * DIAMONDOUTPUT
     statsoutput = outdir * "/" * STATSOUTPUT
     plotsoutput = outdir * "/" * PLOTSOUTPUT
@@ -414,15 +416,16 @@ function main()
     trimmedalignment_output = outdir * "/" * TRIMMEDALIGNMENT_OUTPUT
 
     if (isfile(alignmentoutput) || isdir(statsoutput) && !isempty(readdir(statsoutput))
-        || (isdir(fastaoutput) && !isempty(readdir(fastaoutput))))
+        || (isdir(fastaoutput) && !isempty(readdir(fastaoutput))) 
+        || (isdir(dnafastaoutput) && !isempty(readdir(dnafastaoutput))))
         if !args["overwrite"]
             answer = warn_overwrite()
             isequal(answer, "n") && return
         end
-        cleanfiles(alignmentoutput, statsoutput, fastaoutput)
+        cleanfiles(alignmentoutput, statsoutput, fastaoutput, dnafastaoutput)
     end
 
-    map(mkpath, [diamondoutput, fastaoutput, statsoutput, plotsoutput])
+    map(mkpath, [diamondoutput, fastaoutput, dnafastaoutput, statsoutput, plotsoutput])
 
     if isnothing(args["search-results"])
         if isempty(queries)
@@ -462,18 +465,19 @@ function main()
         # assuming all queries belong to same species:
 
         mergedregions = mergeoverlaps(regions)
-        concatenation = concatenate(mergedregions, args["species-delimiter"])
+        concatenation, dna_concatenation = concatenate(mergedregions, args["species-delimiter"])
 
         # Mask inserts
-        finalalignment = maskgaps(concatenation).aln
+        maskedalignment, maskeddna = maskgaps(concatenation, dna_concatenation)
         # Mask stop codons and ambiguous characters
-        finalalignment = maskalignment(finalalignment, DEFAULT_SCOREMODEL,
-            args["retain-stops"], args["retain-ambiguous"]).aln
+        maskedalignment, finaldna = maskalignment(maskedalignment.aln, maskeddna, DEFAULT_SCOREMODEL,
+            args["retain-stops"], args["retain-ambiguous"])
+        finalalignment = maskedalignment.aln
         write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
 
         # Alignment trimming
         if !args["no-trimming"]
-            finalalignment = slidingwindow(finalalignment, args["window-size"],
+            finalalignment, finaldna = slidingwindow(finalalignment, finaldna, args["window-size"],
                 args["required-distance"], DEFAULT_SCOREMODEL)
             write_alignmentfile(trimmedalignment_output, referenceid, length(mergedregions), finalalignment, index)
         end
@@ -481,7 +485,12 @@ function main()
         write_fasta(
             *(fastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
             regions.records[1].queryid,
-            finalalignment
+            finalalignment.a.seq
+        )
+        write_fasta(
+            *(dnafastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
+            regions.records[1].queryid,
+            finaldna
         )
         stats_row = [
             mergedregions.referencesequence.id.id,
