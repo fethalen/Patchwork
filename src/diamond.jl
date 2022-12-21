@@ -15,6 +15,7 @@ const OUTPUT_FORMAT = [6; FIELDS]
 mutable struct DiamondSearchResult
     queryid::SequenceIdentifier
     translated_querysequence::LongAA
+    full_querysequence::LongDNA # ATTENTION: modified to include frameshifts, rev. comp.
     querystart::Int64
     queryend::Int64
     queryframe::Int64
@@ -41,23 +42,110 @@ function readblastTSV(
     path::AbstractString;
     delimiter='@'
 )::Array{DiamondSearchResult,1}
-    results = CSV.File(path; header=FIELDS, delim='\t') |> DataFrame
+    file, io = mktemp()
+    run(pipeline(`sed 's/\\/f/g' $path`, file)) # b for backwards frameshift
+    run(pipeline(`sed 's/\//b/g' $path`, file)) # f for forwards frameshift
+
+    results = CSV.File(file; header=FIELDS, delim='\t') |> DataFrame
+#    results = CSV.File(path; header=FIELDS, delim='\t') |> DataFrame
     unique!(results)
 
     diamondsearchresults = []
     for row in eachrow(results)
         queryid = SequenceIdentifier(String(row.qseqid))
         subjectid = SequenceIdentifier(String(row.sseqid))
+        frameshifted_fullqseq, newcigar, newqstart, newqstop, frame = frameshift_fullseq(
+            row.full_qseq, row.cigar, row.qstart, row.qend, row.qframe)
         result = DiamondSearchResult(
-            queryid,
-            BioSequences.LongAA(row.qseq_translated), row.qstart,
-            row.qend, row.qframe, subjectid,
-            BioSequences.LongAA(row.sseq), row.sstart, row.send,
-            row.cigar, row.pident, row.bitscore
+            queryid, BioSequences.LongAA(row.qseq_translated), frameshifted_fullqseq, 
+            newqstart, newqstop, frame, subjectid, BioSequences.LongAA(row.sseq),
+            row.sstart, row.send, newcigar, row.pident, row.bitscore
         )
         push!(diamondsearchresults, result)
     end
+
+    close(io)
     return diamondsearchresults
+end
+
+function frameshift(
+    sequence::Union{BioSequences.LongDNA, AbstractString},
+    cigar::AbstractString,
+    frame::Int64
+)
+    if typeof(sequence) <: AbstractString
+        sequence = LongDNA{4}(sequence)
+    end
+    if frame < 0
+        return frameshift(reverse_complement(sequence), cigar)
+    else
+        return frameshift(sequence, cigar)
+    end
+end
+
+function frameshift(
+    sequence::Union{BioSequences.LongDNA, AbstractString},
+    cigar::AbstractString
+)::Tuple{BioSequences.LongDNA, AbstractString}
+    cigar = replace(cigar, "\\" => "f", "/" => "b") # see DIAMOND Wiki on GitHub, \ = +1, / = -1 in translation direction
+    anchors = collect(eachmatch(r"[fbMIDNSHP=X]", cigar)) # b for backwards, f for forwards frameshift
+    positions = collect(eachmatch(r"\d+", cigar))
+    index = 1
+    seqbuffer = IOBuffer()
+
+    for (p, anchor) in zip(positions, anchors)
+        pos = parse(Int64, p.match)
+        # anchor corresponding to pos * 1 nucleotide
+        if isequal(anchor.match, "f")
+            index += pos
+        elseif isequal(anchor.match, "b")
+            index -= pos
+        # anchor corresponding to pos * nucleotide triplet (if DELETE, don't change index): (delete = gap in ref)
+        elseif !BioAlignments.isdeleteop(BioAlignments.Operation(anchor.match[1]))
+            print(seqbuffer, sequence[index:index + 3 * pos - 1])
+            index += 3 * pos
+        end
+    end
+
+    tmpcigar = replace(cigar, r"\d+b" => "", r"\d+f" => "") # delete frameshifts
+    tmpanchors = collect(eachmatch(r"[MIDNSHP=X]", tmpcigar))
+    tmppositions = collect(eachmatch(r"\d+", tmpcigar))
+    newcigar = ""
+    poscount = 0
+    # if there are consecutive same operations after rm frameshifts, bundle them together
+    for i in 1:lastindex(tmpanchors)-1
+        poscount += parse(Int64, tmppositions[i].match)
+        if !isequal(tmpanchors[i].match, tmpanchors[i+1].match)
+            newcigar = *(newcigar, string(poscount), tmpanchors[i].match)
+            poscount = 0
+        end
+    end
+    poscount += parse(Int64, last(tmppositions).match)
+    newcigar = *(newcigar, string(poscount), last(tmpanchors).match)
+
+    return (LongDNA{4}(String(take!(seqbuffer))), newcigar)
+end
+
+function frameshift_fullseq(fullqseq::AbstractString, 
+    cigar::AbstractString, tstart::Int64, tstop::Int64, frame::Int64
+)::Tuple{LongDNA, AbstractString, Int64, Int64, Int64}
+    if frame >= 0 # 0 = unspecified frame, assume forward strand...
+        frameshifted, newcigar = frameshift(fullqseq[tstart:tstop], cigar)
+        patched = fullqseq[firstindex(fullqseq):tstart-1] * 
+            String(frameshifted) * fullqseq[tstop+1:lastindex(fullqseq)]
+        newtstop = tstart + length(frameshifted) - 1
+        return (BioSequences.LongDNA{4}(patched), newcigar, tstart, newtstop, frame)
+    else # in case of negative reading frames, apply cigar ops to reverse complement
+        revtstart = length(fullqseq) - tstart + 1
+        revtstop = length(fullqseq) - tstop + 1
+        revcomp = reverse_complement(LongDNA{4}(fullqseq))
+        frameshifted, newcigar = frameshift(revcomp[revtstart:revtstop], cigar)
+        revcomp_patched = LongDNA{4}(join([revcomp[firstindex(fullqseq):revtstart-1], 
+            frameshifted, revcomp[revtstop+1:lastindex(fullqseq)]]))
+        newrevtstop = revtstart + length(frameshifted) - 1
+        return (revcomp_patched, newcigar, revtstart, newrevtstop, -frame) # return reverse complement
+        # --> after this, assume positive frame!
+    end
 end
 
 """
@@ -73,13 +161,22 @@ function writeblastTSV(
     header=false,
     omit::Vector{Symbol}=Symbol[]
 )::AbstractString
-    #dataframe = select!(DataFrames.DataFrame(results), Not(:subjectid))
+    # ATTENTION: this function operates on the DiamondSearchResult Array, i.e. 
+    # the full_querysequence is modified (includes frameshifts and is potentially 
+    # reverse-complement of "original" DNA seq)
+    # this results in frame being always positive
+    # cigar should not contain frameshifting ops
     dataframe = select!(DataFrames.DataFrame(results), Not(omit))
     if !in(:queryid, omit)
         dataframe[!, :queryid] = map(result -> result.queryid.id, results)
     end
     if !in(:subjectid, omit)
         dataframe[!, :subjectid] = map(result -> result.subjectid.id, results)
+    end
+    # not really necessary; frameshifts should be absent from modified cigar string
+    if !in(:cigar, omit) 
+        dataframe[!, :cigar] = map(c -> replace(c, "b" => "/", "f" => "\\"), 
+            dataframe[!, :cigar])
     end
     CSV.write(path, dataframe, delim=delimiter, writeheader=header)
     return path

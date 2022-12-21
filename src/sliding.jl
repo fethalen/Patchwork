@@ -47,6 +47,49 @@ function cutalignment(
     return sequence
 end
 
+function cutsequence(
+    seq::Union{BioSequences.LongAA, BioSequences.LongDNA},
+    cuttingpoints::Vector{Tuple{Int64,Int64}},
+    seqend::Int64
+)
+    keep = []
+    keepopen = false
+    cutbegin = first(first(cuttingpoints))
+    cutend = last(last(cuttingpoints))
+    keepbegin = 1
+    sequence = typeof(seq)()
+
+    # If the first cut starts after the first position, include everything up until that
+    # point
+    if cutbegin > 1
+        push!(keep, (keepbegin, cutbegin - 1))
+    end
+
+    # Retrieve positions in between the cutting points
+    for (cutbegin, cutend) in cuttingpoints
+        if !keepopen
+            keepbegin = cutend + 1
+            keepopen = true
+        else
+            keepend = cutbegin - 1
+            push!(keep, (keepbegin, keepend))
+            keepopen = false
+        end
+    end
+
+    # If the last cut comes before the last position in the alignment, include everything
+    # after that point
+    if cutend < seqend
+        push!(keep, (cutend + 1, seqend))
+    end
+
+    for (keepbegin, keepend) in keep
+        sequence *= seq[keepbegin:keepend]
+    end
+
+    return sequence
+end
+
 """
     slidingwindow(alignment, windowsize, distancethreshold)
 
@@ -56,6 +99,7 @@ provided `alignment` where the average distance within the window falls below th
 """
 function slidingwindow(
     alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAA,BioSequences.LongAA},
+    dna::BioSequences.LongDNA,
     windowsize::Int64,
     distancethreshold::Float64,
     scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
@@ -71,6 +115,7 @@ function slidingwindow(
     windowstart = 1
     windowstop = alignmentend - windowsize + windowstart
     flagged = Tuple{Int64,Int64}[]
+    dnaflagged = Tuple{Int64,Int64}[]
     cutbegin = 0
     cutend = 0
     cutopen = false
@@ -91,16 +136,21 @@ function slidingwindow(
             end
         elseif cutopen && i > cutend + 1
             push!(flagged, (cutbegin, cutend))
+            push!(dnaflagged, (3*(cutbegin-1)+1, 3*cutend))
             cutopen = false
         end
     end
     if cutopen
         push!(flagged, (cutbegin, lastpos))
+        push!(dnaflagged, (3*(cutbegin-1)+1, lastindex(dna)))
     end
 
     if length(flagged) == 0 # no need for trimming
-        return alignment
+        return alignment, dna
     else
-        return pairalign_global(cutalignment(alignment, flagged), alignment.b, scoremodel).aln
+        anchors = alignment.a.aln.anchors
+        alignmentend = last(anchors).refpos
+        return pairalign_global(cutsequence(alignment.a.seq, flagged, alignmentend), 
+            alignment.b, scoremodel).aln, cutsequence(dna, dnaflagged, lastindex(dna))
     end
 end

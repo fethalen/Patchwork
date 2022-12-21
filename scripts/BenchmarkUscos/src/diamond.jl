@@ -7,10 +7,10 @@ using BioSequences
 const DATABASE = "database.dmnd"
 const DIAMONDDB_EXT = "dmnd"
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const FIELDS = ["qseqid", "qseq", "full_qseq", "sseqid", "sseq", "full_sseq",
+const FIELDS = ["qseqid", "qseq", "full_qseq", "sseqid", "sseq", "full_sseq", "qframe",
                 "cigar", "pident", "bitscore"]
 const FIELDS_DNAQUERY = ["qseqid", "qseq", "qseq_translated", "full_qseq", "sseqid", "sseq", "full_sseq",
-                "cigar", "pident", "bitscore"]
+                "qframe", "cigar", "pident", "bitscore"]
 const OUTPUT_FORMAT = [6; FIELDS]
 const OUTPUT_FORMAT_DNAQUERY = [6; FIELDS_DNAQUERY]
 
@@ -21,6 +21,7 @@ mutable struct DiamondSearchResult
     subjectid::SequenceIdentifier
     subjectsequence::LongAA
     full_subjectsequence::LongAA
+    qframe::Int64
     cigar::AbstractString
     percentidentical::Float64
     bitscore::Float64
@@ -37,10 +38,14 @@ Filters non-unique results and results with less percent identity than
  qframe sseq seq`
 """
 function readblastTSV(path::AbstractString; dnaquery::Bool=false)::Array{DiamondSearchResult,1}
+    file, io = mktemp()
+    run(pipeline(`sed 's/\\/b/g' $path`, file)) # b for backwards frameshift
+    run(pipeline(`sed 's/\//f/g' $path`, file)) # f for forwards frameshift
+
     if !dnaquery 
-        results = CSV.File(path; header=FIELDS, delim='\t') |> DataFrame
+        results = CSV.File(file; header=FIELDS, delim='\t') |> DataFrame
     else
-        results = CSV.File(path; header=FIELDS_DNAQUERY, delim='\t') |> DataFrame
+        results = CSV.File(file; header=FIELDS_DNAQUERY, delim='\t') |> DataFrame
     end
     unique!(results)
 
@@ -52,7 +57,7 @@ function readblastTSV(path::AbstractString; dnaquery::Bool=false)::Array{Diamond
             result = DiamondSearchResult(
                 queryid, LongAA(row.qseq), LongAA(row.full_qseq),
                 subjectid, LongAA(row.sseq), LongAA(row.full_sseq),
-                row.cigar, row.pident, row.bitscore
+                row.qframe, row.cigar, row.pident, row.bitscore
             )
         else
             # if no frameshift: 
@@ -87,16 +92,18 @@ function readblastTSV(path::AbstractString; dnaquery::Bool=false)::Array{Diamond
             # querysequence = translate_fromcigar(LongDNA{4}(row.qseq), row.cigar)  # julia-translation if frameshifting is allowed in DIAMOND
             # fullquery = patch_translate_fullquery(row.full_qseq, row.qseq, querysequences)
             querysequence = LongAA(row.qseq_translated)
-            fullquery = patch_translate_fullquery(row.full_qseq, row.qseq, row.qseq_translated)
+            fullquery = patch_translate_fullquery(row.full_qseq, row.qseq, row.qseq_translated, row.qframe)
 
             result = DiamondSearchResult(
                 queryid, querysequence, fullquery,
                 subjectid, LongAA(row.sseq), LongAA(row.full_sseq),
-                row.cigar, row.pident, row.bitscore
+                row.qframe, row.cigar, row.pident, row.bitscore
             )
         end
         push!(diamondsearchresults, result)
     end
+
+    close(io)
     return diamondsearchresults
 end
 
@@ -136,12 +143,16 @@ DIAMOND-translated `qseq_translated`, which corresponds to the aligned part of t
 and the julia-translated "rest" of the full query sequence (i.e. the parts that precede and 
 succeed the part of the full sequence that corresponds to `qseq_translated`).
 """
-function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractString, qseq_translated::AbstractString)::LongAA
+function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractString, 
+    qseq_translated::AbstractString, qframe::Int64
+)::LongAA
     translatedseq = LongAA(qseq_translated)
-    return patch_translate_fullquery(full_qseq, qseq, translatedseq)
+    return patch_translate_fullquery(full_qseq, qseq, translatedseq, qframe)
 end
 
-function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractString, qseq_translated::LongAA)::LongAA
+function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractString, 
+    qseq_translated::LongAA, qframe::Int64
+)::LongAA
     if isequal(full_qseq, qseq) #length(qseq) >= length(full_qseq)
         return qseq_translated
     elseif length(full_qseq) <= length(qseq)
@@ -164,7 +175,13 @@ function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractStri
         New length not divisible by three. 
         """
 
-    translatedpart = findfirst(qseq, full_qseq)
+    if qframe < 0
+        full_qseq = BioSequences.reverse_complement(full_qseq)
+        qseq = BioSequences.reverse_complement(full_qseq)
+        translatedpart = findfirst(qseq, full_qseq)
+    else
+        translatedpart = findfirst(qseq, full_qseq)
+    end
     @assert !isnothing(translatedpart) """
         query:\n $(qseq)\n 
         full query:\n $(full_qseq)\n 
@@ -191,30 +208,69 @@ end
 # not needed if patch_translate_fullquery() (i.e., using DIAMOND translation
 # qseq_translated of aligned part qseq)
 # would only be needed for julia-translating qseq
-# function translate_fromcigar(
-#     sequence::BioSequences.LongDNA,
+# function frameshift(
+#     sequence::Union{BioSequences.LongDNA, AbstractString},
+#     cigar::AbstractString,
+#     frame::Int64
+# )
+#     if typeof(sequence) <: AbstractString
+#         sequence = LongDNA{4}(sequence)
+#     end
+#     if frame < 0
+#         return frameshift(reverse_complement(sequence), cigar)
+#     else
+#         return frameshift(sequence, cigar)
+#     end
+# end
+
+# function frameshift(
+#     sequence::Union{BioSequences.LongDNA, AbstractString},
 #     cigar::AbstractString
-# )::BioSequences.LongAA
-#     anchors = collect(eachmatch(r"[/\\MIDNSHP=X]", cigar))
+# )::Tuple{BioSequences.LongDNA, AbstractString}
+#     cigar = replace(cigar, "\\" => "b", "/" => "f")
+#     anchors = collect(eachmatch(r"[fbMIDNSHP=X]", cigar)) # b for backwards, f for forwards frameshift
 #     positions = collect(eachmatch(r"\d+", cigar))
 #     index = 1
-#     buffer = IOBuffer()
+#     seqbuffer = IOBuffer()
+#     newcigar = replace(cigar, "b" => "", "f" => "")
 
 #     for (p, anchor) in zip(positions, anchors)
 #         pos = parse(Int64, p.match)
 #         # anchor corresponding to pos * 1 nucleotide
-#         if isequal(anchor.match, "\\")
+#         if isequal(anchor.match, "b")
 #             index += pos
-#         elseif isequal(anchor.match, "/")
+#         elseif isequal(anchor.match, "f")
 #             index -= pos
 #         # anchor corresponding to pos * nucleotide triplet (if DELETE, don't change index):
 #         elseif !BioAlignments.isdeleteop(BioAlignments.Operation(anchor.match[1]))
-#             print(buffer, sequence[index:index + 3 * pos - 1])
+#             print(seqbuffer, sequence[index:index + 3 * pos - 1])
 #             index += 3 * pos
 #         end
 #     end
 
-#     return BioSequences.translate(BioSequences.LongDNA(String(take!(buffer))))
+#     return (LongDNA{4}(String(take!(seqbuffer))), newcigar)
+# end
+
+# function frameshift_fullseq(fullqseq::AbstractString, 
+#     cigar::AbstractString, tstart::Int64, tstop::Int64
+# )::Tuple{AbstractString, AbstractString, Int64, Int64}
+#     if tstart <= tstop
+#         frameshifted, newcigar = frameshift(fullqseq, cigar)
+#         patched = fullqseq[firstindex(fullqseq):tstart-1] * 
+#             String(frameshifted) * fullqseq[tstop+1:lastindex(fullqseq)]
+#         newtstop = tstart + length(patched) - 1
+#         return (patched, newcigar, tstart, newtstop)
+#     else # in case of negative reading frames, apply cigar ops to reverse complement
+#         revtstart = length(fullqseq) - tstart + 1
+#         revtstop = length(fullqseq) - tstop + 1
+#         revcomp = reverse_complement(LongDNA{4}(fullqseq))
+#         frameshifted, newcigar = frameshift(revcomp[revtstart:revtstop], cigar)
+#         revcomp_patched = LongDNA{4}(join([revcomp[firstindex(fullqseq):revtstart-1], 
+#             frameshifted, revcomp[revtstop+1:lastindex(fullqseq)]]))
+#         patched = String(reverse_complement(revcomp_patched))
+#         newtstart = tstop + length(patched) - 1
+#         return (patched, newcigar, newtstart, tstop)
+#     end
 # end
 
 """
