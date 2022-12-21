@@ -24,6 +24,10 @@ function createbridgealignment(
     return BioAlignments.PairwiseAlignment(gapquery, reference[range], gapcigar)
 end
 
+#function createbridge_dna(length::Int64)::BioSequences.LongDNA
+#    return BioSequences.LongDNA{4}(repeat("N", length))
+#end
+
 """
     concatenate(first::PairwiseAlignment, second::PairwiseAlignment)
 
@@ -105,26 +109,32 @@ are not covered by alignments to query sequences will be aligned to gaps (empty 
 function concatenate(
     regions::Patchwork.AlignedRegionCollection,
     delimiter::Char = '@'
-)::BioAlignments.PairwiseAlignment
+)::Tuple{BioAlignments.PairwiseAlignment, BioSequences.LongDNA}
     @assert !hasoverlaps(regions) "Detected overlaps in regions."
-    @assert !isempty(regions.referencesequence) "Reference sequence may not be empty."
+    @assert !isempty(regions.referencesequence) "Reference sequence must not be empty."
     reference = regions.referencesequence.sequencedata
     isempty(regions) &&
-        return createbridgealignment(reference, 1:lastindex(regions.referencesequence))
+        return createbridgealignment(reference, 1:lastindex(regions.referencesequence))#, DNA???
 
     if regions[1].subjectfirst > 1
         alignments = [createbridgealignment(reference, 1:regions[1].subjectfirst-1),
             regions[1].pairwisealignment]
+#        dnalength = 3 * (regions[1].subjectfirst-1)
+#        dnaqueries = [createbridge_dna(dnalength), regions[1].full_querysequence[regions[1].queryfirst:regions[1].querylast]]
     else
         alignments = [regions[1].pairwisealignment]
+#        dnaqueries = [regions[1].full_querysequence[regions[1].queryfirst:regions[1].querylast]]
     end
+    dnaqueries = [regions[1].full_querysequence[regions[1].queryfirst:regions[1].querylast]] # no need for bridge DNA!
 
     if lastindex(regions) == 1
         if regions[1].subjectlast < lastindex(regions.referencesequence)
             push!(alignments, createbridgealignment(reference,
                 regions[1].subjectlast+1:lastindex(regions.referencesequence)))
+#            dnalength = 3 * (lastindex(regions.referencesequence)-regions[1].subjectlast)
+#            push!(dnaqueries, createbridge_dna(dnalength))
         end
-        return concatenate(alignments)
+        return concatenate(alignments), LongDNA{4}(join(dnaqueries))
     end
 
     otu = otupart(regions[1].queryid, delimiter) # empty if no OTU part found
@@ -143,17 +153,23 @@ function concatenate(
             push!(alignments, createbridgealignment(reference,
                     regions[i-1].subjectlast+1:regions[i].subjectfirst-1),
                 regions[i].pairwisealignment)
+#            dnalength = 3 * (regions[i].subjectfirst - regions[i-1].subjectlast + 1)
+#            push!(dnaqueries, createbridge_dna(dnalength), regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast])
         else
             push!(alignments, regions[i].pairwisealignment)
+#            push!(dnaqueries, regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast])
         end
+        push!(dnaqueries, regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast])
+
         if (i == lastindex(regions)
-            &&
-            regions[i].subjectlast < lastindex(regions.referencesequence))
+            && regions[i].subjectlast < lastindex(regions.referencesequence))
             push!(alignments, createbridgealignment(reference,
                 regions[i].subjectlast+1:length(regions.referencesequence)))
+#            dnalength = 3 * (length(regions.referencesequence) - regions[i].subjectlast + 1)
+#            push!(dnaqueries, createbridge_dna(dnalength))
         end
     end
-    return concatenate(alignments)
+    return concatenate(alignments), LongDNA{4}(join(dnaqueries))
 end
 
 """
@@ -241,7 +257,7 @@ reference sequence. This function concatenates `regions` before computing occupa
 the occupancy score based on the entire reference sequence of the collection.
 """
 function occupancy(regions::AlignedRegionCollection)::Float64
-    return occupancy(concatenate(regions))
+    return occupancy(concatenate(regions)[1]) # use the pw aln, not the concatenated dna seq
 end
 
 
@@ -251,14 +267,14 @@ Remove unaligned columns (i.e., insertions in the reference sequence) _in the qu
 sequence_.
 """
 function maskgaps(
-    alignment::BioAlignments.PairwiseAlignment
-)::BioAlignments.PairwiseAlignmentResult
-    # Iterate backwards, since we're deleting things.
-    # a is query, b is reference sequence
-    #println("MASK")
+    alignment::BioAlignments.PairwiseAlignment, 
+    dna::BioSequences.LongDNA
+)::Tuple{BioAlignments.PairwiseAlignmentResult, BioSequences.LongDNA}
     anchors = alignment.a.aln.anchors
     maskedseq = BioSequences.LongAA()
+    maskeddna = BioSequences.LongDNA{4}()
     from = 1
+    dnafrom = 1
     gapcount = 0
     for i in 2:lastindex(anchors)
         if isinsertop(anchors[i].op) # === BioAlignments.OP_INSERT
@@ -268,12 +284,19 @@ function maskgaps(
             gapcount += lastinsertion - firstinsertion + 1
             maskedseq *= alignment.a.seq[from:to]
             from = anchors[i].seqpos + 1
+            # convert AA coords to DNA coords for masking DNA seq
+            dnato = 3 * anchors[i-1].seqpos 
+            maskeddna *= dna[dnafrom:dnato]
+            dnafrom = 3 * anchors[i].seqpos + 1
         elseif i == lastindex(anchors)
             to = anchors[i].seqpos
             maskedseq *= alignment.a.seq[from:to]
+            # convert AA coords to DNA coords for masking DNA seq
+            dnato = 3 * anchors[i].seqpos 
+            maskeddna *= dna[dnafrom:dnato]
         end
     end
-    return pairalign_global(maskedseq, alignment.b)
+    return pairalign_global(maskedseq, alignment.b), maskeddna
 end
 
 """
@@ -285,11 +308,13 @@ the resulting query sequences to the reference using the provided `scoremodel`.
 """
 function maskalignment(
     alignment::BioAlignments.PairwiseAlignment,
+    dnaseq::BioSequences.LongDNA,
     scoremodel::BioAlignments.AbstractScoreModel,
     retainstops::Bool = false,
     retainambiguous::Bool = false
-)::BioAlignments.PairwiseAlignmentResult
+)::Tuple{BioAlignments.PairwiseAlignmentResult, BioSequences.LongDNA}
     flagged = Int64[]
+    dnaflagged = Int64[]
     queryseq = alignment.a.seq
     anchors = alignment.a.aln.anchors
     alignmentend = last(anchors).seqpos
@@ -302,9 +327,11 @@ function maskalignment(
             (refletter == AA_Gap)
         )
             push!(flagged, position)
+            push!(dnaflagged, 3*(position-1)+1:3*position...)
         end
     end
     # We reverse the list of indices as deleting from left shifts the next deletion
     map(seqpos -> deleteat!(queryseq, seqpos), reverse(flagged))
-    return pairalign_global(queryseq, alignment.b, scoremodel)
+    map(seqpos -> deleteat!(dnaseq, seqpos), reverse(dnaflagged))
+    return pairalign_global(queryseq, alignment.b, scoremodel), dnaseq
 end

@@ -25,6 +25,7 @@ import Pkg
 """
 struct AlignedRegion
     pairwisealignment::BioAlignments.PairwiseAlignment
+    full_querysequence::LongDNA
     subjectfirst::Int64
     subjectlast::Int64
     queryid::SequenceIdentifier
@@ -35,21 +36,22 @@ struct AlignedRegion
     function AlignedRegion()
         emptyaln = BioAlignments.PairwiseAlignment(BioSequences.LongAA(),
             BioSequences.LongAA(), "")
-        return new(emptyaln, 0, -1, SequenceIdentifier(), 0, -1, 0)
+        return new(emptyaln, BioSequences.LongDNA(), 0, -1, SequenceIdentifier(), 0, -1, 0)
     end
 
-    function AlignedRegion(alignment::BioAlignments.PairwiseAlignment, subjectfirst::Int64,
-        subjectlast::Int64, queryid::SequenceIdentifier, queryfirst::Int64,
-        querylast::Int64, queryframe::Int64)
-        return new(alignment, subjectfirst, subjectlast, queryid, queryfirst, querylast,
-            queryframe)
+    function AlignedRegion(alignment::BioAlignments.PairwiseAlignment, fullqseq::LongDNA, 
+        subjectfirst::Int64, subjectlast::Int64, queryid::SequenceIdentifier, 
+        queryfirst::Int64, querylast::Int64, queryframe::Int64)
+        return new(alignment, fullqseq, subjectfirst, subjectlast, queryid, queryfirst, 
+            querylast, queryframe)
     end
 
     function AlignedRegion(result::DiamondSearchResult)
         alignment = BioAlignments.PairwiseAlignment(result.translated_querysequence,
-            result.subjectsequence, cleancigar(result.cigar))
-        return new(alignment, result.subjectstart, result.subjectend, result.queryid,
-                   result.querystart, result.queryend, result.queryframe)
+            result.subjectsequence, cleancigar(result.cigar)) # should be clean from frameshift() call but nvm
+        return new(alignment, result.full_querysequence, result.subjectstart, 
+                    result.subjectend, result.queryid, result.querystart, result.queryend, 
+                    result.queryframe)
     end
 end
 
@@ -61,6 +63,7 @@ function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnch
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
     for i in 2:lastindex(anchors)
         # `alnpos` is required when the version of BioAlignments.jl >= 2.1.0
+        # if-else not necessary since BioAlignments >= 3.0.0 required in Project/Manifest
         #if packageversion("BioAlignments") >= 210
 		    positions = anchors[i].alnpos - anchors[i-1].alnpos
         #else
@@ -101,28 +104,10 @@ end
 
 function BioSequences.translate(
     sequence::BioSequences.LongDNA,
-    cigar::AbstractString
+    cigar::AbstractString, 
+    frame::Int64=0 # not specified
 )::BioSequences.LongAA
-    anchors = collect(eachmatch(r"[/\\MIDNSHP=X]", cigar))
-    positions = collect(eachmatch(r"\d+", cigar))
-    index = 1
-    buffer = IOBuffer()
-
-    for (p, anchor) in zip(positions, anchors)
-        pos = parse(Int64, p.match)
-        # anchor corresponding to pos * 1 nucleotide
-        if isequal(anchor.match, "\\")
-            index += pos
-        elseif isequal(anchor.match, "/")
-            index -= pos
-        # anchor corresponding to pos * nucleotide triplet (if DELETE, don't change index):
-        elseif !BioAlignments.isdeleteop(BioAlignments.Operation(anchor.match[1]))
-            print(buffer, sequence[index:index + 3 * pos - 1])
-            index += 3 * pos
-        end
-    end
-
-    return BioSequences.translate(BioSequences.LongDNA(String(take!(buffer))))
+    return BioSequences.translate(frameshift(sequence, cigar, frame)[1])
 end
 
 function Base.show(
@@ -340,9 +325,9 @@ function Base.getindex(
     subjectfirst = first(indices)
     subjectlast = last(indices)
     queryfirst, querylast = Patchwork.subject_queryboundaries(region, indices)
-    return AlignedRegion(region.pairwisealignment[indices].aln,
+    return AlignedRegion(region.pairwisealignment[indices].aln, region.full_querysequence, 
         subject2fullsubject(region, subjectfirst), subject2fullsubject(region, subjectlast),
-        region.queryid, queryfirst, querylast, region.queryframe)
+        region.queryid, queryfirst, querylast, region.queryframe)#, region.fqueryfist, region.fquerylast)
 end
 
 function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegion
@@ -396,7 +381,6 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     #queryint = max(1, first(queryint)):last(queryint)
     @assert first(queryint) != 0
 
-
     #latest_bioalignments = packageversion("BioAlignments") >= 210
 
     querystart = first(queryint)
@@ -420,9 +404,9 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     sliced = BioAlignments.PairwiseAlignment(query[queryint],
         subject[subjectstart:subjectend], cigar(newanchors))
     queryfirst, querylast = subject_queryboundaries(region, subjectstart:subjectend)
-    return AlignedRegion(sliced, subject2fullsubject(region, subjectstart),
-        subject2fullsubject(region, subjectend), region.queryid, queryfirst, querylast,
-        region.queryframe)
+    return AlignedRegion(sliced, region.full_querysequence, 
+        subject2fullsubject(region, subjectstart), subject2fullsubject(region, subjectend), 
+        region.queryid, queryfirst, querylast, region.queryframe)
 end
 
 """
