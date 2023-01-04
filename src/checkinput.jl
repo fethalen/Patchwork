@@ -27,11 +27,12 @@ const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(
                          "PAM70"=>(10, 1), "PAM250"=>(14, 2))
 const AVAIL_DIAMOND = ["sensitivity", "iterate", "frameshift", "evalue", "min-score", 
     "max-target-seqs", "top", "max-hsps", "id", "query-cover", "subject-cover", 
-    "query-gencode", "strand", "min-orf"]
+    "query-gencode", "strand", "min-orf", "masking"]
 const DIAMONDSTRANDS = ["both", "plus", "minus"]
 const DIAMONDMODES = ["fast", "mid-sensitive", "sensitive", "more-sensitive", 
     "very-sensitive", "ultra-sensitive"]
 const DMND_ITERATE = ["PATCHWORK_OFF"]
+const DIAMONDMASK = ["0", "1", "seg"]
 
 # FUNCTIONS ###############################################################################
 
@@ -343,9 +344,13 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
         end
         push!(diamondflags, "--iterate", args["iterate"]...)
     end
+    if args["masking"] < 0 || args["masking"] > 2
+        error("Only values '0', '1', and '2' are allowed for the --masking option.")
+    end
+    push!(diamondflags, "--masking", DIAMONDMASK[args["masking"] + 1]) # 1-based indexing
 
     for opt in AVAIL_DIAMOND
-        (isequal(opt, "sensitivity") || isequal(opt, "iterate")) && continue
+        in(opt, ["sensitivity", "iterate", "masking"]) && continue
         if !isnothing(args[opt])
             push!(diamondflags, "--" * opt, string(args[opt]))
         end

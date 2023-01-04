@@ -300,6 +300,13 @@ function parse_parameters()
         help = "Discard DIAMOND hits with less subject cover than the given percentage"
         arg_type = Float64
         metavar = "PERCENTAGE"
+        "--masking"
+        help = """Set the DIAMOND mode for repeat masking. Masking is disabled by default (0). 
+            Set to 1 to enable tantan masking, or to 2 to enable default BLASTP SEG masking. 
+            Note that the latter requires a DIAMOND version >= 2.0.12."""
+        arg_type = Int64
+        metavar = "MODE"
+        default = 0 # TODO: default 0 or default 1? (which one works better for Patchwork?)
         # end of DIAMOND options ##########################################################
 
         "--len"
