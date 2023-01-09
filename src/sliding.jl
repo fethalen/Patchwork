@@ -135,13 +135,17 @@ function slidingwindow(
                 cutopen = true
             end
         elseif cutopen && i > cutend + 1
+            cutbegin = ref2seq(alignment, cutbegin)[1] # get position from (position, operation)
+            cutend = ref2seq(alignment, cutend)[1]
             push!(flagged, (cutbegin, cutend))
             push!(dnaflagged, (3*(cutbegin-1)+1, 3*cutend))
             cutopen = false
         end
     end
     if cutopen
-        push!(flagged, (cutbegin, lastpos))
+        cutbegin = ref2seq(alignment, cutbegin)[1]
+        cutend = ref2seq(alignment, lastpos)[1]
+        push!(flagged, (cutbegin, cutend)) # lastpos
         push!(dnaflagged, (3*(cutbegin-1)+1, lastindex(dna)))
     end
 
@@ -149,7 +153,7 @@ function slidingwindow(
         return alignment, dna
     else
         anchors = alignment.a.aln.anchors
-        alignmentend = last(anchors).refpos
+        alignmentend = last(anchors).seqpos # last(anchors).refpos
         return pairalign_global(cutsequence(alignment.a.seq, flagged, alignmentend), 
             alignment.b, scoremodel).aln, cutsequence(dna, dnaflagged, lastindex(dna))
     end
