@@ -19,7 +19,8 @@ RUN wget http://github.com/bbuchfink/diamond/releases/download/v2.0.13/diamond-l
 ENV PATH /home/patchwork/julia-1.8.3/bin:$PATH
 RUN wget https://github.com/fethalen/Patchwork/archive/v$VERSION.tar.gz \
     && tar xvzf v$VERSION.tar.gz && cd Patchwork-$VERSION \ 
-    && julia src/compile.jl . src/precompiled.jl ../patchwork-$VERSION
+    && julia --project=. -e "import Pkg; Pkg.instantiate()" \
+    && julia --project=. src/compile.jl . src/precompiled.jl ../patchwork-$VERSION
 
 
 # To reduce the final image size, use a multi-stage build:
