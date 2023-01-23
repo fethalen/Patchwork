@@ -25,7 +25,7 @@ const GAPS = Dict("BLOSUM45"=>[(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13,
 const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(11, 1),
                          "BLOSUM80"=>(10, 1), "BLOSUM90"=>(10, 1), "PAM30"=>(9, 1),
                          "PAM70"=>(10, 1), "PAM250"=>(14, 2))
-const AVAIL_DIAMOND = ["sensitivity", "iterate", "frameshift", "evalue", "min-score", 
+const AVAIL_DIAMOND = ["iterate", "frameshift", "evalue", "min-score", #"sensitivity",
     "max-target-seqs", "top", "max-hsps", "id", "query-cover", "subject-cover", 
     "query-gencode", "strand", "min-orf", "masking"]
 const DIAMONDSTRANDS = ["both", "plus", "minus"]
@@ -318,12 +318,12 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
         !in(args["strand"], DIAMONDSTRANDS) && error("Only values 'both', 'plus', and 'minus' 
             are allowed for the --strand option.")
     end
-    if !isnothing(args["sensitivity"])
-        !in(args["sensitivity"], DIAMONDMODES) && error("""Only values 'fast', 'mid-sensitive', 
-            'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive' are 
-            allowed for the --sensitivity option.""")
-        push!(diamondflags, "--" * args["sensitivity"])
-    end
+    # if !isnothing(args["sensitivity"])
+    #     !in(args["sensitivity"], DIAMONDMODES) && error("""Only values 'fast', 'mid-sensitive', 
+    #         'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive' are 
+    #         allowed for the --sensitivity option.""")
+    #     push!(diamondflags, "--" * args["sensitivity"])
+    # end
     if !isequal(args["iterate"], DMND_ITERATE) 
         if !isempty(args["iterate"])
             !min_diamondversion("2.0.12") && error("""DIAMOND version must be at least 2.0.12
@@ -349,8 +349,23 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
     end
     push!(diamondflags, "--masking", DIAMONDMASK[args["masking"] + 1]) # 1-based indexing
 
+    sens = false
+    for opt in DIAMONDMODES
+        if args[opt] 
+            if !sens
+                push!(diamondflags, "--" * opt)
+                sens = true
+            else
+                error("Please specify <= 1 sensitivity mode for DIAMOND.")
+            end
+        end
+    end
     for opt in AVAIL_DIAMOND
-        in(opt, ["sensitivity", "iterate", "masking"]) && continue
+        # in(opt, ["sensitivity", "iterate", "masking"]) && continue
+        # if !isnothing(args[opt])
+        #     push!(diamondflags, "--" * opt, string(args[opt]))
+        # end
+        in(opt, ["iterate", "masking"]) && continue
         if !isnothing(args[opt])
             push!(diamondflags, "--" * opt, string(args[opt]))
         end

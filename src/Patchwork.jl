@@ -1,5 +1,5 @@
 # julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultra-sensitive" --output-dir "../test/patchwork-output"
-# julia --project=. src/Patchwork.jl --contigs "test/07673_lcal.fa" --reference "test/07673_Alitta_succinea.fa" --frameshift 15 --sensitivity ultra-sensitive --output-dir "test/patchwork-output" --overwrite
+# julia --project=. src/Patchwork.jl --contigs "test/07673_lcal.fa" --reference "test/07673_Alitta_succinea.fa" --frameshift 15 --ultra-sensitive --output-dir "test/patchwork-output" --overwrite
 # diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
 
 module Patchwork
@@ -242,12 +242,30 @@ function parse_parameters()
             than 100, and 40 otherwise. Set to 1 to disable"""
         arg_type = Int64
         metavar = "NUMBER"
-        "--sensitivity"
-        help = """Set DIAMOND sensitivity mode. Allowed values are: 'fast', 'mid-sensitive', 
-            'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive'. Without 
-            this option, DIAMOND will be run in its default mode"""
-        arg_type = String
-        metavar = "MODE"
+        # "--sensitivity"
+        # help = """Set DIAMOND sensitivity mode. Allowed values are: 'fast', 'mid-sensitive', 
+        #     'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive'. Without 
+        #     this option, DIAMOND will be run in its default mode"""
+        # arg_type = String
+        # metavar = "MODE"
+        "--fast"
+        help = "Set DIAMOND sensitivity mode to 'fast'."
+        action = :store_true
+        "--mid-sensitive"
+        help = "Set DIAMOND sensitivity mode to 'mid-sensitive'."
+        action = :store_true
+        "--sensitive"
+        help = "Set DIAMOND sensitivity mode to 'sensitive'."
+        action = :store_true
+        "--more-sensitive"
+        help = "Set DIAMOND sensitivity mode to 'more-sensitive'."
+        action = :store_true
+        "--very-sensitive"
+        help = "Set DIAMOND sensitivity mode to 'very-sensitive'."
+        action = :store_true
+        "--ultra-sensitive"
+        help = "Set DIAMOND sensitivity mode to 'ultra-sensitive'."
+        action = :store_true
         # ATTENTION: error when combining iterate and frameshift (GitHub issue #593)
         "--iterate" # iterate with list requires diamond v. 2.0.12
         help = """Set DIAMOND option --iterate. In version 2.0.12 or higher, you can 
