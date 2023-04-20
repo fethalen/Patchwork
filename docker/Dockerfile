@@ -36,7 +36,7 @@ LABEL base_image="ubuntu:20.04"
 LABEL version="1"
 LABEL software="Patchwork"
 LABEL software.version="0.5.2"
-LABEL about.author="Felix Thalén <felix.thalen@uni-goettingen.de>"
+LABEL about.author="Felix Thalén <felix.thalen@cardio-care.ch>"
 LABEL about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
 LABEL about.home="https://github.com/fethalen/Patchwork"
 LABEL about.documentation="https://github.com/fethalen/Patchwork#readme"
@@ -46,7 +46,7 @@ LABEL about.tags="phylogenomics"
 
 # MAINTAINER ##################################################################################################################
 
-# MAINTAINER Felix Thalén <felix.thalen@uni-goettingen.de>
+# MAINTAINER Felix Thalén <felix.thalen@cardio-care.ch>
 
 # BUILD #######################################################################################################################
 
