@@ -122,7 +122,7 @@ function printinfo(
     about = """
     P A T C H W O R K
     - Developers: Felix Thalén & Clara G. Köhne         - Cite      : In prep.
-    - Contact   : <felix.thalen@uni-goettingen.de>      - DIAMOND v.: $diamondversion
+    - Contact   : <felix.thalen@cardio-care.ch>         - DIAMOND v.: $diamondversion
     - Wiki      : github.com/fethalen/patchwork/wiki    - Threads   : $threads
     $RULER"""
     println(about)
