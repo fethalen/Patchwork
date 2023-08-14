@@ -3,3 +3,5 @@ patchwork_output
 archive
 Manifest_main.toml.bk
 Manifest.toml.bk
+Singularity.sif
+Singularity.def
