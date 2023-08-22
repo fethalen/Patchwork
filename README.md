@@ -9,6 +9,8 @@ searches the provided DNA query contigs against one or more amino acid reference
 sequences. Multiple, overlapping hits are merged to derive a single, continuous
 sequence for each reference sequence.
 
+![Graphical Overview](https://github.com/fethalen/patchwork/blob/main/overview.png?raw=true)
+
 ### Features
 
 <img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_screenshot.png" alt="Patchwork screenshot"/>
@@ -21,8 +23,6 @@ sequence for each reference sequence.
   [DIAMOND](https://github.com/bbuchfink/diamond) for maximum speed
 
 ### Graphical Overview
-
-![Graphical Overview](https://github.com/fethalen/patchwork/blob/main/overview.png?raw=true)
 
 ### Quick installation
 

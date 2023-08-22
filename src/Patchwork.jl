@@ -40,7 +40,7 @@ export
     #collectdiamondflags,
 
     # diamond
-    FIELDS, OUTPUT_FORMAT, readblastTSV, frameshift, writeblastTSV, diamond_blastx, 
+    FIELDS, OUTPUT_FORMAT, readblastTSV, frameshift, writeblastTSV, diamond_blastx,
     diamond_makeblastdb, queryids, subjectids, isdiamonddatabase,
 
     # fasta
@@ -181,7 +181,7 @@ function parse_parameters()
     whole-genome sequencing data
     """
     settings = ArgParseSettings(description = overview,
-        version = "0.5.0",
+        version = "0.5.1",
         add_version = true)
     @add_arg_table! settings begin
         "--contigs"
@@ -226,25 +226,25 @@ function parse_parameters()
 
         # DIAMOND BLASTX options ##########################################################
         "--query-gencode"
-        help = """The genetic code DIAMOND uses for translation of query sequences. All 
-            allowed values can be found on the NCBI website. The Standard Code is used by 
+        help = """The genetic code DIAMOND uses for translation of query sequences. All
+            allowed values can be found on the NCBI website. The Standard Code is used by
             default"""
         arg_type = Int64
         metavar = "NUMBER"
         "--strand"
-        help = """Set the query strand that DIAMOND uses for alignments. Allowed values are: 
+        help = """Set the query strand that DIAMOND uses for alignments. Allowed values are:
             'both', 'plus', and 'minus'. By default, both strands are searched"""
         arg_type = String
         metavar = "STRING"
         "--min-orf"
-        help = """DIAMOND ignores translated sequences with smaller open reading frames. 
-            Default is: disabled for sequences smaller than 30, 20 fro sequences smaller 
+        help = """DIAMOND ignores translated sequences with smaller open reading frames.
+            Default is: disabled for sequences smaller than 30, 20 fro sequences smaller
             than 100, and 40 otherwise. Set to 1 to disable"""
         arg_type = Int64
         metavar = "NUMBER"
         # "--sensitivity"
-        # help = """Set DIAMOND sensitivity mode. Allowed values are: 'fast', 'mid-sensitive', 
-        #     'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive'. Without 
+        # help = """Set DIAMOND sensitivity mode. Allowed values are: 'fast', 'mid-sensitive',
+        #     'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive'. Without
         #     this option, DIAMOND will be run in its default mode"""
         # arg_type = String
         # metavar = "MODE"
@@ -268,16 +268,16 @@ function parse_parameters()
         action = :store_true
         # ATTENTION: error when combining iterate and frameshift (GitHub issue #593)
         "--iterate" # iterate with list requires diamond v. 2.0.12
-        help = """Set DIAMOND option --iterate. In version 2.0.12 or higher, you can 
-            optionally specify a space-separated list of sensitivity modes to iterate over. 
-            Allowed values are 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive', 
+        help = """Set DIAMOND option --iterate. In version 2.0.12 or higher, you can
+            optionally specify a space-separated list of sensitivity modes to iterate over.
+            Allowed values are 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive',
             'very-sensitive', 'ultra-sensitive', 'default' and none"""
         arg_type = String
         default = DMND_ITERATE
         metavar = "MODE"
         nargs = '*'
         "--frameshift"
-        help = """Allow frameshift in DIAMOND and set frameshift penalty. Without this 
+        help = """Allow frameshift in DIAMOND and set frameshift penalty. Without this
             option, frameshift is disabled entirely"""
         arg_type = Int64
         metavar = "NUMBER"
@@ -291,18 +291,18 @@ function parse_parameters()
         arg_type = Float64
         metavar = "NUMBER"
         "--max-target-seqs"
-        help = """The maximum number of subject sequences that DIAMOND may report per 
+        help = """The maximum number of subject sequences that DIAMOND may report per
             query. Default is 25; setting it to 0 will report all hits"""
         arg_type = Int64
         metavar = "NUMBER"
         "--top"
-        help = """Discard DIAMOND hits outside the given percentage range of the top 
+        help = """Discard DIAMOND hits outside the given percentage range of the top
             alignment score. This option overrides --max-target-seqs"""
         arg_type = Int64
         metavar = "NUMBER"
         "--max-hsps"
         help = """Maximum number of HSPs DIAMOND may report per target sequence for each
-            query. Default is reporting only the highest-scoring HSP. Setting this option 
+            query. Default is reporting only the highest-scoring HSP. Setting this option
             to 0 will report all alternative HSPs"""
         arg_type = Int64
         metavar = "NUMBER"
@@ -319,9 +319,9 @@ function parse_parameters()
         arg_type = Float64
         metavar = "PERCENTAGE"
         "--masking"
-        help = """Set the DIAMOND mode for repeat masking. Note that, contrary to DIAMOND 
-            default (tantan masking enabled), Patchwork disables masking by default 
-            (default: 0)! Set to 1 to enable tantan masking, or to 2 to enable default 
+        help = """Set the DIAMOND mode for repeat masking. Note that, contrary to DIAMOND
+            default (tantan masking enabled), Patchwork disables masking by default
+            (default: 0)! Set to 1 to enable tantan masking, or to 2 to enable default
             BLASTP SEG masking. Note that the latter requires a DIAMOND version >= 2.0.12."""
         arg_type = Int64
         metavar = "MODE"
@@ -442,7 +442,7 @@ function main()
     trimmedalignment_output = outdir * "/" * TRIMMEDALIGNMENT_OUTPUT
 
     if (isfile(alignmentoutput) || isdir(statsoutput) && !isempty(readdir(statsoutput))
-        || (isdir(fastaoutput) && !isempty(readdir(fastaoutput))) 
+        || (isdir(fastaoutput) && !isempty(readdir(fastaoutput)))
         || (isdir(dnafastaoutput) && !isempty(readdir(dnafastaoutput))))
         if !args["overwrite"]
             answer = warn_overwrite()

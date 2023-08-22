@@ -135,13 +135,15 @@ function selectsequence(
 )
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
-    record = FASTA.Record()
-    open(FASTA.Reader, fastafile) do reader
-        while !eof(reader)
-            read!(reader, record)
-            currentid = FASTA.identifier(record)
+
+    FASTAReader(open(abs_fastafile)) do reader
+        for record in reader
+            currentid = String(FASTX.identifier(record))
             if isequal(currentid, identifier.id)
-                return SequenceRecord(currentid, FASTA.sequence(record))
+                return SequenceRecord(
+                    SequenceIdentifier(currentid),
+                    FASTX.sequence(LongAA, record)
+                )
             end
         end
     end
