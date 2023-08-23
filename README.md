@@ -9,8 +9,6 @@ searches the provided DNA query contigs against one or more amino acid reference
 sequences. Multiple, overlapping hits are merged to derive a single, continuous
 sequence for each reference sequence.
 
-![Graphical Overview](https://github.com/fethalen/patchwork/blob/main/overview.png?raw=true)
-
 ### Features
 
 * Align nucleotide sequences to one or more protein sequences
@@ -21,6 +19,8 @@ sequence for each reference sequence.
   [DIAMOND](https://github.com/bbuchfink/diamond) for maximum speed
 
 ### Graphical Overview
+
+![Graphical Overview](https://github.com/fethalen/patchwork/blob/main/overview.png?raw=true)
 
 ### Quick installation
 
