@@ -2,14 +2,6 @@
 # alignment. Provides methods and types for working with the range and
 # length of such regions.
 
-import BioSequences
-import BioAlignments
-import BioGenerics
-import Pkg
-
-#include("diamond.jl")
-#include("sequencerecord.jl")
-
 """
     struct AlignedRegion
 
@@ -39,18 +31,18 @@ struct AlignedRegion
         return new(emptyaln, BioSequences.LongDNA(), 0, -1, SequenceIdentifier(), 0, -1, 0)
     end
 
-    function AlignedRegion(alignment::BioAlignments.PairwiseAlignment, fullqseq::LongDNA, 
-        subjectfirst::Int64, subjectlast::Int64, queryid::SequenceIdentifier, 
+    function AlignedRegion(alignment::BioAlignments.PairwiseAlignment, fullqseq::LongDNA,
+        subjectfirst::Int64, subjectlast::Int64, queryid::SequenceIdentifier,
         queryfirst::Int64, querylast::Int64, queryframe::Int64)
-        return new(alignment, fullqseq, subjectfirst, subjectlast, queryid, queryfirst, 
+        return new(alignment, fullqseq, subjectfirst, subjectlast, queryid, queryfirst,
             querylast, queryframe)
     end
 
     function AlignedRegion(result::DiamondSearchResult)
         alignment = BioAlignments.PairwiseAlignment(result.translated_querysequence,
             result.subjectsequence, cleancigar(result.cigar)) # should be clean from frameshift() call but nvm
-        return new(alignment, result.full_querysequence, result.subjectstart, 
-                    result.subjectend, result.queryid, result.querystart, result.queryend, 
+        return new(alignment, result.full_querysequence, result.subjectstart,
+                    result.subjectend, result.queryid, result.querystart, result.queryend,
                     result.queryframe)
     end
 end
@@ -104,7 +96,7 @@ end
 
 function BioSequences.translate(
     sequence::BioSequences.LongDNA,
-    cigar::AbstractString, 
+    cigar::AbstractString,
     frame::Int64=0 # not specified
 )::BioSequences.LongAA
     return BioSequences.translate(frameshift(sequence, cigar, frame)[1])
@@ -325,7 +317,7 @@ function Base.getindex(
     subjectfirst = first(indices)
     subjectlast = last(indices)
     queryfirst, querylast = Patchwork.subject_queryboundaries(region, indices)
-    return AlignedRegion(region.pairwisealignment[indices].aln, region.full_querysequence, 
+    return AlignedRegion(region.pairwisealignment[indices].aln, region.full_querysequence,
         subject2fullsubject(region, subjectfirst), subject2fullsubject(region, subjectlast),
         region.queryid, queryfirst, querylast, region.queryframe)#, region.fqueryfist, region.fquerylast)
 end
@@ -404,8 +396,8 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     sliced = BioAlignments.PairwiseAlignment(query[queryint],
         subject[subjectstart:subjectend], cigar(newanchors))
     queryfirst, querylast = subject_queryboundaries(region, subjectstart:subjectend)
-    return AlignedRegion(sliced, region.full_querysequence, 
-        subject2fullsubject(region, subjectstart), subject2fullsubject(region, subjectend), 
+    return AlignedRegion(sliced, region.full_querysequence,
+        subject2fullsubject(region, subjectstart), subject2fullsubject(region, subjectend),
         region.queryid, queryfirst, querylast, region.queryframe)
 end
 

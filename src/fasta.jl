@@ -1,10 +1,5 @@
 # Provides utilities and types for working with FASTA files
 
-using FASTX
-using CodecZlib
-using BioSequences
-using BioGenerics
-
 const FASTQEXTENSIONS = ["fq", "fastq"]
 
 """

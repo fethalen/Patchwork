@@ -1,8 +1,3 @@
-using BioAlignments
-using BioSymbols
-
-#include("diamond.jl")
-
 const MATRICES = Dict("BLOSUM45"=>BLOSUM45, "BLOSUM50"=>BLOSUM50,"BLOSUM62"=>BLOSUM62,
                       "BLOSUM80"=>BLOSUM80, "BLOSUM90"=>BLOSUM90, "PAM30"=>PAM30,
                       "PAM70"=>PAM70, "PAM250"=>PAM250)
@@ -26,10 +21,10 @@ const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(
                          "BLOSUM80"=>(10, 1), "BLOSUM90"=>(10, 1), "PAM30"=>(9, 1),
                          "PAM70"=>(10, 1), "PAM250"=>(14, 2))
 const AVAIL_DIAMOND = ["iterate", "frameshift", "evalue", "min-score", #"sensitivity",
-    "max-target-seqs", "top", "max-hsps", "id", "query-cover", "subject-cover", 
+    "max-target-seqs", "top", "max-hsps", "id", "query-cover", "subject-cover",
     "query-gencode", "strand", "min-orf", "masking"]
 const DIAMONDSTRANDS = ["both", "plus", "minus"]
-const DIAMONDMODES = ["fast", "mid-sensitive", "sensitive", "more-sensitive", 
+const DIAMONDMODES = ["fast", "mid-sensitive", "sensitive", "more-sensitive",
     "very-sensitive", "ultra-sensitive"]
 const DMND_ITERATE = ["PATCHWORK_OFF"]
 const DIAMONDMASK = ["0", "1", "seg"]
@@ -315,29 +310,29 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
         "--threads", string(args["threads"])]
 
     if !isnothing(args["strand"])
-        !in(args["strand"], DIAMONDSTRANDS) && error("Only values 'both', 'plus', and 'minus' 
+        !in(args["strand"], DIAMONDSTRANDS) && error("Only values 'both', 'plus', and 'minus'
             are allowed for the --strand option.")
     end
     # if !isnothing(args["sensitivity"])
-    #     !in(args["sensitivity"], DIAMONDMODES) && error("""Only values 'fast', 'mid-sensitive', 
-    #         'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive' are 
+    #     !in(args["sensitivity"], DIAMONDMODES) && error("""Only values 'fast', 'mid-sensitive',
+    #         'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive' are
     #         allowed for the --sensitivity option.""")
     #     push!(diamondflags, "--" * args["sensitivity"])
     # end
-    if !isequal(args["iterate"], DMND_ITERATE) 
+    if !isequal(args["iterate"], DMND_ITERATE)
         if !isempty(args["iterate"])
             !min_diamondversion("2.0.12") && error("""DIAMOND version must be at least 2.0.12
             to support providing a list of sensitivities with the --iterate option.""")
             # if in("default", args["iterate"]) && length(args["iterate"]) > 1
-            #     error("'default' may not be used in combination with other values when setting 
+            #     error("'default' may not be used in combination with other values when setting
             #         --iterate.")
             # end
             # if !isequal(args["iterate"][1], "default")
             for val in args["iterate"]
-                (!in(val, DIAMONDMODES) && !isequal(val, "default")) && error("""The only 
-                    values allowed for the --iterate option are 'default', a combination of 
-                    the values 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive', 
-                    'very-sensitive', and 'ultra-sensitive', provided as a space-separated 
+                (!in(val, DIAMONDMODES) && !isequal(val, "default")) && error("""The only
+                    values allowed for the --iterate option are 'default', a combination of
+                    the values 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive',
+                    'very-sensitive', and 'ultra-sensitive', provided as a space-separated
                     list, or nothing at all.""")
             end
             # end
@@ -351,7 +346,7 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
 
     sens = false
     for opt in DIAMONDMODES
-        if args[opt] 
+        if args[opt]
             if !sens
                 push!(diamondflags, "--" * opt)
                 sens = true

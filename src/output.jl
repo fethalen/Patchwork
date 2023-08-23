@@ -1,6 +1,3 @@
-using BioAlignments
-using FASTX
-
 const WIDTH = 80
 
 function cleanfiles(paths::String...)

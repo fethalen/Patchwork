@@ -1,9 +1,5 @@
 # Wrapper for running BLAST+ from the command-line.
 
-using CSV
-using DataFrames
-using BioSequences
-
 const DATABASE = "database.dmnd"
 const DIAMONDDB_EXT = "dmnd"
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
@@ -57,7 +53,7 @@ function readblastTSV(
         frameshifted_fullqseq, newcigar, newqstart, newqstop, frame = frameshift_fullseq(
             row.full_qseq, row.cigar, row.qstart, row.qend, row.qframe)
         result = DiamondSearchResult(
-            queryid, BioSequences.LongAA(row.qseq_translated), frameshifted_fullqseq, 
+            queryid, BioSequences.LongAA(row.qseq_translated), frameshifted_fullqseq,
             newqstart, newqstop, frame, subjectid, BioSequences.LongAA(row.sseq),
             row.sstart, row.send, newcigar, row.pident, row.bitscore
         )
@@ -126,12 +122,12 @@ function frameshift(
     return (LongDNA{4}(String(take!(seqbuffer))), newcigar)
 end
 
-function frameshift_fullseq(fullqseq::AbstractString, 
+function frameshift_fullseq(fullqseq::AbstractString,
     cigar::AbstractString, tstart::Int64, tstop::Int64, frame::Int64
 )::Tuple{LongDNA, AbstractString, Int64, Int64, Int64}
     if frame >= 0 # 0 = unspecified frame, assume forward strand...
         frameshifted, newcigar = frameshift(fullqseq[tstart:tstop], cigar)
-        patched = fullqseq[firstindex(fullqseq):tstart-1] * 
+        patched = fullqseq[firstindex(fullqseq):tstart-1] *
             String(frameshifted) * fullqseq[tstop+1:lastindex(fullqseq)]
         newtstop = tstart + length(frameshifted) - 1
         return (BioSequences.LongDNA{4}(patched), newcigar, tstart, newtstop, frame)
@@ -140,7 +136,7 @@ function frameshift_fullseq(fullqseq::AbstractString,
         revtstop = length(fullqseq) - tstop + 1
         revcomp = reverse_complement(LongDNA{4}(fullqseq))
         frameshifted, newcigar = frameshift(revcomp[revtstart:revtstop], cigar)
-        revcomp_patched = LongDNA{4}(join([revcomp[firstindex(fullqseq):revtstart-1], 
+        revcomp_patched = LongDNA{4}(join([revcomp[firstindex(fullqseq):revtstart-1],
             frameshifted, revcomp[revtstop+1:lastindex(fullqseq)]]))
         newrevtstop = revtstart + length(frameshifted) - 1
         return (revcomp_patched, newcigar, revtstart, newrevtstop, -frame) # return reverse complement
@@ -161,8 +157,8 @@ function writeblastTSV(
     header=false,
     omit::Vector{Symbol}=Symbol[]
 )::AbstractString
-    # ATTENTION: this function operates on the DiamondSearchResult Array, i.e. 
-    # the full_querysequence is modified (includes frameshifts and is potentially 
+    # ATTENTION: this function operates on the DiamondSearchResult Array, i.e.
+    # the full_querysequence is modified (includes frameshifts and is potentially
     # reverse-complement of "original" DNA seq)
     # this results in frame being always positive
     # cigar should not contain frameshifting ops
@@ -174,8 +170,8 @@ function writeblastTSV(
         dataframe[!, :subjectid] = map(result -> result.subjectid.id, results)
     end
     # not really necessary; frameshifts should be absent from modified cigar string
-    if !in(:cigar, omit) 
-        dataframe[!, :cigar] = map(c -> replace(c, "b" => "/", "f" => "\\"), 
+    if !in(:cigar, omit)
+        dataframe[!, :cigar] = map(c -> replace(c, "b" => "/", "f" => "\\"),
             dataframe[!, :cigar])
     end
     CSV.write(path, dataframe, delim=delimiter, writeheader=header)

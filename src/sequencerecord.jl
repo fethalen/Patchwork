@@ -1,8 +1,3 @@
-import BioSequences
-import Base
-
-#include("sequenceidentifier.jl")
-
 """
 A `SequenceRecord` represents a record in a multiple sequence alignment
 (MSA). A sequence record has an operational taxonomic unit (OTU; usually a
@@ -81,14 +76,14 @@ end
 """
     countgaps(object)
 
-Return the absolute number of gap characters in a SequenceRecord, MultipleSequenceAlignment, 
-PairwiseAlignment, or AlignedRegion. 
-For sequences in a pairwise alignment, compute the number of gaps in the query that align 
+Return the absolute number of gap characters in a SequenceRecord, MultipleSequenceAlignment,
+PairwiseAlignment, or AlignedRegion.
+For sequences in a pairwise alignment, compute the number of gaps in the query that align
 to residues in the reference sequence.
 """
 function countgaps end
 
-function countgaps(alignment::SequenceRecord)::Int64 
+function countgaps(alignment::SequenceRecord)::Int64
     length(alignment) - length(ungap(alignment))
 end
 

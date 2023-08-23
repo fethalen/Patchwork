@@ -1,8 +1,5 @@
 # Provides a "sliding window" approach for removing spurious alignments
 
-import BioAlignments
-import BioSequences
-
 function cutalignment(
     alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAA,BioSequences.LongAA},
     cuttingpoints::Vector{Tuple{Int64,Int64}}
@@ -154,7 +151,7 @@ function slidingwindow(
     else
         anchors = alignment.a.aln.anchors
         alignmentend = last(anchors).seqpos # last(anchors).refpos
-        return pairalign_global(cutsequence(alignment.a.seq, flagged, alignmentend), 
+        return pairalign_global(cutsequence(alignment.a.seq, flagged, alignmentend),
             alignment.b, scoremodel).aln, cutsequence(dna, dnaflagged, lastindex(dna))
     end
 end

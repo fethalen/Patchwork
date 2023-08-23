@@ -1,9 +1,5 @@
-using FASTX
-using CodecZlib
-using BioSequences
-
 function isfastqfile(
-    file::AbstractString, 
+    file::AbstractString,
     ext::AbstractVector{String}=FASTQEXTENSIONS
 )::Bool
     # splits = split(file, ".")
@@ -25,8 +21,8 @@ end
 function fastq2fasta(
     infile::AbstractString;
     ext::Vector{String}=FASTQEXTENSIONS,
-    removeduplicates::Bool=true, 
-    bysequence::Bool=true, 
+    removeduplicates::Bool=true,
+    bysequence::Bool=true,
     byid::Bool=true
 )::AbstractString
     isfastqfile(infile, ext) || error("Wrong file format; input must be a fastq file.")
@@ -35,7 +31,7 @@ function fastq2fasta(
     # open(FASTQ.Reader, infile) do reader
     #     for record in reader
     #         id = identifier(record)
-    #         seq = sequence(record) 
+    #         seq = sequence(record)
     #         write(fastawriter, FASTA.Record(id, seq))
     #     end
     # end
@@ -47,9 +43,9 @@ end
 
 function fastq2fasta(
     infiles::Vector{String};
-    ext::Vector{String}=FASTQEXTENSIONS, 
-    removeduplicates::Bool=true, 
-    bysequence::Bool=true, 
+    ext::Vector{String}=FASTQEXTENSIONS,
+    removeduplicates::Bool=true,
+    bysequence::Bool=true,
     byid::Bool=true
 )::Vector{AbstractString}
     output = String[]
@@ -96,10 +92,10 @@ end
 function combinefiles(files::AbstractVector{String})
     file, io = mktemp() # deduplicated (output) fasta file
     writer = FASTA.Writer(io)
-    # stores tuples of record and index of the reader it came from: 
-    seqrecords = repeat([(SequenceRecord(), 0)], length(files)) 
+    # stores tuples of record and index of the reader it came from:
+    seqrecords = repeat([(SequenceRecord(), 0)], length(files))
     record = FASTA.Record()
-    # one reader for each infile: 
+    # one reader for each infile:
     readers = Vector{FASTA.Reader}(undef, length(files))
     # index of the reader from which the next record should be read:
     nextreader_index = 0
@@ -134,7 +130,7 @@ function combinefiles(files::AbstractVector{String})
         read!(readers[nextreader_index], record)
         seqrecord = SequenceRecord(FASTA.identifier(record), FASTA.sequence(record))
         # ...and add to array only if it doesn't yet contain any of sequence, revcomp or ID
-        if !(in(seqrecord.sequencedata, mappedsequences) || 
+        if !(in(seqrecord.sequencedata, mappedsequences) ||
             in(reverse_complement(seqrecord.sequencedata), mappedsequences) ||
             in(seqrecord.id.id, map(tuple -> tuple[1].id.id, seqrecords)))
             push!(seqrecords, (seqrecord, nextreader_index))

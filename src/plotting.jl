@@ -1,6 +1,3 @@
-import Plots
-import UnicodePlots
-
 function plot_querycover(
     query_cover::Vector{Float64},
     fileout::AbstractString

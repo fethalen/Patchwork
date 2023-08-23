@@ -13,8 +13,6 @@ sequence for each reference sequence.
 
 ### Features
 
-<img src="https://github.com/fethalen/Patchwork/blob/main/patchwork_screenshot.png" alt="Patchwork screenshot"/>
-
 * Align nucleotide sequences to one or more protein sequences
 * Works with already assembled contigs _or_ raw reads
 * Stitch overlapping or gappy sequences together based on a reference

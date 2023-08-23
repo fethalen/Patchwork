@@ -1,11 +1,5 @@
 # Provides basic types for working with the general feature format (GFF).
 
-#import Base
-import GFF3
-import DataFrames
-using GenomicFeatures
-using BioCore
-
 columns = [:seqid, :source, :type, :start, :end_, :score, :strand, :phase, :attributes]
 attributelist = ["ID", "Name", "Alias", "Parent", "Target", "Gap", "Derives_from", "Note", "Dbxref", "Ontology_term", "Is_circular"]
 

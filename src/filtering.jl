@@ -1,9 +1,3 @@
-using BioSequences
-using DataFrames
-
-#include("multiplesequencealignment.jl")
-#include("alignedregion.jl")
-
 function remove_duplicates!(searchresults::DataFrame)::DataFrame
     unique!(searchresults, [:qstart, :qend])
     return searchresults

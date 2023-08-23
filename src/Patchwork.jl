@@ -4,6 +4,49 @@
 
 module Patchwork
 
+using ArgParse
+using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
+using BioAlignments
+# using BioCore
+using BioSequences
+using BioSymbols
+using CSV
+using CodecZlib
+using DataFrames
+using FASTX
+using GenomicFeatures
+using PackageCompiler
+using PrettyTables
+using Statistics
+
+import Base
+import BioGenerics
+# import GFF3
+import Pkg
+import Plots
+import Random
+import UnicodePlots
+
+include("sequenceidentifier.jl")
+include("sequencerecord.jl")
+include("fasta.jl")
+include("fastq.jl")
+# include("gffrecord.jl")
+# include("gffrecordcollection.jl")
+include("multiplesequencealignment.jl")
+include("diamond.jl")
+include("alignedregion.jl")
+include("alignedregioncollection.jl")
+include("alignment.jl")
+include("filtering.jl")
+include("alignment.jl")
+include("alignmentconcatenation.jl")
+include("checkinput.jl")
+include("output.jl")
+include("plotting.jl")
+include("sliding.jl")
+include("clustering.jl")
+
 export
     # types
     SequenceIdentifier,
@@ -18,7 +61,7 @@ export
     subject2fullquery, fullsubject2subject, fullsubject2query, fullsubject2fullquery,
     query2fullquery, fullsubject_queryboundaries, subject_queryboundaries, slicealignment,
     query_leftposition, query_rightposition, subject_leftposition, subject_rightposition,
-    subjectinterval, queryinterval, queryframe, isordered, precedes, #isoverlapping,
+    subjectinterval, queryinterval, queryframe, isordered, precedes, isoverlapping,
     samerange, identifier, sameid, samesequence, merge, leftintersection, rightintersection,
     overlap, beforeoverlap, afteroverlap, shadows, equalrange, totalrange, longest,
     isnucleotide, isaminoacid,
@@ -29,6 +72,7 @@ export
 
     # alignment
     DEFAULT_SCOREMODEL, pairalign_global, pairalign_local, order, realign,
+    gapexcluded_identity,
 
     # alignmentconcatenation
     createbridgealignment, concatenate, countmatches, occupancy, maskgaps, countgaps,
@@ -67,31 +111,6 @@ export
     # sequencerecord
     missingdata, gappositions, nongap_range, has_compoundregions, fillmissing, compoundregions,
     compoundranges, nongap_ranges
-
-using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
-using ArgParse
-using BioAlignments
-using CSV
-using FASTX
-using DataFrames
-using PrettyTables
-using Statistics
-
-include("sequenceidentifier.jl")
-include("sequencerecord.jl")
-include("multiplesequencealignment.jl")
-include("filtering.jl")
-include("diamond.jl")
-include("alignedregion.jl")
-include("alignedregioncollection.jl")
-include("alignment.jl")
-include("alignmentconcatenation.jl")
-include("checkinput.jl")
-include("fasta.jl")
-include("fastq.jl")
-include("output.jl")
-include("plotting.jl")
-include("sliding.jl")
 
 const EMPTY = String[]
 # const DIAMONDFLAGS = ["--ultra-sensitive", "--iterate", "--evalue", "0.001",
@@ -181,7 +200,7 @@ function parse_parameters()
     whole-genome sequencing data
     """
     settings = ArgParseSettings(description = overview,
-        version = "0.5.1",
+        version = "0.5.3",
         add_version = true)
     @add_arg_table! settings begin
         "--contigs"

@@ -1,12 +1,3 @@
-import BioAlignments
-using BioSequences
-
-#include("alignment.jl")
-#include("alignedregion.jl")
-#include("alignedregioncollection.jl")
-
-#########################################################################################################################################################
-
 """
     createbridgealignment(reference::LongSequence)
 
@@ -267,7 +258,7 @@ Remove unaligned columns (i.e., insertions in the reference sequence) _in the qu
 sequence_.
 """
 function maskgaps(
-    alignment::BioAlignments.PairwiseAlignment, 
+    alignment::BioAlignments.PairwiseAlignment,
     dna::BioSequences.LongDNA
 )::Tuple{BioAlignments.PairwiseAlignmentResult, BioSequences.LongDNA}
     anchors = alignment.a.aln.anchors
@@ -285,14 +276,14 @@ function maskgaps(
             maskedseq *= alignment.a.seq[from:to]
             from = anchors[i].seqpos + 1
             # convert AA coords to DNA coords for masking DNA seq
-            dnato = 3 * anchors[i-1].seqpos 
+            dnato = 3 * anchors[i-1].seqpos
             maskeddna *= dna[dnafrom:dnato]
             dnafrom = 3 * anchors[i].seqpos + 1
         elseif i == lastindex(anchors)
             to = anchors[i].seqpos
             maskedseq *= alignment.a.seq[from:to]
             # convert AA coords to DNA coords for masking DNA seq
-            dnato = 3 * anchors[i].seqpos 
+            dnato = 3 * anchors[i].seqpos
             maskeddna *= dna[dnafrom:dnato]
         end
     end

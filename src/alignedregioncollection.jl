@@ -161,7 +161,7 @@ function hasoverlaps(
     end
 
     for i in 2:lastindex(regions)
-        if isoverlapping(regions[i], regions[i - 1])
+        if BioGenerics.isoverlapping(regions[i], regions[i - 1])
             return true
         end
     end

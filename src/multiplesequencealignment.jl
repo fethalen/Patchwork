@@ -1,8 +1,5 @@
 # Utilities and types for working with multiple sequence alignments (MSAs)
 
-using BioSequences
-#include("sequencerecord.jl")
-
 """
 Datastructures which holds a collection of `SequenceRecord`s.
 """
@@ -104,7 +101,7 @@ function Base.sort(msa::MultipleSequenceAlignment; bysequence::Bool=true, byid::
     return sortedmsa
 end
 
-function Base.sortperm(msa::MultipleSequenceAlignment; alg::Base.Algorithm=Base.DEFAULT_UNSTABLE, 
+function Base.sortperm(msa::MultipleSequenceAlignment; alg::Base.Algorithm=Base.DEFAULT_UNSTABLE,
     lt=isless, by=identity, rev::Bool=false, order::Base.Ordering=Base.Forward)
     return sortperm(msa.sequences; alg=alg, lt=lt, by=by, rev=rev, order=order)
 end
@@ -274,7 +271,7 @@ function mktemp_fasta(
 end
 
 function remove_duplicates!(msa::MultipleSequenceAlignment; bysequence::Bool=true, byid::Bool=true)
-    if bysequence 
+    if bysequence
         msa = sort(msa; bysequence=true, byid=false)
         i = 1
         while i < lastindex(msa)
@@ -307,9 +304,9 @@ end
 
 function pool(
     files::AbstractVector{String};
-    name::AbstractString="", 
+    name::AbstractString="",
     removeduplicates::Bool=true,
-    bysequence::Bool=true, 
+    bysequence::Bool=true,
     byid::Bool=true
 )::MultipleSequenceAlignment
     result = MultipleSequenceAlignment(name)
@@ -326,7 +323,7 @@ end
 function cat(files::AbstractVector{String})
     tmpfile, tmpio = mktemp()
     for file in files
-        if isgzipcompressed(file) 
+        if isgzipcompressed(file)
             run(pipeline(`gunzip -c $file`, stdout=tmpfile, append=true))
         else
             run(pipeline(`cat $file`, stdout=tmpfile, append = true))

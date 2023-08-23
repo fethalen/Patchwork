@@ -1,19 +1,13 @@
-using FASTX
-using CodecZlib
-using BioSequences
-using BioAlignments
-using Patchwork
-
-# Subsample reads: 
-# julia --project=/home/clara/Patchwork/scripts/Subsample /home/clara/Patchwork/scripts/Subsample/src/Subsample.jl --r1 ~/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_1.fq.gz --r2 ~/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_2.fq.gz --count 40000000 --random --outdir ~/Data 
+# Subsample reads:
+# julia --project=/home/clara/Patchwork/scripts/Subsample /home/clara/Patchwork/scripts/Subsample/src/Subsample.jl --r1 ~/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_1.fq.gz --r2 ~/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_2.fq.gz --count 40000000 --random --outdir ~/Data
 
 # no internal gaps allowed --> look only at diagonals in alignment matrix
 # only diagonals that are long enough to meet the threshold t are considered
-# if inside such a diagonal, it is found that the sequences do not align well enough to meet t, 
+# if inside such a diagonal, it is found that the sequences do not align well enough to meet t,
 # the alignment for that diagonal is stopped and we continue with the next diagonal.
-# alignment scoring is very basic bc the sequences are evaluated according to identity 
+# alignment scoring is very basic bc the sequences are evaluated according to identity
 # --> exact match +1, mismatch +-0 (for now, can be adjusted or added to fct signature later)
-# score(x,y) = score(x-1, y-1) + m or - mm depending 
+# score(x,y) = score(x-1, y-1) + m or - mm depending
 # any(score(x,y) / length(shorter sequence) >= t) ? success : fail
 function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
     matrix = zeros(Int64, length(s1), length(s2)) # s1 ^= rows, s2 ^= columns; 0st row/col ^= gap
@@ -34,13 +28,13 @@ function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
             x = coords[1]
             y = coords[2]
             if x == 1 || y == 1 # no internal gaps allowed
-                matrix[x, y] = isequal(s1[x], s2[y]) ? m : -mm 
+                matrix[x, y] = isequal(s1[x], s2[y]) ? m : -mm
             else # no internal gaps allowed
-                matrix[x, y] = isequal(s1[x], s2[y]) ? matrix[x-1, y-1] + m : matrix[x-1, y-1] - mm 
+                matrix[x, y] = isequal(s1[x], s2[y]) ? matrix[x-1, y-1] + m : matrix[x-1, y-1] - mm
             end
-            if matrix[x, y] / shorter >= t # threshold met! 
+            if matrix[x, y] / shorter >= t # threshold met!
                 return true
-            elseif (matrix[x, y] + shorter - coords[pos]) / shorter < t 
+            elseif (matrix[x, y] + shorter - coords[pos]) / shorter < t
                 break # mark this diagonal as done/look at next diagonal
             end # else continue in this diagonal because t can still be met
         end
@@ -53,16 +47,16 @@ function gapfreealign_t(first::SequenceRecord, second::SequenceRecord, t::Float6
 end
 
 ###########################################################################################
-# simple (gapfree-align) LINCLUST: 
+# simple (gapfree-align) LINCLUST:
 
 # (MORE OR LESS) COPIED FROM LINCLUST SUPPLEMENTARY MATERIAL ------------------------------
 rotateleft(val, bits) = xor(val << bits, val >> (16 - bits))
 
 function circularhash(kmer::LongDNA, k::Int64)
     # fixed 16bit randoms
-    rands = Dict(DNA_A => 0x4567, DNA_C => 0x23c6, DNA_G => 0x9869, DNA_T => 0x4873, 
-        DNA_M => 0xdc51, DNA_R => 0x5cff, DNA_W => 0x944a, DNA_S => 0x58ec, DNA_Y => 0x1f29, 
-        DNA_K => 0x7ccd, DNA_V => 0x58ba, DNA_H => 0xd7ab, DNA_D => 0x41f2, DNA_B => 0x1efb, 
+    rands = Dict(DNA_A => 0x4567, DNA_C => 0x23c6, DNA_G => 0x9869, DNA_T => 0x4873,
+        DNA_M => 0xdc51, DNA_R => 0x5cff, DNA_W => 0x944a, DNA_S => 0x58ec, DNA_Y => 0x1f29,
+        DNA_K => 0x7ccd, DNA_V => 0x58ba, DNA_H => 0xd7ab, DNA_D => 0x41f2, DNA_B => 0x1efb,
         DNA_N => 0xa9e3, DNA_Gap => 0xe146)
     h = 0x0
     h = xor(h, rands[kmer[1]])
@@ -75,9 +69,9 @@ end
 
 # rolling hash variant for previous hash function
 function circularhash_next(seq::LongDNA, k::Int64, prevbase::DNA, h::UInt16)
-    rands = Dict(DNA_A => 0x4567, DNA_C => 0x23c6, DNA_G => 0x9869, DNA_T => 0x4873, 
-        DNA_M => 0xdc51, DNA_R => 0x5cff, DNA_W => 0x944a, DNA_S => 0x58ec, DNA_Y => 0x1f29, 
-        DNA_K => 0x7ccd, DNA_V => 0x58ba, DNA_H => 0xd7ab, DNA_D => 0x41f2, DNA_B => 0x1efb, 
+    rands = Dict(DNA_A => 0x4567, DNA_C => 0x23c6, DNA_G => 0x9869, DNA_T => 0x4873,
+        DNA_M => 0xdc51, DNA_R => 0x5cff, DNA_W => 0x944a, DNA_S => 0x58ec, DNA_Y => 0x1f29,
+        DNA_K => 0x7ccd, DNA_V => 0x58ba, DNA_H => 0xd7ab, DNA_D => 0x41f2, DNA_B => 0x1efb,
         DNA_N => 0xa9e3, DNA_Gap => 0xe146)
     h = xor(h, rotateleft(rands[prevbase], (5 * k) % 16))
     h = rotateleft(h, 5)
@@ -108,12 +102,12 @@ end
 Base.isempty(kmerindex::KmerIndex) = isempty(kmerindex.kmer)
 
 # split the file first (splitfile in fastq.jl) in filelength reads per tempfile!!!
-# then you can use the following functions sequentially for doing the clustering: 
+# then you can use the following functions sequentially for doing the clustering:
 
 function buildkmertable(
-    name::AbstractString, 
-    reader::Union{FASTA.Reader, FASTQ.Reader}, 
-    k::Int64, m::Int64, 
+    name::AbstractString,
+    reader::Union{FASTA.Reader, FASTQ.Reader},
+    k::Int64, m::Int64,
     filelength::Int64=10000000
 )
     record = typeof(reader) == FASTA.Reader ? FASTA.Record() : FASTQ.Record()
@@ -128,7 +122,7 @@ function buildkmertable(
         seqlen = length(seq)
 
         # no need to relocate the array for storing new records: array was preallocated
-        sequences[msaindex] = SequenceRecord(FASTX.identifier(record), seq) 
+        sequences[msaindex] = SequenceRecord(FASTX.identifier(record), seq)
         # looking for a max of m lowest-hashing kmers
         num_kmers = m + k - 1 <= seqlen ? m : seqlen - k + 1
         #kmertable = repeat([KmerIndex()], num_kmers)
@@ -145,12 +139,12 @@ function buildkmertable(
         if length(seq_kmers) > m # store the m lowest-hashing kmers in the index table
             for i in 1:m
                 minhash, idx = findmin(map(tup -> tup[2], seq_kmers))
-                kmertable[i] = KmerIndex(seq_kmers[idx][1], seqlen, seq_kmers[idx][3], 
+                kmertable[i] = KmerIndex(seq_kmers[idx][1], seqlen, seq_kmers[idx][3],
                     msaindex)
                 if minhash == 0xffff
                     deleteat!(seq_kmers, idx)
                 else # avoid relocating m * ~l array entries where possible
-                    seq_kmers[idx] = (seq_kmers[idx][1], 0xffff, seq_kmers[idx][3]) 
+                    seq_kmers[idx] = (seq_kmers[idx][1], 0xffff, seq_kmers[idx][3])
                 end
             end
         else # only <= m kmers in total
@@ -167,11 +161,11 @@ function buildkmertable(
 end
 
 function buildkmertable(
-    file::AbstractString, 
-    k::Int64, m::Int64, 
+    file::AbstractString,
+    k::Int64, m::Int64,
     filelength::Int64=10000000
 )
-    if isfastafile(file) 
+    if isfastafile(file)
         reader = isgzipcompressed(file) ? FASTA.Reader(GzipDecompressorStream(open(file))) : FASTA.Reader(open(file))
     elseif isfastqfile(file)
         reader = isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file))
@@ -185,7 +179,7 @@ end
 function mktemp_kmertable(kmertable::Vector{KmerIndex})
     # sort by kmer block, sequence length, sequence id
     # --> get kmertable with blocks of kmers, inside of which the longest/center seq is at the top
-    # one kmer block corresponds to exactly one center sequence, so the whole thing is also ordered 
+    # one kmer block corresponds to exactly one center sequence, so the whole thing is also ordered
     # by center sequence right from the beginning
     sort!(kmertable, by = kmerindex -> (kmerindex.kmer, -kmerindex.seqlen, kmerindex.msaindex))
     tmpfile, tmpio = mktemp()
@@ -217,7 +211,7 @@ function mktemp_kmertable(kmertable::Vector{KmerIndex})
             if kmertable[i].msaindex == kmertable[i-1].msaindex # same sequence has more than one matching kmer with center
                 # keep only entry with smaller relative kmer pos
                 # make sure to keep currentcenter (writestart), if current center seq has same kmer in diff pos
-                if kmertable[i].kmerpos >= kmertable[i-1].kmerpos || writestart == i-1 
+                if kmertable[i].kmerpos >= kmertable[i-1].kmerpos || writestart == i-1
                     # deleteat!(kmertable, i)
                     kmertable[i] = KmerIndex() # avoid relocating the array
                 else
@@ -257,7 +251,7 @@ function gapfreealign_tocenter(kmertable_file::AbstractString, filelength::Int64
             for seqindex in positions[2:end]
                 aln = gapfreealign_t(msa[positions[1]], msa[seqindex], t)
                 if aln
-                    if newcluster 
+                    if newcluster
                         # push!(edges, [positions[1], seqindex])
                         edges[i] = [positions[1], seqindex]
                         newcluster = false
@@ -292,7 +286,7 @@ function greedyincremental_clustering(edgesfile::AbstractString, msa::MultipleSe
         while !eof(reader)
             edge = map(x -> parse(Int64, x), split(readline(reader), "\t"))
             # if this center doesn't belong to a different, larger cluster: remove all its neighbours
-            if keepers[edge[1]] 
+            if keepers[edge[1]]
                 for seqindex in edge[2:end]
                     keepers[seqindex] = false
                 end
@@ -313,19 +307,19 @@ end
 #threshold = 0.95
 
 #println("build kmer table:")
-#@time msa, evolvingclusters = buildkmertable(file, k, m, filelength) 
+#@time msa, evolvingclusters = buildkmertable(file, k, m, filelength)
 ## 202.322562 seconds (1.69 G allocations: 106.001 GiB, 28.16% gc time)
 #println("length of input msa: ", length(msa)) # 1000000
 #println("length of kmertable: ", length(evolvingclusters)) # m * length(msa) = 20000000
 #if !isempty(msa) # if isempty, print errormessage and return.
 #    println("save kmer table:")
-#    @time evolvingclusters, numlines = mktemp_kmertable(evolvingclusters) # file that contains all possible center/seq edges 
+#    @time evolvingclusters, numlines = mktemp_kmertable(evolvingclusters) # file that contains all possible center/seq edges
 #    # 107.737633 seconds (20.89 M allocations: 960.595 MiB, 14.66% gc time)
 #    println("gapfree alignment filter:")
 #    @time evolvingclusters = gapfreealign_tocenter(evolvingclusters, numlines, msa, threshold) # file that contains all clusters center->s1,s2,s3..., sorted by cluster size
 #    # 226.887146 seconds (142.79 M allocations: 996.792 GiB, 28.36% gc time, 0.20% compilation time)
 #    println("greedy incremental clustering:")
-#    @time msa = greedyincremental_clustering(evolvingclusters, msa) 
+#    @time msa = greedyincremental_clustering(evolvingclusters, msa)
 #    # 1.302488 seconds (6.69 M allocations: 546.244 MiB, 10.39% gc time, 12.41% compilation time)
 #    println("length of output msa: ", length(msa)) # 890927
 #end
