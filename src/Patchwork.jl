@@ -14,7 +14,6 @@ using CSV
 using CodecZlib
 using DataFrames
 using FASTX
-using GenomicFeatures
 using PackageCompiler
 using PrettyTables
 using Statistics
