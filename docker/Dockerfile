@@ -29,23 +29,29 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
 WORKDIR '/opt'
 
 # Download and install Julia
-RUN wget --quiet 'https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.0-rc3-linux-x86_64.tar.gz' \
-    && tar -xvzf 'julia-1.9.0-rc3-linux-x86_64.tar.gz' \
-    && rm 'julia-1.9.0-rc3-linux-x86_64.tar.gz'
-ENV PATH /opt/julia-1.9.0-rc3/bin:${PATH}
+RUN wget --quiet 'https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.3-linux-x86_64.tar.gz' \
+    && tar -xvzf 'julia-1.9.3-linux-x86_64.tar.gz' \
+    && rm 'julia-1.9.3-linux-x86_64.tar.gz'
+ENV PATH "/opt/julia-1.9.3-rc3/bin:${PATH}"
 
 # Download and install DIAMOND
-RUN wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.6/diamond-linux64.tar.gz' \
+RUN wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-linux64.tar.gz' \
     && tar -xvzf 'diamond-linux64.tar.gz' \
+    && mv 'diamond' '/usr/local/bin' \
     && rm 'diamond-linux64.tar.gz'
 
 # Doad and install Patchwork
-ARG HWORK_VERSION='0.5.2'
+ARG PATCHWORK_VERSION='0.5.2'
 RUN wget -O "patchwork-${PATCHWORK_VERSION}.tar.gz" "https://github.com/fethalen/Patchwork/archive/refs/tags/v${PATCHWORK_VERSION}.tar.gz" \
     && tar -xvzf "patchwork-${PATCHWORK_VERSION}.tar.gz" \
     && rm "patchwork-${PATCHWORK_VERSION}.tar.gz" \
     && cd "Patchwork-${PATCHWORK_VERSION}" \
     && julia --project=. -e "import Pkg; Pkg.instantiate()" \
+    && julia --project=. src/compile.jl . src/precompiled.jl ../patchwork-$VERSION
+
+RUN git clone 'https://github.com/fethalen/patchwork' \
+    && cd patchwork \
+    && julia --project=. -e 'import Pkg; Pkg.instantiate()' \
     && julia --project=. src/compile.jl . src/precompiled.jl ../patchwork-$VERSION
 
 # # Stage 2/2: Production
