@@ -5,3 +5,5 @@ Manifest_main.toml.bk
 Manifest.toml.bk
 Singularity.sif
 Singularity.def
+build/compiled/**
+build/compiled
