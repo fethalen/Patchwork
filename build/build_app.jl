@@ -16,7 +16,7 @@ end
 # Resolve dependencies and activate project
 using Pkg
 try
-    Pkg.activate(PROJECT_DIR)
+    Pkg.activate(PROJECTDIR)
     Pkg.instantiate()
 catch e
     @warn "Could not read project's dependencies! ($e)"
