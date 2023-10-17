@@ -5,10 +5,7 @@ const PROJECTDIR = abspath(joinpath(BASEDIR, ".."))
 const COMPILEDIR = abspath(joinpath(BASEDIR, "compiled"))
 
 # Remove compiled directory if it already exists
-if !isdir(COMPILEDIR)
-    mkdir(COMPILEDIR)
-    @info "Created directory $COMPILEDIR."
-else
+if isdir(COMPILEDIR)
     rm(COMPILEDIR, recursive=true, force=true)
     @info "Removed pre-existing compiled directory $COMPILEDIR."
 end
@@ -28,6 +25,7 @@ using PackageCompiler
 create_app(
     PROJECTDIR,
     COMPILEDIR,
+    executables = ["patchwork" => "julia_main"],
     force=true,
     incremental=true,
     include_transitive_dependencies=false,
