@@ -11,6 +11,10 @@ FROM ubuntu:22.04 AS builder
 # System is non-interactive when building the Docker image
 ENV DEBIAN_FRONTEND noninteractive
 
+# Set time zone to Zurich, Europe
+ENV TZ=Europe/Zurich
+RUN ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime && echo "$TZ" > /etc/timezone
+
 # Update the repository sources and install required tools and libraries
 RUN apt-get update && apt-get install --yes --no-install-recommends \
     apt-utils \
@@ -18,12 +22,8 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
     gcc \
     ca-certificates \
     python3-matplotlib \
-    libqt5widgets5
-
-# RUN groupadd --gid 1000 patchwork \
-#     && useradd --uid 1000 --gid patchwork --shell /bin/bash --create-home patchwork \
-#     && chmod -R a+rwx /home/patchwork
-# USER patchwork
+    libqt5widgets5 \
+    git
 
 # Set work directory
 WORKDIR '/opt'
@@ -32,7 +32,7 @@ WORKDIR '/opt'
 RUN wget --quiet 'https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.3-linux-x86_64.tar.gz' \
     && tar -xvzf 'julia-1.9.3-linux-x86_64.tar.gz' \
     && rm 'julia-1.9.3-linux-x86_64.tar.gz'
-ENV PATH "/opt/julia-1.9.3-rc3/bin:${PATH}"
+ENV PATH "/opt/julia-1.9.3/bin:${PATH}"
 
 # Download and install DIAMOND
 RUN wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-linux64.tar.gz' \
@@ -40,59 +40,47 @@ RUN wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-l
     && mv 'diamond' '/usr/local/bin' \
     && rm 'diamond-linux64.tar.gz'
 
-# Doad and install Patchwork
-ARG PATCHWORK_VERSION='0.5.2'
-RUN wget -O "patchwork-${PATCHWORK_VERSION}.tar.gz" "https://github.com/fethalen/Patchwork/archive/refs/tags/v${PATCHWORK_VERSION}.tar.gz" \
-    && tar -xvzf "patchwork-${PATCHWORK_VERSION}.tar.gz" \
-    && rm "patchwork-${PATCHWORK_VERSION}.tar.gz" \
-    && cd "Patchwork-${PATCHWORK_VERSION}" \
-    && julia --project=. -e "import Pkg; Pkg.instantiate()" \
-    && julia --project=. src/compile.jl . src/precompiled.jl ../patchwork-$VERSION
-
+# Download and install Patchwork
 RUN git clone 'https://github.com/fethalen/patchwork' \
-    && cd patchwork \
-    && julia --project=. -e 'import Pkg; Pkg.instantiate()' \
-    && julia --project=. src/compile.jl . src/precompiled.jl ../patchwork-$VERSION
+    && cd patchwork/build \
+    && ./build_app.jl
 
-# # Stage 2/2: Production
-# # ---------------------
+# Stage 2/2: Production
+# ---------------------
 
-# # Set the base image
-# FROM ubuntu:22.04
+# Set the base image
+FROM ubuntu:22.04 AS production
 
-# # File maintainer
-# MAINTAINER Felix Thalén <felix.thalen@cardio-care.ch>
+# Metadata
+LABEL org.opencontainers.image.authors="felix.thalen@cardio-care.ch"
+LABEL version="1"
+LABEL software="Patchwork"
+LABEL software.version="0.5.5"
+LABEL about.author="Felix Thalén <felix.thalen@cardio-care.ch>"
+LABEL about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
+LABEL about.home="https://github.com/fethalen/patchwork"
+LABEL about.documentation="https://github.com/fethalen/patchwork#readme"
+LABEL about.license="SPDX:GPL-3.0"
+LABEL about.tags="phylogenomics, phylogenetics, genomics, alignment"
 
-# # System is non-interactive when building the Docker image
-# ENV DEBIAN_FRONTEND noninteractive
+# System is non-interactive when building the Docker image
+ENV DEBIAN_FRONTEND noninteractive
 
-# # Set time zone to Zurich, Europe
-# ENV TZ=Europe/Zurich
-# RUN ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime && echo "$TZ" > /etc/timezone
+# Set time zone to Zurich, Europe
+ENV TZ=Europe/Zurich
+RUN ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime && echo "$TZ" > /etc/timezone
 
-# # Metadata
-# LABEL base_image="ubuntu:20.04"
-# LABEL version="1"
-# LABEL software="Patchwork"
-# LABEL software.version="0.5.2"
-# LABEL about.author="Felix Thalén <felix.thalen@cardio-care.ch>"
-# LABEL about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
-# LABEL about.home="https://github.com/fethalen/Patchwork"
-# LABEL about.documentation="https://github.com/fethalen/Patchwork#readme"
-# LABEL about.license="SPDX:GPL-3.0"
-# LABEL about.license_file="https://github.com/fethalen/Patchwork/blob/main/LICENSE"
-# LABEL about.tags="phylogenomics"
+# Create the user
+RUN useradd --create-home --shell /bin/bash --user-group --uid 1000 patchwork
 
-# RUN groupadd --gid 1000 patchwork \
-#     && useradd --uid 1000 --gid patchwork --shell /bin/bash --create-home patchwork \
-#     && chmod -R a+rwx /home/patchwork
-# WORKDIR /home/patchwork
-# USER patchwork
-# ENV VERSION 0.5.2
+# Set the default user
+USER patchwork
 
-# COPY --from=builder /home/patchwork/patchwork-$VERSION patchwork-$VERSION
-# COPY --from=builder /home/patchwork/diamond diamond
-# RUN ln -s patchwork-$VERSION/bin/patchwork patchwork
-# ENV PATH /home/patchwork:$PATH
+# Set the working directory
+WORKDIR /home/patchwork
 
-# CMD patchwork --help
+COPY --from=builder /opt/patchwork/build/compiled /opt/patchwork
+COPY --from=builder /usr/local/bin/diamond /usr/local/bin/diamond
+ENV PATH /opt/patchwork/bin:$PATH
+
+ENTRYPOINT ["patchwork"]

@@ -1,0 +1,112 @@
+Bootstrap: docker
+From: ubuntu:22.04 
+Stage: builder
+
+%post
+# To reduce the final image size, the build process has been split into a build
+# stage and a production stage. After compiling Patchwork, the Julia
+# installation is no longer needed and is therefore removed in the second stage.
+
+# Stage 1/2: Build
+# ----------------
+
+# Set the base image
+
+# System is non-interactive when building the Docker image
+DEBIAN_FRONTEND=noninteractive
+
+# Set time zone to Zurich, Europe
+TZ=Europe/Zurich
+ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime && echo "$TZ" > /etc/timezone
+
+# Update the repository sources and install required tools and libraries
+apt-get update && apt-get install --yes --no-install-recommends \
+apt-utils \
+wget \
+gcc \
+ca-certificates \
+python3-matplotlib \
+libqt5widgets5 \
+git
+
+# Set work directory
+mkdir -p '/opt'
+cd '/opt'
+
+# Download and install Julia
+wget --quiet 'https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.3-linux-x86_64.tar.gz' \
+&& tar -xvzf 'julia-1.9.3-linux-x86_64.tar.gz' \
+&& rm 'julia-1.9.3-linux-x86_64.tar.gz'
+PATH="/opt/julia-1.9.3/bin:${PATH}"
+
+# Download and install DIAMOND
+wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-linux64.tar.gz' \
+&& tar -xvzf 'diamond-linux64.tar.gz' \
+&& mv 'diamond' '/usr/local/bin' \
+&& rm 'diamond-linux64.tar.gz'
+
+# Download and install Patchwork
+git clone 'https://github.com/fethalen/patchwork' \
+&& cd patchwork/build \
+&& ./build_app.jl
+
+# Stage 2/2: Production
+# ---------------------
+
+# Set the base image
+%environment
+export DEBIAN_FRONTEND=noninteractive
+export TZ=Europe/Zurich
+export PATH="/opt/julia-1.9.3/bin:${PATH}"
+
+Bootstrap: docker
+From: ubuntu:22.04 
+Stage: production
+
+%files from builder
+/opt/patchwork/build/compiled /opt/patchwork
+/usr/local/bin/diamond /usr/local/bin/diamond
+%labels
+org.opencontainers.image.authors="felix.thalen@cardio-care.ch"
+version="1"
+software="Patchwork"
+software.version="0.5.4"
+about.author="Felix Thalén <felix.thalen@cardio-care.ch>"
+about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
+about.home="https://github.com/fethalen/patchwork"
+about.documentation="https://github.com/fethalen/patchwork#readme"
+about.license="SPDX:GPL-3.0"
+about.tags="phylogenomics, phylogenetics, genomics, alignment"
+%post
+
+# Metadata
+
+# System is non-interactive when building the Docker image
+DEBIAN_FRONTEND=noninteractive
+
+# Set time zone to Zurich, Europe
+TZ=Europe/Zurich
+ln -snf "/usr/share/zoneinfo/${TZ}" /etc/localtime && echo "$TZ" > /etc/timezone
+
+# Create the user
+useradd --create-home --shell /bin/bash --user-group --uid 1000 patchwork
+
+# Set the default user
+su -  patchwork # USER patchwork
+
+# Set the working directory
+mkdir -p /home/patchwork
+cd /home/patchwork
+
+PATH=/opt/patchwork/bin:$PATH
+
+%environment
+export DEBIAN_FRONTEND=noninteractive
+export TZ=Europe/Zurich
+export PATH=/opt/patchwork/bin:$PATH
+%runscript
+cd /home/patchwork
+exec patchwork "$@"
+%startscript
+cd /home/patchwork
+exec patchwork "$@"
