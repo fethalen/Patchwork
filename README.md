@@ -37,7 +37,18 @@ Please see our [Wiki](https://github.com/fethalen/Patchwork/wiki).
 
 ### Cite
 
-Our manuscript is still in preparation, it will be posted here once a preprint
-of the article is available.
+Thalen, F., Koehne, C. G., & Bleidorn, C. (2022). Patchwork: alignment-based retrieval and concatenation of phylogenetic markers from genomic data. bioRxiv.
+
+BibTeX-format:
+
+```bibtex
+@article{thalen2022patchwork,
+  title={Patchwork: alignment-based retrieval and concatenation of phylogenetic markers from genomic data},
+  author={Thalen, Felix and Koehne, Clara Gisela and Bleidorn, Christoph},
+  journal={bioRxiv},
+  year={2022},
+  publisher={Cold Spring Harbor Laboratory}
+}
+```
 
 © [Dept. for Animal Evolution and Biodiversity](https://www.uni-goettingen.de/en/80149.html) 2020
