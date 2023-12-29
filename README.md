@@ -42,12 +42,15 @@ Thalen, F., Koehne, C. G., & Bleidorn, C. (2022). Patchwork: alignment-based ret
 BibTeX-format:
 
 ```bibtex
-@article{thalen2022patchwork,
+@article{thalen2023patchwork,
   title={Patchwork: alignment-based retrieval and concatenation of phylogenetic markers from genomic data},
-  author={Thalen, Felix and Koehne, Clara Gisela and Bleidorn, Christoph},
-  journal={bioRxiv},
-  year={2022},
-  publisher={Cold Spring Harbor Laboratory}
+  author={Thal{\'e}n, Felix and K{\"o}hne, Clara G and Bleidorn, Christoph},
+  journal={Genome Biology and Evolution},
+  volume={15},
+  number={12},
+  pages={evad227},
+  year={2023},
+  publisher={Oxford University Press US}
 }
 ```
 
