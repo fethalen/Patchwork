@@ -37,7 +37,7 @@ Please see our [Wiki](https://github.com/fethalen/Patchwork/wiki).
 
 ### Cite
 
-Thalen, F., Koehne, C. G., & Bleidorn, C. (2022). Patchwork: alignment-based retrieval and concatenation of phylogenetic markers from genomic data. bioRxiv.
+Thalén, F., Köhne, C. G., & Bleidorn, C. (2023). Patchwork: alignment-based retrieval and concatenation of phylogenetic markers from genomic data. _Genome Biology and Evolution, 15_(12), evad227.
 
 BibTeX-format:
 
