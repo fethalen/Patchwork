@@ -560,7 +560,7 @@ Given two overlapping `AlignedRegion`s, slice the regions such that the best-sco
 covers the overlapping interval. Returns an array of `AlignedRegion` objects.
 """
 function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
-    !skipcheck && !isoverlapping(a, b) && error("region $a and $b are not overlapping")
+    !skipcheck && !BioGenerics.isoverlapping(a, b) && error("region $a and $b are not overlapping")
 
     overlappingregion = overlap(a, b)
     bestscore, lowestscore = order(a, b, overlappingregion)
@@ -759,7 +759,7 @@ function totalrange(
     a::AlignedRegion,
     b::AlignedRegion
 )
-    if !isoverlapping(a, b)
+    if !BioGenerics.isoverlapping(a, b)
         error("Cannot do total range of non-overlapping regions, $a and $b")
     elseif equalrange(a, b)
         return (subject_leftposition(a), subject_rightposition(a))

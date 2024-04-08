@@ -201,7 +201,7 @@ function mergeoverlaps(
     for i in 2:lastindex(regions)
         currentregion = regions[i]
         lastregion = last(mergedregions)
-        if isoverlapping(currentregion, lastregion)
+        if BioGenerics.isoverlapping(currentregion, lastregion)
             pop!(mergedregions)
             for region in merge(currentregion, lastregion)
                 if !isempty(region)
