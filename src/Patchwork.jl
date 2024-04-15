@@ -112,9 +112,6 @@ export
     compoundranges, nongap_ranges
 
 const EMPTY = String[]
-# const DIAMONDFLAGS = ["--ultra-sensitive", "--iterate", "--evalue", "0.001",
-#                       "--max-hsps", "1", "--max-target-seqs", "1"]
-# const DIAMONDFLAGS = ["--evalue", "0.001"] # ["--iterate", "--evalue", "0.001"]
 const DIAMONDFLAGS = ["--iterate", "--evalue", "0.001"]
 const MIN_DIAMONDVERSION = "2.0.10" # for --iterate option
 const MATRIX = "BLOSUM62"
@@ -127,6 +124,7 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
+const VERSION = "0.5.7"
 
 """
     printinfo()
@@ -138,10 +136,10 @@ function printinfo(
     threads::Int64
 )
     about = """
-    P A T C H W O R K
-    - Developers: Felix Thalén & Clara G. Köhne         - Cite      : In prep.
-    - Contact   : <felix.thalen@cardio-care.ch>         - DIAMOND v.: $diamondversion
-    - Wiki      : github.com/fethalen/patchwork/wiki    - Threads   : $threads
+    P A T C H W O R K v$VERSION
+    - Developers: Felix Thalén & Clara G. Köhne       - Cite (DOI): 10.1093/gbe/evad227
+    - Contact   : <felix.thalen@cardio-care.ch>       - DIAMOND v.: $diamondversion
+    - Wiki      : github.com/fethalen/patchwork/wiki  - Threads   : $threads
     $RULER"""
     println(about)
     return
@@ -199,7 +197,7 @@ function parse_parameters()
     whole-genome sequencing data
     """
     settings = ArgParseSettings(description = overview,
-        version = "0.5.6",
+        version = VERSION,
         add_version = true)
     @add_arg_table! settings begin
         "--contigs"
