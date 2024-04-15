@@ -569,7 +569,7 @@ end
 
 function julia_main()::Cint
     try
-        main()
+        @time main()
     catch
         Base.invokelatest(Base.display_error, Base.catch_stack())
         return 1
