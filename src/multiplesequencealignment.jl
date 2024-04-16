@@ -323,11 +323,7 @@ end
 function cat(files::AbstractVector{String})
     tmpfile, tmpio = mktemp()
     for file in files
-        if isgzipcompressed(file)
-            run(pipeline(`gunzip -c $file`, stdout=tmpfile, append=true))
-        else
-            run(pipeline(`cat $file`, stdout=tmpfile, append = true))
-        end
+        run(pipeline(`cat $file`, stdout = tmpfile, append = true))
     end
     close(tmpio)
     return tmpfile

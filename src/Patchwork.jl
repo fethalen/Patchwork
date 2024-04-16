@@ -7,7 +7,6 @@ module Patchwork
 using ArgParse
 using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using BioAlignments
-# using BioCore
 using BioSequences
 using BioSymbols
 using CSV
@@ -20,7 +19,6 @@ using Statistics
 
 import Base
 import BioGenerics
-# import GFF3
 import Pkg
 import Plots
 import Random
@@ -30,8 +28,6 @@ include("sequenceidentifier.jl")
 include("sequencerecord.jl")
 include("fasta.jl")
 include("fastq.jl")
-# include("gffrecord.jl")
-# include("gffrecordcollection.jl")
 include("multiplesequencealignment.jl")
 include("diamond.jl")
 include("alignedregion.jl")
@@ -124,7 +120,7 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const VERSION = "0.5.7"
+const VERSION = "0.6.0"
 
 """
     printinfo()
@@ -199,57 +195,78 @@ function parse_parameters()
     settings = ArgParseSettings(description = overview,
         version = VERSION,
         add_version = true)
+
+    add_arg_group!(settings, "input/output")
     @add_arg_table! settings begin
         "--contigs"
-        help = "Path to one or more sequences in FASTA format"
+        help = """PATH to 1+ nucleotide sequence files in FASTA or FASTQ format. Can be GZip
+            compressed."""
         arg_type = String
         nargs = '+'
         metavar = "PATH"
         "--reference"
-        help = """A path to one or more sequences in FASTA format. Additionally, you can
-                also provide a DIAMOND output file in tabular format (use --search-results)
-                or a DIAMOND or BLAST database (use --database)."""
+        help = "PATH to 1+ amino acid sequence files in the FASTA format."
         required = true
         arg_type = String
         nargs = '+'
         metavar = "PATH"
         "--search-results"
-        help = """Provide a DIAMOND output file in tabular format. The first line of
-                such files is considered to be the header. Please adhere to Patchwork's
-                DIAMOND output format:
-                6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
-                evalue bitscore qframe sseq seq."""
+        help = """PATH to a tabular DIAMOND output file, with one header line in format:
+            6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send
+            evalue bitscore qframe sseq seq."""
         arg_type = String
         metavar = "PATH"
         "--database"
-        help = "Provide a subject DIAMOND or BLAST database to search against."
+        help = "Path to a subject DIAMOND or BLAST database to search against."
         arg_type = String
         metavar = "PATH"
-        "--output-dir"
-        help = "Write output files to this directory"
+        "--matrix"
+        help = "Specifies the NAME of the scoring matrix"
         arg_type = String
-        default = "patchwork_output"
+        metavar = "NAME"
+        "--custom-matrix"
+        help = "PATH to a custom scoring matrix"
+        arg_type = String
         metavar = "PATH"
+        "--species-delimiter"
+        help = "Set the CHARACTER used to separate the OTU from the rest in sequence IDs"
+        default = '@'
+        arg_type = Char
+        metavar = "CHARACTER"
         "--fasta-extension"
         help = "Filetype extension used for output FASTA files"
         arg_type = String
         default = DEFAULT_FASTA_EXT
         metavar = "STRING"
-        "--matrix"
-        help = "Set scoring matrix"
+        "--wrap-column"
+        help = "Wrap output sequences at column NUMBER. 0 = no wrap"
+        default = 0
+        arg_type = Int64
+        metavar = "NUMBER"
+        "--no-plots"
+        help = "Do not include plots"
+        action = :store_true
+        "--output-dir"
+        help = "Write output files to this directory PATH"
         arg_type = String
-        metavar = "NAME"
+        default = "patchwork_output"
+        metavar = "PATH"
+        "--overwrite"
+        help = "Overwrite old content in the output directory"
+        action = :store_true
+    end # Input/output
 
-        # DIAMOND BLASTX options ##########################################################
+    add_arg_group!(settings, "DIAMOND BLASTX")
+    @add_arg_table! settings begin
         "--query-gencode"
-        help = """The genetic code DIAMOND uses for translation of query sequences. All
-            allowed values can be found on the NCBI website. The Standard Code is used by
-            default"""
+        help = """Genetic code used for translation of query sequences. A list
+            of possible values can be found on the NCBI website. Standard Code is
+            used by default"""
         arg_type = Int64
         metavar = "NUMBER"
         "--strand"
-        help = """Set the query strand that DIAMOND uses for alignments. Allowed values are:
-            'both', 'plus', and 'minus'. By default, both strands are searched"""
+        help = """Specifies the strand of the query. Possible values are:
+            'both', 'plus', and 'minus'. Both strands are searched by default"""
         arg_type = String
         metavar = "STRING"
         "--min-orf"
@@ -258,12 +275,6 @@ function parse_parameters()
             than 100, and 40 otherwise. Set to 1 to disable"""
         arg_type = Int64
         metavar = "NUMBER"
-        # "--sensitivity"
-        # help = """Set DIAMOND sensitivity mode. Allowed values are: 'fast', 'mid-sensitive',
-        #     'sensitive', 'more-sensitive', 'very-sensitive', and 'ultra-sensitive'. Without
-        #     this option, DIAMOND will be run in its default mode"""
-        # arg_type = String
-        # metavar = "MODE"
         "--fast"
         help = "Set DIAMOND sensitivity mode to 'fast'."
         action = :store_true
@@ -342,22 +353,20 @@ function parse_parameters()
         arg_type = Int64
         metavar = "MODE"
         default = 0 # TODO: default 0 or default 1? (which one works better for Patchwork?)
-        # end of DIAMOND options ##########################################################
+    end # DIAMOND BLASTX
 
+    add_arg_group!(settings, "alignment")
+    @add_arg_table! settings begin
         "--len"
-        help = "Discard DIAMOND hits shorter than the provided length"
+        help = "Discard DIAMOND hits shorter than the provided NUMBER"
         arg_type = Int64
         metavar = "NUMBER"
-        "--custom-matrix"
-        help = "Use a custom scoring matrix"
-        arg_type = String
-        metavar = "PATH"
         "--gapopen"
-        help = "Set gap open penalty (positive integer)"
+        help = "Set the gap open penalty to this positive NUMBER"
         arg_type = Int64
         metavar = "NUMBER"
         "--gapextend"
-        help = "Set gap extension penalty (positive integer)"
+        help = "Set the gap extension penalty to this positive NUMBER"
         arg_type = Int64
         metavar = "NUMBER"
         "--retain-stops"
@@ -366,42 +375,32 @@ function parse_parameters()
         "--retain-ambiguous"
         help = "Do not remove ambiguous characters from the output sequences"
         action = :store_true
+    end
+
+    add_arg_group!(settings, "sliding window")
+    @add_arg_table! settings begin
+        "--no-trimming"
+        help = "Skip sliding window-based trimming of alignments"
+        action = :store_true
         "--window-size"
-        help = """For the sliding window alignment trimming step, specifices the number of
-                positions to average across (default: 4)"""
+        help = "Specifices the NUMBER of positions to average across"
         arg_type = Int64
         default = 4
         metavar = "NUMBER"
         "--required-distance"
-        help = """For the sliding window alignment trimming step, specifies the average
-                distance required (default: -7.0)"""
+        help = "Specifies the average distance required"
         arg_type = Float64
         default = -7.0
         metavar = "NUMBER"
+    end
+
+    add_arg_group!(settings, "resources")
+    @add_arg_table! settings begin
         "--threads"
-        help = "Number of threads to utilize (default: all available)"
+        help = "Number of threads to utilize"
         default = Sys.CPU_THREADS
         arg_type = Int64
         metavar = "NUMBER"
-        "--species-delimiter"
-        help = "Used to distinguish the OTU from the rest in sequence IDs"
-        default = '@'
-        arg_type = Char
-        metavar = "CHARACTER"
-        "--no-trimming"
-        help = "Do not perform sliding window-based trimming of alignments"
-        action = :store_true
-        "--no-plots"
-        help = "Save time by skipping plots"
-        action = :store_true
-        "--wrap-column"
-        help = "Wrap output sequences at this column number (default: no wrap)"
-        default = 0
-        arg_type = Int64
-        metavar = "NUMBER"
-        "--overwrite"
-        help = "Overwrite output from previous runs without warning"
-        action = :store_true
     end
 
     return ArgParse.parse_args(settings)
@@ -411,13 +410,11 @@ function main()
     args = parse_parameters()
 
     if !min_diamondversion(MIN_DIAMONDVERSION)
-        error("Patchwork requires \'diamond\' with a version number above
-               $MIN_DIAMONDVERSION to run")
+        error("Patchwork requires DIAMOND with a version number above $MIN_DIAMONDVERSION")
     end
     printinfo(get_diamondversion(), args["threads"])
 
     setpatchworkflags!(args)
-    # setdiamondflags!(args)
 
     if length(args["reference"]) == 1
         references_file = args["reference"][1]              # 1 .fa
@@ -425,19 +422,19 @@ function main()
         references_file = mktemp_fasta(pool(args["reference"]; removeduplicates = false))
     end
     refseqs_count = countsequences(references_file)
-    # TODO: queries doesn't need to be stored as a MSA all the time!
-    # You just need 1 fasta file for DIAMOND.
-    #queries = pool(args["contigs"])                          # MultipleSequenceAlignment
+
     if length(args["contigs"]) > 1
+        all(map(isfile, args["contigs"])) || error("One or more contig files not found")
         if !(all(f -> isfastafile(f), args["contigs"]) || all(f -> isfastqfile(f), args["contigs"]))
-            println("Please provide all query files in the same format (FASTA or FASTQ).")
-            return
+            error("Query files must be in the same format (FASTA or FASTQ).")
         end
         queries = cat(args["contigs"])
     elseif length(args["contigs"]) == 1
+        contig_path = only(args["contigs"])
+        isfile(contig_path) || error("No contig file in path $contig_path")
         queries = only(args["contigs"])
-    # else: provided --search-results
     end
+
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
     fastaoutput = outdir * "/" * FASTAOUTPUT

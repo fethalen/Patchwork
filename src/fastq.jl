@@ -26,18 +26,7 @@ function fastq2fasta(
     byid::Bool=true
 )::AbstractString
     isfastqfile(infile, ext) || error("Wrong file format; input must be a fastq file.")
-    # outfile = *(rsplit(infile, ".", limit=1)[1], ".fasta")
-    # fastawriter = open(FASTA.Writer, outfile)
-    # open(FASTQ.Reader, infile) do reader
-    #     for record in reader
-    #         id = identifier(record)
-    #         seq = sequence(record)
-    #         write(fastawriter, FASTA.Record(id, seq))
-    #     end
-    # end
-    # return outfile
     msa = readmsa(infile; removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
-    #removeduplicates && remove_duplicates!(msa)
     return mktemp_fasta(msa)
 end
 
@@ -59,7 +48,6 @@ end
 function splitfile(path::AbstractString; recordsperfile::Int64=1000000)
     isfastqfile(path) || error("Incorrect file type.")
 
-    # files = String[]
     files = Tuple{String, Int64}[]
     record = FASTQ.Record()
     reader = isgzipcompressed(path) ? FASTQ.Reader(GzipDecompressorStream(open(path))) : FASTQ.Reader(open(path, "r"))
@@ -148,6 +136,3 @@ function combinefiles(files::AbstractVector{String})
     close(writer)
     return file
 end
-
-# s = splitfile("/home/clara/Data/felix2_EKDL190133942-1a_HVN23DSXX_L1_1.fq.gz")
-# c = combinefiles(map(tup -> tup[1], s))
