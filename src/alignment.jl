@@ -1,7 +1,3 @@
-# Default scoremodel taken from DIAMOND's defaults for BLOSUM62
-const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
-    gap_open = -11, gap_extend = -1)
-
 """
     pairalign_global(seq, ref, scoremodel)
 
