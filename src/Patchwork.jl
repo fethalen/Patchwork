@@ -120,10 +120,11 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const VERSION = "0.6.0"
+const VERSION = "0.6.1"
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
     gap_open = -11, gap_extend = -1)
+const GZIP_MAGIC_NUMBER = UInt8[0x1f, 0x8b]
 
 """
     printinfo()
@@ -426,17 +427,19 @@ function main()
     end
     refseqs_count = countsequences(references_file)
 
-    if length(args["contigs"]) > 1
-        all(map(isfile, args["contigs"])) || error("One or more contig files not found")
-        if !(all(f -> isfastafile(f), args["contigs"]) || all(f -> isfastqfile(f), args["contigs"]))
-            error("Query files must be in the same format (FASTA or FASTQ).")
-        end
-        queries = cat(args["contigs"])
-    elseif length(args["contigs"]) == 1
-        contig_path = only(args["contigs"])
-        isfile(contig_path) || error("No contig file in path $contig_path")
-        queries = only(args["contigs"])
+    contigpaths = args["contigs"]
+    contigsformat = sequencefiles_format(contigpaths)
+    println("Sequence data file format detected: ", contigsformat)
+
+    # Concatenate multiple sequence files if necessary.
+    if length(contigpaths) > 1
+        println("Concatenating query sequence files...")
+        queries = cat(contigpaths)
+    elseif length(contigpaths) == 1
+        queries = only(contigpaths)
     end
+
+    contigscount = countrecords(queries, contigsformat)
 
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
@@ -552,8 +555,9 @@ function main()
 
     println(RULER)
     percentmarkers = getpercentage(queryseqs_count, refseqs_count)
-    println("# markers in: ", refseqs_count)
-    println("# markers out: ", queryseqs_count, " (", percentmarkers, "%)")
+    println("# query sequences in: ", contigscount)
+    println("# reference sequences in: ", refseqs_count)
+    println("# alignments out: ", queryseqs_count, " (", percentmarkers, "%)")
 
     CSV.write(*(statsoutput, "/statistics.csv"), statistics, delim = ",")
     statssummary = select(describe(select(statistics, Not(:id))), Not([:nmissing, :eltype]))

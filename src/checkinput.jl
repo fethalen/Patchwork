@@ -267,6 +267,7 @@ function setpatchworkflags!(args::Dict{String, Any})     # Run this fct. before 
     setgapopen!(args)
     setgapextend!(args)
     checkgappenalty(args[getmatrixtype(args)], args["gapopen"], args["gapextend"])
+    contigfiles_exists(args)
 end
 
 # """
@@ -367,4 +368,78 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
     end
     # println(diamondflags)
     return diamondflags
+end
+
+"""
+    contigfiles_exists(args::Dict{String, Any})
+
+Verify that none of the provided contig files are missing. Missing files are reported and
+results in an error.
+"""
+function contigfiles_exists(args::Dict{String, Any})
+    contigfiles = args["contigs"]
+    filesexists = map(isfile, contigfiles)
+    if !all(filesexists)
+        missingfiles = findall(iszero, filesexists)
+        plural = ""
+        if length(missingfiles) > 1
+            plural = "s"
+        end
+        println("The following contig file$plural were not found:")
+        for index in missingfiles
+            println("  ", contigfiles[index])
+        end
+        exit(1)
+    end
+    return contigfiles
+end
+
+"""
+    sequencefiles_format(sequencefiles::Vector{String})
+
+Takes a list of `sequencefiles` as input and verifies that they are either in
+FASTA order FASTQ format. Returns the string "FASTA" for the FASTA file format
+and "FASTQ" for the FASTQ format. Generates an error message and exists if any
+of the files are neither in FASTA or FASTQ format.
+"""
+function sequencefiles_format(sequencefiles::Vector{String})
+    if all(file -> isfastafile(file), sequencefiles)
+        return "FASTA"
+    elseif all(file -> isfastqfile(file), sequencefiles)
+        return "FASTQ"
+    else
+        println("Contig sequence files must be in the same format. FASTA or FASTQ.")
+        exit(1)
+    end
+end
+
+"""
+    isgzipcompressed(file::AbstractString)
+
+Reads the first two bytes of the provided files and returns true if they correspond to the
+GZip magic number `UInt8[0x1f, 0x8b]`. Failure to read the provided file results in `false`
+being returned.
+"""
+function isgzipcompressed(file::AbstractString)
+    open(file, "r") do io
+        magic_number = UInt8[]
+        readbytes!(io, magic_number, 2)
+        return magic_number == GZIP_MAGIC_NUMBER
+    end
+end
+
+"""
+    countrecords(sequencefile::String, sequencefile_format::String)
+
+Takes the path to a sequence file and the name of a sequence file format (FASTA or FASTQ)
+as an input. Returns the number of sequence records in that file. An unrecognized file
+format results in a 0 being returned.
+"""
+function countrecords(sequencefile::String, sequencefile_format::String)
+    if sequencefile_format == "FASTA"
+        return fasta_countrecords(sequencefile)
+    elseif sequencefile_format == "FASTQ"
+        return fastq_countrecords(sequencefile)
+    end
+    return 0
 end

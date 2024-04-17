@@ -136,3 +136,20 @@ function combinefiles(files::AbstractVector{String})
     close(writer)
     return file
 end
+
+function fastq_countrecords(file::AbstractString)
+    if isgzipcompressed(file)
+        reader = FASTQ.Reader(GzipDecompressorStream(open(file)))
+    else
+        reader = FASTQ.Reader(open(file))
+    end
+
+    recordcount = 0
+    for _ in reader
+        recordcount += 1
+    end
+
+    close(reader)
+
+    return recordcount
+end

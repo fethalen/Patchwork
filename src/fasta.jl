@@ -172,13 +172,6 @@ function selectsequences(
     return msa
 end
 
-function isgzipcompressed(file::AbstractString)
-    occursin(".", file) || return false
-    extension = rsplit(file, ".", limit=2)[2]
-    isequal(extension, "gz") && return true
-    return false
-end
-
 function isfastafile(
     path::AbstractString,
     ext::AbstractVector{String}=FASTAEXTENSIONS
@@ -192,7 +185,7 @@ function isfastafile(
     try # in case the file is a tmp file without extension
         read!(reader, record)
         close(reader)
-    catch e
+    catch
         close(reader)
         return false
     end
@@ -246,4 +239,22 @@ function countsequences(path::AbstractString)::Int
     end
     return count
 end
+
+function fasta_countrecords(file::AbstractString)
+    if isgzipcompressed(file)
+        reader = FASTA.Reader(GzipDecompressorStream(open(file)))
+    else
+        reader = FASTA.Reader(open(file))
+    end
+
+    recordcount = 0
+    for _ in reader
+        recordcount += 1
+    end
+
+    close(reader)
+
+    return recordcount
+end
+
 
