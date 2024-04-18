@@ -311,7 +311,7 @@ function maskalignment(
     alignmentend = last(anchors).seqpos
 
     for (position, letters) in enumerate(alignment)
-        position > alignmentend && break
+        # position > alignmentend && break
         (queryletter, refletter) = letters
         if ((!retainstops && queryletter == AA_Term) ||
             (!retainambiguous && isambiguous(queryletter)) ||
