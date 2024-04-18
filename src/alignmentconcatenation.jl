@@ -317,8 +317,9 @@ function maskalignment(
             (!retainambiguous && isambiguous(queryletter)) ||
             (refletter == AA_Gap)
         )
-            push!(flagged, position)
-            push!(dnaflagged, 3*(position-1)+1:3*position...)
+            querypos = first(aln2seq(alignment, position))
+            push!(flagged, querypos)
+            push!(dnaflagged, 3 * (querypos - 1) + 1:3 * querypos...)
         end
     end
     # We reverse the list of indices as deleting from left shifts the next deletion

@@ -113,14 +113,14 @@ const MIN_DIAMONDVERSION = "2.0.10" # for --iterate option
 const MATRIX = "BLOSUM62"
 const ALIGNMENTOUTPUT = "untrimmed_alignments.txt"
 const TRIMMEDALIGNMENT_OUTPUT = "trimmed_alignments.txt"
-const FASTAOUTPUT = "query_sequences"
-const DNAFASTAOUTPUT = "dna_query_sequences"
+const FASTAOUTPUT = "protein_query_sequences"
+const DNAFASTAOUTPUT = "nucleotide_query_sequences"
 const DEFAULT_FASTA_EXT = ".fas"
 const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const VERSION = "0.6.1"
+const VERSION = "0.6.2"
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
     gap_open = -11, gap_extend = -1)
@@ -514,9 +514,11 @@ function main()
 
         # Mask inserts
         maskedalignment, maskeddna = maskgaps(concatenation, dna_concatenation)
+
         # Mask stop codons and ambiguous characters
         maskedalignment, finaldna = maskalignment(maskedalignment.aln, maskeddna, DEFAULT_SCOREMODEL,
             args["retain-stops"], args["retain-ambiguous"])
+
         finalalignment = maskedalignment.aln
         write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
 
