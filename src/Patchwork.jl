@@ -357,6 +357,13 @@ function parse_parameters()
         arg_type = Int64
         metavar = "MODE"
         default = 0 # TODO: default 0 or default 1? (which one works better for Patchwork?)
+        "--block-size"
+        help = "Billions of sequence letters to be processed at a time. A larger block size
+            leads to increased performance at the expense of disk and memory usage. Values
+            >20 are not recommended."
+        arg_type = Float64
+        metavar = "NUMBER"
+        default = 2.0
     end # DIAMOND BLASTX
 
     add_arg_group!(settings, "alignment")

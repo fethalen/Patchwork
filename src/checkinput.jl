@@ -22,7 +22,7 @@ const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(
                          "PAM70"=>(10, 1), "PAM250"=>(14, 2))
 const AVAIL_DIAMOND = ["iterate", "frameshift", "evalue", "min-score", #"sensitivity",
     "max-target-seqs", "top", "max-hsps", "id", "query-cover", "subject-cover",
-    "query-gencode", "strand", "min-orf", "masking"]
+    "query-gencode", "strand", "min-orf", "masking", "block-size"]
 const DIAMONDSTRANDS = ["both", "plus", "minus"]
 const DIAMONDMODES = ["fast", "mid-sensitive", "sensitive", "more-sensitive",
     "very-sensitive", "ultra-sensitive"]
@@ -344,6 +344,8 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
         error("Only values '0', '1', and '2' are allowed for the --masking option.")
     end
     push!(diamondflags, "--masking", DIAMONDMASK[args["masking"] + 1]) # 1-based indexing
+
+    push!(diamondflags, "--block-size", string(args["block-size"]))
 
     sens = false
     for opt in DIAMONDMODES
