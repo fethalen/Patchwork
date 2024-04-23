@@ -120,7 +120,7 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const VERSION = "0.6.4"
+const VERSION = "0.6.6"
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
     gap_open = -11, gap_extend = -1)
@@ -137,7 +137,7 @@ function printinfo(
 )
     about = """
     P A T C H W O R K v$VERSION
-    - Developers: Felix Thalén & Clara G. Köhne       - Cite (DOI): 10.1093/gbe/evad227
+    - Developers: Felix Thalén & Clara G. Köhne       - Cite      : 10.1093/gbe/evad227
     - Contact   : <felix.thalen@cardio-care.ch>       - DIAMOND v.: $diamondversion
     - Wiki      : github.com/fethalen/patchwork/wiki  - Threads   : $threads
     $RULER"""
@@ -357,13 +357,6 @@ function parse_parameters()
         arg_type = Int64
         metavar = "MODE"
         default = 0 # TODO: default 0 or default 1? (which one works better for Patchwork?)
-        "--block-size"
-        help = "Billions of sequence letters to be processed at a time. A larger block size
-            leads to increased performance at the expense of disk and memory usage. Values
-            >20 are not recommended."
-        arg_type = Float64
-        metavar = "NUMBER"
-        default = 2.0
     end # DIAMOND BLASTX
 
     add_arg_group!(settings, "alignment")
@@ -405,13 +398,20 @@ function parse_parameters()
         metavar = "NUMBER"
     end
 
-    add_arg_group!(settings, "resources")
+    add_arg_group!(settings, "performance")
     @add_arg_table! settings begin
         "--threads"
         help = "Number of threads to utilize"
         default = Sys.CPU_THREADS
         arg_type = Int64
         metavar = "NUMBER"
+        "--block-size"
+        help = "Billions of sequence letters to be processed at a time. A larger block size
+            leads to increased performance at the expense of disk and memory usage. Values
+            >20 are not recommended."
+        arg_type = Float64
+        metavar = "NUMBER"
+        default = 2.0
     end
 
     return ArgParse.parse_args(settings)
@@ -426,27 +426,6 @@ function main()
     printinfo(get_diamondversion(), args["threads"])
 
     setpatchworkflags!(args)
-
-    if length(args["reference"]) == 1
-        references_file = args["reference"][1]              # 1 .fa
-    else                                                    # multiple .fa files
-        references_file = mktemp_fasta(pool(args["reference"]; removeduplicates = false))
-    end
-    refseqs_count = countsequences(references_file)
-
-    contigpaths = args["contigs"]
-    contigsformat = sequencefiles_format(contigpaths)
-    println("Sequence data file format detected: ", contigsformat)
-
-    # Concatenate multiple sequence files if necessary.
-    if length(contigpaths) > 1
-        println("Concatenating query sequence files...")
-        queries = cat(contigpaths)
-    elseif length(contigpaths) == 1
-        queries = only(contigpaths)
-    end
-
-    contigscount = countrecords(queries, contigsformat)
 
     outdir = args["output-dir"]
     alignmentoutput = outdir * "/" * ALIGNMENTOUTPUT
@@ -478,6 +457,27 @@ function main()
     end
 
     map(mkpath, [diamondoutput, fastaoutput, dnafastaoutput, statsoutput, plotsoutput])
+
+    if length(args["reference"]) == 1
+        references_file = args["reference"][1]              # 1 .fa
+    else                                                    # multiple .fa files
+        references_file = mktemp_fasta(pool(args["reference"]; removeduplicates = false))
+    end
+    refseqs_count = countsequences(references_file)
+
+    contigpaths = args["contigs"]
+    contigsformat = sequencefiles_format(contigpaths)
+    println("Sequence data file format detected: ", contigsformat)
+
+    # Concatenate multiple sequence files if necessary.
+    if length(contigpaths) > 1
+        println("Concatenating query sequence files...")
+        queries = cat(contigpaths)
+    elseif length(contigpaths) == 1
+        queries = only(contigpaths)
+    end
+
+    (contigscount, nucleotidescontigs) = countrecords(queries, contigsformat)
 
     if isnothing(args["search-results"])
         if isempty(queries)
@@ -564,9 +564,11 @@ function main()
 
     println(RULER)
     percentmarkers = getpercentage(queryseqs_count, refseqs_count)
-    println("# query sequences in: ", contigscount)
-    println("# reference sequences in: ", refseqs_count)
-    println("# alignments out: ", queryseqs_count, " (", percentmarkers, "%)")
+    println("# query files        : ", length(contigpaths))
+    println("# query sequences    : ", contigscount)
+    println("# query nucleotides  : ", nucleotidescontigs)
+    println("# reference sequences: ", refseqs_count)
+    println("# alignments out     : ", queryseqs_count, " (", percentmarkers, "%)")
 
     CSV.write(*(statsoutput, "/statistics.csv"), statistics, delim = ",")
     statssummary = select(describe(select(statistics, Not(:id))), Not([:nmissing, :eltype]))

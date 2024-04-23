@@ -8,7 +8,7 @@ function cleanfiles(paths::String...)
 end
 
 function warn_overwrite()::String
-    print("WARNING: found output from a previous run, overwrite old files? (y/n):")
+    print("INPUT NEEDED: found output from a previous run, overwrite old files? (y/n):")
     answer = readline()
     while !isequal(answer, "y") && !isequal(answer, "n")
         println("Please answer 'y' for yes or 'n' for no")
