@@ -145,11 +145,13 @@ function fastq_countrecords(file::AbstractString)
     end
 
     recordcount = 0
-    for _ in reader
+    nucleotides = 0
+    for record in reader
         recordcount += 1
+        nucleotides += length(FASTX.sequence(record))
     end
 
     close(reader)
 
-    return recordcount
+    return recordcount, nucleotides
 end
