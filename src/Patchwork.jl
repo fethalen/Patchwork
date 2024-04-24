@@ -34,7 +34,6 @@ include("alignedregion.jl")
 include("alignedregioncollection.jl")
 include("alignment.jl")
 include("filtering.jl")
-include("alignment.jl")
 include("alignmentconcatenation.jl")
 include("checkinput.jl")
 include("output.jl")
@@ -42,6 +41,7 @@ include("plotting.jl")
 include("sliding.jl")
 include("clustering.jl")
 
+# This list of exports lists the API
 export
     # types
     SequenceIdentifier,
@@ -120,7 +120,7 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const VERSION = "0.6.7"
+const VERSION = "0.6.8"
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
     gap_open = -11, gap_extend = -1)
