@@ -248,6 +248,7 @@ function fasta_countrecords(file::AbstractString)
     end
 
     recordcount = 0
+    nucleotides = 0
     for record in reader
         recordcount += 1
         nucleotides += length(FASTX.sequence(record))
