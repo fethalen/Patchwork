@@ -120,7 +120,7 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const VERSION = "0.6.6"
+const VERSION = "0.6.7"
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
     gap_open = -11, gap_extend = -1)
@@ -256,7 +256,7 @@ function parse_parameters()
         default = "patchwork_output"
         metavar = "PATH"
         "--overwrite"
-        help = "Overwrite old content in the output directory"
+        help = "Overwrite existing content in the output directory"
         action = :store_true
     end # Input/output
 
@@ -270,7 +270,8 @@ function parse_parameters()
         metavar = "NUMBER"
         "--strand"
         help = """Specifies the strand of the query. Possible values are:
-            'both', 'plus', and 'minus'. Both strands are searched by default"""
+            both, plus, and minus."""
+        default = "both"
         arg_type = String
         metavar = "STRING"
         "--min-orf"
