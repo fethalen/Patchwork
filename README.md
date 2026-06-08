@@ -42,9 +42,9 @@ Thalén, F., Köhne, C. G., & Bleidorn, C. (2023). Patchwork: alignment-based re
 BibTeX-format:
 
 ```bibtex
-@article{thalen2023patchwork,
+@article{sandberg2023patchwork,
   title={Patchwork: alignment-based retrieval and concatenation of phylogenetic markers from genomic data},
-  author={Thal{\'e}n, Felix and K{\"o}hne, Clara G and Bleidorn, Christoph},
+  author={Sandberg, Felicia and K{\"o}hne, Clara G and Bleidorn, Christoph},
   journal={Genome Biology and Evolution},
   volume={15},
   number={12},
