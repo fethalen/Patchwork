@@ -7,3 +7,4 @@ Singularity.sif
 Singularity.def
 build/compiled/**
 build/compiled
+.DS_Store
