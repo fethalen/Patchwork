@@ -5,7 +5,6 @@
 module Patchwork
 
 using ArgParse
-using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using BioAlignments
 using BioSequences
 using BioSymbols
@@ -573,7 +572,7 @@ function main()
 
     CSV.write(*(statsoutput, "/statistics.csv"), statistics, delim = ",")
     statssummary = select(describe(select(statistics, Not(:id))), Not([:nmissing, :eltype]))
-    pretty_table(statssummary, nosubheader = true)
+    pretty_table(statssummary, column_labels = string.(names(statssummary)))
 
     if !args["no-plots"]
         plot_querycover(statistics.query_coverage, *(plotsoutput, "/query_coverage.png"))

@@ -29,10 +29,12 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
 WORKDIR '/opt'
 
 # Download and install Julia
-RUN wget --quiet 'https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.3-linux-x86_64.tar.gz' \
-    && tar -xvzf 'julia-1.9.3-linux-x86_64.tar.gz' \
-    && rm 'julia-1.9.3-linux-x86_64.tar.gz'
-ENV PATH "/opt/julia-1.9.3/bin:${PATH}"
+ARG JULIA_VERSION=1.12.6
+ARG JULIA_SERIES=1.12
+RUN wget --quiet "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_SERIES}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
+    && tar -xzf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
+    && rm "julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
+ENV PATH="/opt/julia-${JULIA_VERSION}/bin:${PATH}"
 
 # Download and install DIAMOND
 RUN wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-linux64.tar.gz' \
