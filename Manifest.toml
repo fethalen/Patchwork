@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "7cc9f2fc09751b00c752de940b21fd7939cb2496"
+project_hash = "748aa6095fa947e4daa9c918eb079ca1a42124c3"
 
 [[deps.AliasTables]]
 deps = ["PtrArrays", "Random"]
@@ -332,11 +332,6 @@ git-tree-sha1 = "24f6def62397474a297bfcec22384101609142ed"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
 version = "2.86.3+0"
 
-[[deps.Glob]]
-git-tree-sha1 = "246c628cec062230b7d183aab88841fa94fcabe9"
-uuid = "c27321d9-0574-5035-807b-f59d2c89b15c"
-version = "1.5.0"
-
 [[deps.Graphite2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "69ffb934a5c5b7e086a0b4fee3427db2556fba6e"
@@ -473,11 +468,6 @@ version = "0.16.11"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
     tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
-
-[[deps.LazyArtifacts]]
-deps = ["Artifacts", "Pkg"]
-uuid = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
-version = "1.11.0"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -675,12 +665,6 @@ deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 version = "10.44.0+1"
 
-[[deps.PackageCompiler]]
-deps = ["Artifacts", "Glob", "LazyArtifacts", "Libdl", "Pkg", "Printf", "RelocatableFolders", "TOML", "UUIDs", "p7zip_jll"]
-git-tree-sha1 = "513193b976208b1b646ad4303323153e8bff0997"
-uuid = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
-version = "2.4.0"
-
 [[deps.Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "58e5ed5e386e156bd93e86b305ebd21ac63d2d04"
@@ -694,10 +678,10 @@ uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.8.6"
 
 [[deps.Patchwork]]
-deps = ["ArgParse", "BioAlignments", "BioGenerics", "BioSequences", "BioSymbols", "CSV", "CodecZlib", "DataFrames", "FASTX", "PackageCompiler", "Pkg", "Plots", "PrettyTables", "Random", "Statistics", "UnicodePlots"]
+deps = ["ArgParse", "BioAlignments", "BioGenerics", "BioSequences", "BioSymbols", "CSV", "CodecZlib", "DataFrames", "FASTX", "Pkg", "Plots", "PrettyTables", "Random", "Statistics", "UnicodePlots"]
 path = "."
 uuid = "5568df11-beb6-4e3e-8878-8f1e5127fa36"
-version = "0.0.0"
+version = "0.7.0"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "LLVMOpenMP_jll", "Libdl"]

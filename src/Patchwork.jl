@@ -8,7 +8,6 @@ using CSV
 using CodecZlib
 using DataFrames
 using FASTX
-using PackageCompiler
 using PrettyTables
 using Statistics
 
