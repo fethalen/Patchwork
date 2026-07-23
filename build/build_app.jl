@@ -29,5 +29,5 @@ create_app(
     incremental = true,
     include_transitive_dependencies = false,
     filter_stdlibs = false,
-    cpu_target = "native"
+    cpu_target = get(ENV, "JULIA_CPU_TARGET", "native")
 )

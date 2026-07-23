@@ -34,7 +34,7 @@ mkdir -p '/opt'
 cd '/opt'
 
 # Download and install Julia
-JULIA_VERSION=1.12.6
+JULIA_VERSION=1.12.1
 JULIA_SERIES=1.12
 wget --quiet "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_SERIES}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
 && tar -xzf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \

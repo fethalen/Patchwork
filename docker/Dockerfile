@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
 WORKDIR '/opt'
 
 # Download and install Julia
-ARG JULIA_VERSION=1.12.6
+ARG JULIA_VERSION=1.12.1
 ARG JULIA_SERIES=1.12
 RUN wget --quiet "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_SERIES}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
     && tar -xzf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \

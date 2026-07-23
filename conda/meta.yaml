@@ -1,31 +1,30 @@
 {% set name = "Patchwork" %}
-{% set version = "0.1.2" %}
+{% set version = "0.7.0" %}
 
 package:
- name: {{ name|lower }}
- version: {{ version }}
+  name: {{ name|lower }}
+  version: {{ version }}
 
-source: 
- url: https://github.com/fethalen/Patchwork/archive/v0.1.2-pre-alpha.tar.gz
- sha256: 171a1e92adaa04bc605d64518c499f458e4f1c3e4e2f681a7a6ff797af5bc6a7
+source:
+  path: ..
 
 build:
- number: 0
+  number: 0
 
 requirements:
- build: 
-  - {{ compiler('c') }}
-  - julia >=1.6.2
- run:
-  - diamond >=2.0.10
+  build:
+    - {{ compiler('c') }}
+    - julia >=1.12.1,<1.13
+  run:
+    - diamond >=2.0.10
 
 test:
- commands: 
-  - patchwork --help
+  commands:
+    - patchwork --help
 
 about:
- home: https://github.com/fethalen/Patchwork
- doc_url: https://github.com/fethalen/Patchwork#readme
- license: GPL3
- license_file: LICENSE
- summary: "Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
+  home: https://github.com/fethalen/Patchwork
+  doc_url: https://github.com/fethalen/Patchwork#readme
+  license: GPL-3.0-only
+  license_file: LICENSE
+  summary: "Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
