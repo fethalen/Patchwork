@@ -1,7 +1,14 @@
+function configure_file_plotting()
+    # Patchwork writes plots to files and never needs GR's interactive Qt window.
+    ENV["GKSwstype"] = "100"
+    return nothing
+end
+
 function plot_querycover(
     query_cover::Vector{Float64},
     fileout::AbstractString
 )
+    configure_file_plotting()
     categories = [(0.0, 20.99), (21.0, 40.99), (41.0, 60.99), (61.0, 80.99), (81.0, 100.0)]
     labels = ["0.01-20%", "21-40%", "41-60%", "61-80%", "81-100%"]
     bincount = map(category ->
@@ -20,6 +27,7 @@ function plot_percentident(
     subjectcount::Int,
     fileout::AbstractString
 )
+    configure_file_plotting()
     querycount = length(identities)
     @assert subjectcount > 0
     @assert subjectcount >= querycount
@@ -36,4 +44,3 @@ function plot_percentident(
     Plots.savefig(fileout)
     return fileout
 end
-
