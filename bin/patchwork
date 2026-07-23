@@ -1,0 +1,7 @@
+#!/usr/bin/env julia
+
+using Pkg
+Pkg.activate(joinpath(@__DIR__, ".."); io = devnull)
+
+using Patchwork
+exit(Patchwork.julia_main())

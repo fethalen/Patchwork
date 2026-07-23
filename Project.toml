@@ -1,6 +1,7 @@
 name = "Patchwork"
 uuid = "5568df11-beb6-4e3e-8878-8f1e5127fa36"
 authors = ["Felix Thalen <felix.thalen@cardio-care.ch>", "Clara Koehne <claragisela.koehne@stud.uni-goettingen.de>"]
+version = "0.7.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"

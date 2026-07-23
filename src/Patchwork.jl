@@ -1,7 +1,3 @@
-# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultra-sensitive" --output-dir "../test/patchwork-output"
-# julia --project=. src/Patchwork.jl --contigs "test/07673_lcal.fa" --reference "test/07673_Alitta_succinea.fa" --frameshift 15 --ultra-sensitive --output-dir "test/patchwork-output" --overwrite
-# diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
-
 module Patchwork
 
 using ArgParse
@@ -119,7 +115,7 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const VERSION = "0.7.0"
+const PATCHWORK_VERSION = pkgversion(@__MODULE__)
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
     gap_open = -11, gap_extend = -1)
@@ -135,7 +131,7 @@ function printinfo(
     threads::Int64
 )
     about = """
-    P A T C H W O R K v$VERSION
+    P A T C H W O R K v$PATCHWORK_VERSION
     - Developers: Felix Thalén & Clara G. Köhne       - Cite      : 10.1093/gbe/evad227
     - Contact   : <felix.thalen@cardio-care.ch>       - DIAMOND v.: $diamondversion
     - Wiki      : github.com/fethalen/patchwork/wiki  - Threads   : $threads
@@ -196,7 +192,7 @@ function parse_parameters()
     whole-genome sequencing data
     """
     settings = ArgParseSettings(description = overview,
-        version = VERSION,
+        version = string(PATCHWORK_VERSION),
         add_version = true)
 
     add_arg_group!(settings, "input/output")
@@ -591,10 +587,6 @@ function julia_main()::Cint
     end
 
     return 0
-end
-
-if length(ARGS) >= 1
-    julia_main()
 end
 
 end # module
