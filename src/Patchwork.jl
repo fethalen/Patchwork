@@ -132,8 +132,8 @@ function printinfo(
 )
     about = """
     P A T C H W O R K v$PATCHWORK_VERSION
-    - Developers: Felix Thalén & Clara G. Köhne       - Cite      : 10.1093/gbe/evad227
-    - Contact   : <felix.thalen@cardio-care.ch>       - DIAMOND v.: $diamondversion
+    - Developers: Felicia Sandberg & Clara G. Köhne   - Cite      : 10.1093/gbe/evad227
+    - Contact   : <felicia.sandberg@hest.ethz.ch>>    - DIAMOND v.: $diamondversion
     - Wiki      : github.com/fethalen/patchwork/wiki  - Threads   : $threads
     $RULER"""
     println(about)

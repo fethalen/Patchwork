@@ -54,11 +54,11 @@ RUN git clone 'https://github.com/fethalen/patchwork' \
 FROM ubuntu:22.04 AS production
 
 # Metadata
-LABEL org.opencontainers.image.authors="felix.thalen@cardio-care.ch"
+LABEL org.opencontainers.image.authors="felicia.sandberg@hest.ethz.ch"
 LABEL version="1"
 LABEL software="Patchwork"
 LABEL software.version="0.5.5"
-LABEL about.author="Felix Thalén <felix.thalen@cardio-care.ch>"
+LABEL about.author="Felicia Sandberg <felicia.sandberg@hest.ethz.ch>"
 LABEL about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
 LABEL about.home="https://github.com/fethalen/patchwork"
 LABEL about.documentation="https://github.com/fethalen/patchwork#readme"

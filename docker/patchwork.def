@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: ubuntu:22.04 
+From: ubuntu:22.04
 Stage: builder
 
 %post
@@ -62,18 +62,18 @@ export DEBIAN_FRONTEND=noninteractive
 export TZ=Europe/Zurich
 
 Bootstrap: docker
-From: ubuntu:22.04 
+From: ubuntu:22.04
 Stage: production
 
 %files from builder
 /opt/patchwork/build/compiled /opt/patchwork
 /usr/local/bin/diamond /usr/local/bin/diamond
 %labels
-org.opencontainers.image.authors="felix.thalen@cardio-care.ch"
+org.opencontainers.image.authors="felicia.sandberg@hest.ethz.ch"
 version="1"
 software="Patchwork"
 software.version="0.5.4"
-about.author="Felix Thalén <felix.thalen@cardio-care.ch>"
+about.author="Felicia Sandberg <felicia.sandberg@hest.ethz.ch>"
 about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
 about.home="https://github.com/fethalen/patchwork"
 about.documentation="https://github.com/fethalen/patchwork#readme"

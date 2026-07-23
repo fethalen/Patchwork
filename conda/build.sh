@@ -19,11 +19,11 @@ julia -e "import Pkg; Pkg.add([\"PackageCompiler\"])"
 #then 
 #    julia -e "import Pkg; Pkg.add([\"ArgParse\", \"BioAlignments\", \"BioCore\", \"BioSequences\", \"BioSymbols\", \"CSV\", 
 #              \"DataFrames\", \"FASTX\", \"GFF3\", \"GenomicFeatures\", \"Random\", \"Statistics\"])"
-#    julia --trace-compile="${precompiled_file}" "${SRC_DIR}/src/Patchwork.jl" --contigs "${contigs}" --reference "${reference}"
+#    julia --trace-compile="${precompiled_file}" "${SRC_DIR}/bin/patchwork" --contigs "${contigs}" --reference "${reference}"
 #fi
 julia -e "import Pkg; Pkg.add([\"ArgParse\", \"BioAlignments\", \"BioCore\", \"BioSequences\", \"BioSymbols\", \"CSV\", 
           \"DataFrames\", \"FASTX\", \"GFF3\", \"GenomicFeatures\", \"Random\", \"Statistics\"])"
-julia --trace-compile="${precompiled_file}" "${SRC_DIR}/src/Patchwork.jl" --contigs "${contigs}" --reference "${reference}"
+julia --trace-compile="${precompiled_file}" "${SRC_DIR}/bin/patchwork" --contigs "${contigs}" --reference "${reference}"
 
 # this is not entirely elegant, but you need the .toml files for compilation and conda-build only 
 # copies the stuff inside the "src"-directory of the repo to its own working directory SRC_DIR,
