@@ -3,9 +3,22 @@
 const DATABASE = "database.dmnd"
 const DIAMONDDB_EXT = "dmnd"
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const FIELDS = ["qseqid", "qseq", "full_qseq", "qseq_translated", "qstart",
-                "qend", "qframe", "sseqid", "sseq", "sstart", "send", "cigar", "pident",
-                "bitscore"]
+const FIELDS = [
+    "qseqid",
+    "qseq",
+    "full_qseq",
+    "qseq_translated",
+    "qstart",
+    "qend",
+    "qframe",
+    "sseqid",
+    "sseq",
+    "sstart",
+    "send",
+    "cigar",
+    "pident",
+    "bitscore",
+]
 const OUTPUT_FORMAT = [6; FIELDS]
 
 mutable struct DiamondSearchResult
@@ -34,28 +47,35 @@ Filters non-unique results and results with less percent identity than
 `6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore
  qframe sseq seq`
 """
-function readblastTSV(
-    path::AbstractString;
-    delimiter='@'
-)::Array{DiamondSearchResult,1}
+function readblastTSV(path::AbstractString; delimiter = '@')::Array{DiamondSearchResult, 1}
     file, io = mktemp()
     run(pipeline(`sed 's/\\/f/g' $path`, file)) # b for backwards frameshift
     run(pipeline(`sed 's/\//b/g' $path`, file)) # f for forwards frameshift
 
-    results = CSV.File(file; header=FIELDS, delim='\t') |> DataFrame
-#    results = CSV.File(path; header=FIELDS, delim='\t') |> DataFrame
+    results = CSV.File(file; header = FIELDS, delim = '\t') |> DataFrame
+    #    results = CSV.File(path; header=FIELDS, delim='\t') |> DataFrame
     unique!(results)
 
     diamondsearchresults = []
     for row in eachrow(results)
         queryid = SequenceIdentifier(String(row.qseqid))
         subjectid = SequenceIdentifier(String(row.sseqid))
-        frameshifted_fullqseq, newcigar, newqstart, newqstop, frame = frameshift_fullseq(
-            row.full_qseq, row.cigar, row.qstart, row.qend, row.qframe)
+        frameshifted_fullqseq, newcigar, newqstart, newqstop, frame =
+            frameshift_fullseq(row.full_qseq, row.cigar, row.qstart, row.qend, row.qframe)
         result = DiamondSearchResult(
-            queryid, BioSequences.LongAA(row.qseq_translated), frameshifted_fullqseq,
-            newqstart, newqstop, frame, subjectid, BioSequences.LongAA(row.sseq),
-            row.sstart, row.send, newcigar, row.pident, row.bitscore
+            queryid,
+            BioSequences.LongAA(row.qseq_translated),
+            frameshifted_fullqseq,
+            newqstart,
+            newqstop,
+            frame,
+            subjectid,
+            BioSequences.LongAA(row.sseq),
+            row.sstart,
+            row.send,
+            newcigar,
+            row.pident,
+            row.bitscore,
         )
         push!(diamondsearchresults, result)
     end
@@ -67,7 +87,7 @@ end
 function frameshift(
     sequence::Union{BioSequences.LongDNA, AbstractString},
     cigar::AbstractString,
-    frame::Int64
+    frame::Int64,
 )
     if typeof(sequence) <: AbstractString
         sequence = LongDNA{4}(sequence)
@@ -81,7 +101,7 @@ end
 
 function frameshift(
     sequence::Union{BioSequences.LongDNA, AbstractString},
-    cigar::AbstractString
+    cigar::AbstractString,
 )::Tuple{BioSequences.LongDNA, AbstractString}
     cigar = replace(cigar, "\\" => "f", "/" => "b") # see DIAMOND Wiki on GitHub, \ = +1, / = -1 in translation direction
     anchors = collect(eachmatch(r"[fbMIDNSHP=X]", cigar)) # b for backwards, f for forwards frameshift
@@ -96,9 +116,9 @@ function frameshift(
             index += pos
         elseif isequal(anchor.match, "b")
             index -= pos
-        # anchor corresponding to pos * nucleotide triplet (if DELETE, don't change index): (delete = gap in ref)
+            # anchor corresponding to pos * nucleotide triplet (if DELETE, don't change index): (delete = gap in ref)
         elseif !BioAlignments.isdeleteop(BioAlignments.Operation(anchor.match[1]))
-            print(seqbuffer, sequence[index:index + 3 * pos - 1])
+            print(seqbuffer, sequence[index:(index + 3 * pos - 1)])
             index += 3 * pos
         end
     end
@@ -109,9 +129,9 @@ function frameshift(
     newcigar = ""
     poscount = 0
     # if there are consecutive same operations after rm frameshifts, bundle them together
-    for i in 1:lastindex(tmpanchors)-1
+    for i in 1:(lastindex(tmpanchors) - 1)
         poscount += parse(Int64, tmppositions[i].match)
-        if !isequal(tmpanchors[i].match, tmpanchors[i+1].match)
+        if !isequal(tmpanchors[i].match, tmpanchors[i + 1].match)
             newcigar = *(newcigar, string(poscount), tmpanchors[i].match)
             poscount = 0
         end
@@ -122,13 +142,19 @@ function frameshift(
     return (LongDNA{4}(String(take!(seqbuffer))), newcigar)
 end
 
-function frameshift_fullseq(fullqseq::AbstractString,
-    cigar::AbstractString, tstart::Int64, tstop::Int64, frame::Int64
+function frameshift_fullseq(
+    fullqseq::AbstractString,
+    cigar::AbstractString,
+    tstart::Int64,
+    tstop::Int64,
+    frame::Int64,
 )::Tuple{LongDNA, AbstractString, Int64, Int64, Int64}
     if frame >= 0 # 0 = unspecified frame, assume forward strand...
         frameshifted, newcigar = frameshift(fullqseq[tstart:tstop], cigar)
-        patched = fullqseq[firstindex(fullqseq):tstart-1] *
-            String(frameshifted) * fullqseq[tstop+1:lastindex(fullqseq)]
+        patched =
+            fullqseq[firstindex(fullqseq):(tstart - 1)] *
+            String(frameshifted) *
+            fullqseq[(tstop + 1):lastindex(fullqseq)]
         newtstop = tstart + length(frameshifted) - 1
         return (BioSequences.LongDNA{4}(patched), newcigar, tstart, newtstop, frame)
     else # in case of negative reading frames, apply cigar ops to reverse complement
@@ -136,8 +162,13 @@ function frameshift_fullseq(fullqseq::AbstractString,
         revtstop = length(fullqseq) - tstop + 1
         revcomp = reverse_complement(LongDNA{4}(fullqseq))
         frameshifted, newcigar = frameshift(revcomp[revtstart:revtstop], cigar)
-        revcomp_patched = LongDNA{4}(join([revcomp[firstindex(fullqseq):revtstart-1],
-            frameshifted, revcomp[revtstop+1:lastindex(fullqseq)]]))
+        revcomp_patched = LongDNA{4}(
+            join([
+                revcomp[firstindex(fullqseq):(revtstart - 1)],
+                frameshifted,
+                revcomp[(revtstop + 1):lastindex(fullqseq)],
+            ]),
+        )
         newrevtstop = revtstart + length(frameshifted) - 1
         return (revcomp_patched, newcigar, revtstart, newrevtstop, -frame) # return reverse complement
         # --> after this, assume positive frame!
@@ -152,10 +183,10 @@ columns (default: `'\\t'`). No header is added when `header` is set to `false`.
 """
 function writeblastTSV(
     path::AbstractString,
-    results::Array{DiamondSearchResult,1};
-    delimiter='\t',
-    header=false,
-    omit::Vector{Symbol}=Symbol[]
+    results::Array{DiamondSearchResult, 1};
+    delimiter = '\t',
+    header = false,
+    omit::Vector{Symbol} = Symbol[],
 )::AbstractString
     # ATTENTION: this function operates on the DiamondSearchResult Array, i.e.
     # the full_querysequence is modified (includes frameshifts and is potentially
@@ -171,10 +202,10 @@ function writeblastTSV(
     end
     # not really necessary; frameshifts should be absent from modified cigar string
     if !in(:cigar, omit)
-        dataframe[!, :cigar] = map(c -> replace(c, "b" => "/", "f" => "\\"),
-            dataframe[!, :cigar])
+        dataframe[!, :cigar] =
+            map(c -> replace(c, "b" => "/", "f" => "\\"), dataframe[!, :cigar])
     end
-    CSV.write(path, dataframe, delim=delimiter, writeheader=header)
+    CSV.write(path, dataframe, delim = delimiter, writeheader = header)
     return path
 end
 
@@ -186,13 +217,16 @@ Insert the alignments within `searchresults` into `queryalignment`.
 """
 function merge!(
     queryalignment::MultipleSequenceAlignment,
-    searchresults::Array{DiamondSearchResult}
+    searchresults::Array{DiamondSearchResult},
 )::MultipleSequenceAlignment
     sotu = "Ceratonereis_australis"
     sequences = queryalignment
 
     for result in searchresults
-        push!(queryalignment, SequenceRecord(sotu, result.subjectid, result.subjectsequence))
+        push!(
+            queryalignment,
+            SequenceRecord(sotu, result.subjectid, result.subjectsequence),
+        )
     end
     return sequences::MultipleSequenceAlignment
 end
@@ -209,13 +243,16 @@ function diamond_blastx(
     query::AbstractString,
     subject::AbstractString,
     outdir::AbstractString,
-    flags=[]
+    flags = [],
 )::AbstractString
     results_file, results_io = mktemp()
     logfile = outdir * "/diamond_blastx.log"
-    diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
-                            --outfmt $OUTPUT_FORMAT --out $results_file`, stdout=logfile,
-                            stderr=logfile)
+    diamond_cmd = pipeline(
+        `diamond blastx --query $query --db $subject $flags
+         --outfmt $OUTPUT_FORMAT --out $results_file`,
+        stdout = logfile,
+        stderr = logfile,
+    )
     run(diamond_cmd)
     close(results_io)
     return results_file
@@ -225,7 +262,7 @@ function diamond_blastx(
     query::MultipleSequenceAlignment,
     subject::AbstractString,
     outdir::AbstractString,
-    flags=[]
+    flags = [],
 )::AbstractString
     querypath = mktemp_fasta(query)
     return diamond_blastx(querypath, subject, outdir, flags)
@@ -235,7 +272,7 @@ function diamond_blastx(
     query::AbstractString,
     subject::MultipleSequenceAlignment,
     outdir::AbstractString,
-    flags=[]
+    flags = [],
 )::AbstractString
     subjectpath = mktemp_fasta(subject)
     return diamond_blastx(query, subjectpath, outdir, flags)
@@ -245,7 +282,7 @@ function diamond_blastx(
     query::MultipleSequenceAlignment,
     subject::MultipleSequenceAlignment,
     outdir::AbstractString,
-    flags=[]
+    flags = [],
 )::AbstractString
     querypath = mktemp_fasta(query)
     subjectpath = mktemp_fasta(subject)
@@ -259,21 +296,24 @@ optional `flags` such as `["--taxonnodes"]`.
 function diamond_makeblastdb(
     reference::AbstractString,
     outdir::AbstractString,
-    flags=[]
+    flags = [],
 )::AbstractString
     if isdiamonddatabase(reference)
         return reference
     elseif isfastafile(reference)
         db_file = outdir * "/" * DATABASE
         logfile = outdir * "/diamond_makedb.log"
-        makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`,
-                              stdout=logfile, stderr=logfile)
+        makedb_cmd = pipeline(
+            `diamond makedb --in $reference $flags -d $db_file`,
+            stdout = logfile,
+            stderr = logfile,
+        )
         run(makedb_cmd)
         return db_file
     else # BLAST DB
         logfile = outdir * "/diamond_prepdb.log"
-        makedb_cmd = pipeline(`diamond prepdb -d $reference`, stdout=logfile,
-                               stderr=logfile)
+        makedb_cmd =
+            pipeline(`diamond prepdb -d $reference`, stdout = logfile, stderr = logfile)
         return reference
     end
 end
@@ -281,26 +321,25 @@ end
 function diamond_makeblastdb(
     alignment::MultipleSequenceAlignment,
     outdir::AbstractString,
-    flags=[]
+    flags = [],
 )::AbstractString
     reference = mktemp_fasta(alignment)
     db_file = outdir * "/" * DATABASE
     logfile = outdir * "/diamond_makedb.log"
-    makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`,
-                          stdout=logfile, stderr=logfile)
+    makedb_cmd = pipeline(
+        `diamond makedb --in $reference $flags -d $db_file`,
+        stdout = logfile,
+        stderr = logfile,
+    )
     run(makedb_cmd)
     return db_file
 end
 
-function queryids(
-    results::Vector{DiamondSearchResult}
-)::Vector{SequenceIdentifier}
+function queryids(results::Vector{DiamondSearchResult})::Vector{SequenceIdentifier}
     return map(result -> result.queryid, results)
 end
 
-function subjectids(
-    results::Vector{DiamondSearchResult}
-)::Vector{SequenceIdentifier}
+function subjectids(results::Vector{DiamondSearchResult})::Vector{SequenceIdentifier}
     return map(result -> result.subjectid, results)
 end
 

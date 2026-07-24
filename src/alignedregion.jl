@@ -26,24 +26,52 @@ struct AlignedRegion
     queryframe::Int64
 
     function AlignedRegion()
-        emptyaln = BioAlignments.PairwiseAlignment(BioSequences.LongAA(),
-            BioSequences.LongAA(), "")
+        emptyaln = BioAlignments.PairwiseAlignment(
+            BioSequences.LongAA(),
+            BioSequences.LongAA(),
+            "",
+        )
         return new(emptyaln, BioSequences.LongDNA(), 0, -1, SequenceIdentifier(), 0, -1, 0)
     end
 
-    function AlignedRegion(alignment::BioAlignments.PairwiseAlignment, fullqseq::LongDNA,
-        subjectfirst::Int64, subjectlast::Int64, queryid::SequenceIdentifier,
-        queryfirst::Int64, querylast::Int64, queryframe::Int64)
-        return new(alignment, fullqseq, subjectfirst, subjectlast, queryid, queryfirst,
-            querylast, queryframe)
+    function AlignedRegion(
+        alignment::BioAlignments.PairwiseAlignment,
+        fullqseq::LongDNA,
+        subjectfirst::Int64,
+        subjectlast::Int64,
+        queryid::SequenceIdentifier,
+        queryfirst::Int64,
+        querylast::Int64,
+        queryframe::Int64,
+    )
+        return new(
+            alignment,
+            fullqseq,
+            subjectfirst,
+            subjectlast,
+            queryid,
+            queryfirst,
+            querylast,
+            queryframe,
+        )
     end
 
     function AlignedRegion(result::DiamondSearchResult)
-        alignment = BioAlignments.PairwiseAlignment(result.translated_querysequence,
-            result.subjectsequence, cleancigar(result.cigar)) # should be clean from frameshift() call but nvm
-        return new(alignment, result.full_querysequence, result.subjectstart,
-                    result.subjectend, result.queryid, result.querystart, result.queryend,
-                    result.queryframe)
+        alignment = BioAlignments.PairwiseAlignment(
+            result.translated_querysequence,
+            result.subjectsequence,
+            cleancigar(result.cigar),
+        ) # should be clean from frameshift() call but nvm
+        return new(
+            alignment,
+            result.full_querysequence,
+            result.subjectstart,
+            result.subjectend,
+            result.queryid,
+            result.querystart,
+            result.queryend,
+            result.queryframe,
+        )
     end
 end
 
@@ -57,7 +85,7 @@ function BioAlignments.cigar(anchors::AbstractVector{BioAlignments.AlignmentAnch
         # `alnpos` is required when the version of BioAlignments.jl >= 2.1.0
         # if-else not necessary since BioAlignments >= 3.0.0 required in Project/Manifest
         #if packageversion("BioAlignments") >= 210
-		    positions = anchors[i].alnpos - anchors[i-1].alnpos
+        positions = anchors[i].alnpos - anchors[i - 1].alnpos
         #else
         #    positions = max(anchors[i].seqpos - anchors[i-1].seqpos,
         #                    anchors[i].refpos - anchors[i-1].refpos)
@@ -70,7 +98,6 @@ end
 function BioAlignments.cigar(alignment::BioAlignments.PairwiseAlignment)::String
     return BioAlignments.cigar(alignment.a.aln.anchors)
 end
-
 
 """
     cleancigar(cigar::AbstractString)
@@ -97,15 +124,12 @@ end
 function BioSequences.translate(
     sequence::BioSequences.LongDNA,
     cigar::AbstractString,
-    frame::Int64=0 # not specified
+    frame::Int64 = 0, # not specified
 )::BioSequences.LongAA
     return BioSequences.translate(frameshift(sequence, cigar, frame)[1])
 end
 
-function Base.show(
-    io::IO,
-    region::AlignedRegion
-)
+function Base.show(io::IO, region::AlignedRegion)
     compact = get(io, :compact, false)
 
     if compact
@@ -120,11 +144,7 @@ function Base.show(
     end
 end
 
-function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    region::AlignedRegion
-)
+function Base.show(io::IO, ::MIME"text/plain", region::AlignedRegion)
     println(io, length(region), "aa long Aligned Region:")
     print(io, "query name: ", region.queryid.id)
 end
@@ -138,8 +158,10 @@ function query_isreverse(region::AlignedRegion)::Bool
     return region.queryfirst > region.querylast
 end
 
-query2subject(region::AlignedRegion, i::Integer)::Integer = first(BioAlignments.seq2ref(region.pairwisealignment, i))
-subject2query(region::AlignedRegion, i::Integer)::Integer = first(BioAlignments.ref2seq(region.pairwisealignment, i))
+query2subject(region::AlignedRegion, i::Integer)::Integer =
+    first(BioAlignments.seq2ref(region.pairwisealignment, i))
+subject2query(region::AlignedRegion, i::Integer)::Integer =
+    first(BioAlignments.ref2seq(region.pairwisealignment, i))
 
 """
     subject2fullsubject(region::AlignedRegion, i::Integer)::UnitRange
@@ -147,12 +169,13 @@ subject2query(region::AlignedRegion, i::Integer)::Integer = first(BioAlignments.
 Given a position, `i`, in the aligned part of the provided reference sequence,
 return the corresponding _positions_ in the full reference sequence.
 """
-function subject2fullsubject(
-    region::Patchwork.AlignedRegion,
-    i::Integer
-)::Integer
-    i <= lastindex(region) || error("the provided integer, ", i,
-    ", is outside the range of the aligned part of the region, ", region)
+function subject2fullsubject(region::Patchwork.AlignedRegion, i::Integer)::Integer
+    i <= lastindex(region) || error(
+        "the provided integer, ",
+        i,
+        ", is outside the range of the aligned part of the region, ",
+        region,
+    )
     return i + region.subjectfirst - 1
 end
 
@@ -162,10 +185,7 @@ end
 Given a position, `i`, in the aligned part of the provided reference sequence,
 return the corresponding _positions_ in the full query sequence.
 """
-function subject2fullquery(
-    region::AlignedRegion,
-    i::Integer
-)::UnitRange
+function subject2fullquery(region::AlignedRegion, i::Integer)::UnitRange
     subjectpos = subject2fullsubject(region, i)
     return fullsubject2fullquery(region, subjectpos)
 end
@@ -176,20 +196,21 @@ end
 Given a position, `i`, in the full reference sequence, return the corresponding position in
 the aligned part of the subject sequence.
 """
-function fullsubject2subject(
-    region::AlignedRegion,
-    i::Integer
-)::Integer
-    region.subjectfirst <= i <= region.subjectlast || error("the provided integer, ", i,
-    ", is outside the range of the provided region, ", region)
+function fullsubject2subject(region::AlignedRegion, i::Integer)::Integer
+    region.subjectfirst <= i <= region.subjectlast || error(
+        "the provided integer, ",
+        i,
+        ", is outside the range of the provided region, ",
+        region,
+    )
     return i - region.subjectfirst + 1
 end
 
-function fullsubject2subject(
-    region::AlignedRegion,
-    range::UnitRange
-)::UnitRange
-    return fullsubject2subject(region, first(range)):fullsubject2subject(region, last(range))
+function fullsubject2subject(region::AlignedRegion, range::UnitRange)::UnitRange
+    return fullsubject2subject(region, first(range)):fullsubject2subject(
+        region,
+        last(range),
+    )
 end
 
 """
@@ -198,10 +219,7 @@ end
 Given a position, `i`, in the full reference sequence, return the corresponding position in
 the aligned part of the query sequence.
 """
-function fullsubject2query(
-    region::AlignedRegion,
-    i::Integer
-)::Integer
+function fullsubject2query(region::AlignedRegion, i::Integer)::Integer
     subjectpos = fullsubject2subject(region, i)
     return subject2query(region, subjectpos)
 end
@@ -212,10 +230,7 @@ end
 Given a position, `i`, in the full reference sequence, return the corresponding _positions_
 in the full query sequence.
 """
-function fullsubject2fullquery(
-    region::AlignedRegion,
-    i::Integer
-)::UnitRange
+function fullsubject2fullquery(region::AlignedRegion, i::Integer)::UnitRange
     querypos = fullsubject2query(region, i)
     return query2fullquery(region, querypos)
 end
@@ -226,16 +241,13 @@ end
 Given a position, `i`, in the aligned part of the query sequence, return the corresponding
 _positions_ in the full part of the query sequence.
 """
-function query2fullquery(
-    region::AlignedRegion,
-    i::Integer
-)::UnitRange
+function query2fullquery(region::AlignedRegion, i::Integer)::UnitRange
     if query_isreverse(region)
         full_querypos = query_rightposition(region) - ((i - 1) * 3)
-        return full_querypos - 2:full_querypos
+        return (full_querypos - 2):full_querypos
     else
         full_querypos = query_leftposition(region) + ((i - 1) * 3)
-        return full_querypos:full_querypos + 2
+        return full_querypos:(full_querypos + 2)
     end
 end
 
@@ -249,16 +261,17 @@ correspond to a range of positions. This function's _raison d'etre_ is thus to c
 the first and the last position of the ranges, given the provided range. The results are
 returned as a tuple. Note that the returned range may be inverted.
 """
-function fullsubject_queryboundaries(
-    region::AlignedRegion,
-    range::UnitRange
-)::Tuple
+function fullsubject_queryboundaries(region::AlignedRegion, range::UnitRange)::Tuple
     if query_isreverse(region)
-        return (last(fullsubject2fullquery(region, first(range))),
-                first(fullsubject2fullquery(region, last(range))))
+        return (
+            last(fullsubject2fullquery(region, first(range))),
+            first(fullsubject2fullquery(region, last(range))),
+        )
     else
-        return (first(fullsubject2fullquery(region, first(range))),
-                last(fullsubject2fullquery(region, last(range))))
+        return (
+            first(fullsubject2fullquery(region, first(range))),
+            last(fullsubject2fullquery(region, last(range))),
+        )
     end
 end
 
@@ -268,16 +281,17 @@ end
 Given a `range` in the aligned part of the reference sequence, return the first and last
 positions in the full query sequence, which correspond to the provided range.
 """
-function subject_queryboundaries(
-    region::AlignedRegion,
-    range::UnitRange
-)::Tuple
+function subject_queryboundaries(region::AlignedRegion, range::UnitRange)::Tuple
     if query_isreverse(region)
-        return (last(subject2fullquery(region, first(range))),
-                first(subject2fullquery(region, last(range))))
+        return (
+            last(subject2fullquery(region, first(range))),
+            first(subject2fullquery(region, last(range))),
+        )
     else
-        return (first(subject2fullquery(region, first(range))),
-                last(subject2fullquery(region, last(range))))
+        return (
+            first(subject2fullquery(region, first(range))),
+            last(subject2fullquery(region, last(range))),
+        )
     end
 end
 
@@ -297,10 +311,7 @@ Base.firstindex(region::AlignedRegion) = 1
 Base.lastindex(region::AlignedRegion) = length(region)
 Base.eachindex(region::AlignedRegion) = Base.OneTo(lastindex(region))
 
-function Base.getindex(
-    aln::BioAlignments.PairwiseAlignment,
-    indices::UnitRange
-)
+function Base.getindex(aln::BioAlignments.PairwiseAlignment, indices::UnitRange)
     queryinterval = BioAlignments.ref2seq(aln, indices)
     subjectseq = aln.b[indices]
     isequal(queryinterval, 0:0) &&
@@ -310,16 +321,20 @@ function Base.getindex(
     return pairalign_global(queryseq, subjectseq)
 end
 
-function Base.getindex(
-    region::AlignedRegion,
-    indices::UnitRange
-)
+function Base.getindex(region::AlignedRegion, indices::UnitRange)
     subjectfirst = first(indices)
     subjectlast = last(indices)
     queryfirst, querylast = Patchwork.subject_queryboundaries(region, indices)
-    return AlignedRegion(region.pairwisealignment[indices].aln, region.full_querysequence,
-        subject2fullsubject(region, subjectfirst), subject2fullsubject(region, subjectlast),
-        region.queryid, queryfirst, querylast, region.queryframe)#, region.fqueryfist, region.fquerylast)
+    return AlignedRegion(
+        region.pairwisealignment[indices].aln,
+        region.full_querysequence,
+        subject2fullsubject(region, subjectfirst),
+        subject2fullsubject(region, subjectlast),
+        region.queryid,
+        queryfirst,
+        querylast,
+        region.queryframe,
+    )#, region.fqueryfist, region.fquerylast)
 end
 
 function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegion
@@ -330,18 +345,21 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     @assert length(anchors) >= 2
     subjectstart = first(indices)
     subjectend = last(indices)
-    while length(anchors) >= 2 && (isdeleteop(anchors[2].op) ||
-            anchors[2].refpos < first(indices))
+    while length(anchors) >= 2 &&
+          (isdeleteop(anchors[2].op) || anchors[2].refpos < first(indices))
         removeanchor = popat!(anchors, 2)
-        if (length(anchors) >= 2 && isdeleteop(removeanchor.op) &&
-                anchors[2].refpos > first(indices))
+        if (
+            length(anchors) >= 2 &&
+            isdeleteop(removeanchor.op) &&
+            anchors[2].refpos > first(indices)
+        )
             subjectstart = anchors[2].refpos
         end
     end
     @assert length(anchors) >= 2
     lastanchor = last(anchors)
-    while length(anchors) >= 2 && (isdeleteop(lastanchor.op) ||
-            lastanchor.refpos > last(indices))
+    while length(anchors) >= 2 &&
+          (isdeleteop(lastanchor.op) || lastanchor.refpos > last(indices))
         toomuch = pop!(anchors)
         lastanchor = last(anchors)
         if lastanchor.refpos < last(indices)
@@ -349,11 +367,19 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
                 subjectend = lastanchor.refpos
             else
                 #packageversion("BioAlignments") >= 210
-                    seqposition = subject2query(region, subjectend)
-                    alnposition = lastanchor.alnpos + max(seqposition - lastanchor.seqpos,
-                        subjectend - lastanchor.refpos)
-                    push!(anchors, BioAlignments.AlignmentAnchor(seqposition, subjectend,
-                        alnposition, toomuch.op))
+                seqposition = subject2query(region, subjectend)
+                alnposition =
+                    lastanchor.alnpos +
+                    max(seqposition - lastanchor.seqpos, subjectend - lastanchor.refpos)
+                push!(
+                    anchors,
+                    BioAlignments.AlignmentAnchor(
+                        seqposition,
+                        subjectend,
+                        alnposition,
+                        toomuch.op,
+                    ),
+                )
                 #else
                 #    push!(anchors, BioAlignments.AlignmentAnchor(subject2query(region, subjectend),
                 #    subjectend, toomuch.op))
@@ -378,27 +404,40 @@ function slicealignment(region::AlignedRegion, indices::UnitRange)::AlignedRegio
     querystart = first(queryint)
     newanchors = [anchors[1]]
     #if latest_bioalignments
-	    offset = anchors[2].alnpos -
-	    	max(anchors[2].seqpos-querystart+1, anchors[2].refpos-subjectstart+1)
+    offset =
+        anchors[2].alnpos -
+        max(anchors[2].seqpos-querystart+1, anchors[2].refpos-subjectstart+1)
     #end
     for anchor in anchors[2:lastindex(anchors)]
         #if latest_bioalignments
-            seqposition = anchor.seqpos - querystart + 1
-            refposition = anchor.refpos - subjectstart + 1
-            alnposition = anchor.alnpos - offset
-            push!(newanchors, BioAlignments.AlignmentAnchor(seqposition, refposition,
-                alnposition, anchor.op))
+        seqposition = anchor.seqpos - querystart + 1
+        refposition = anchor.refpos - subjectstart + 1
+        alnposition = anchor.alnpos - offset
+        push!(
+            newanchors,
+            BioAlignments.AlignmentAnchor(seqposition, refposition, alnposition, anchor.op),
+        )
         #else
         #    push!(newanchors, BioAlignments.AlignmentAnchor(anchor.seqpos - querystart + 1,
         #        anchor.refpos - subjectstart + 1, anchor.op))
         #end
     end
-    sliced = BioAlignments.PairwiseAlignment(query[queryint],
-        subject[subjectstart:subjectend], cigar(newanchors))
+    sliced = BioAlignments.PairwiseAlignment(
+        query[queryint],
+        subject[subjectstart:subjectend],
+        cigar(newanchors),
+    )
     queryfirst, querylast = subject_queryboundaries(region, subjectstart:subjectend)
-    return AlignedRegion(sliced, region.full_querysequence,
-        subject2fullsubject(region, subjectstart), subject2fullsubject(region, subjectend),
-        region.queryid, queryfirst, querylast, region.queryframe)
+    return AlignedRegion(
+        sliced,
+        region.full_querysequence,
+        subject2fullsubject(region, subjectstart),
+        subject2fullsubject(region, subjectend),
+        region.queryid,
+        queryfirst,
+        querylast,
+        region.queryframe,
+    )
 end
 
 """
@@ -471,10 +510,7 @@ end
 Check if two aligned regions are well-ordered. Two regions, `a` and `b` are
 considered well-ordered if `leftposition(a) <= leftposition(b)`.
 """
-function isordered(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::Bool
+function isordered(a::AlignedRegion, b::AlignedRegion)::Bool
     return subject_leftposition(a) <= subject_leftposition(b)
 end
 
@@ -483,10 +519,7 @@ end
 
 Check whether the interval in `a` starts before `b`.
 """
-function precedes(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::Bool
+function precedes(a::AlignedRegion, b::AlignedRegion)::Bool
     return subject_leftposition(a) < subject_leftposition(b)
 end
 
@@ -495,10 +528,7 @@ end
 
 Returns `true` if the interval of `a` overlaps that of `b`.
 """
-function BioGenerics.isoverlapping(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::Bool
+function BioGenerics.isoverlapping(a::AlignedRegion, b::AlignedRegion)::Bool
     return subject_leftposition(a) <= subject_rightposition(b) &&
            subject_leftposition(b) <= subject_rightposition(a)
 end
@@ -508,10 +538,7 @@ end
 
 Returns `true` if the interval of `a` is the same as that of `b`.
 """
-function samerange(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::Bool
+function samerange(a::AlignedRegion, b::AlignedRegion)::Bool
     return subject_leftposition(a) == subject_leftposition(b) &&
            subject_rightposition(b) == subject_rightposition(a)
 end
@@ -522,10 +549,7 @@ end
 Returns the sequence identifier of `region` with the OTU and sequence ID
 separated by `separator`.
 """
-function identifier(
-    region::AlignedRegion,
-    separator::AbstractChar='@'
-)
+function identifier(region::AlignedRegion, separator::AbstractChar = '@')
     return identifier(region.record, separator)
 end
 
@@ -534,10 +558,7 @@ end
 
 Returns `true` if the sequence identifer of `a` and `b` are identical.
 """
-function sameid(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::Bool
+function sameid(a::AlignedRegion, b::AlignedRegion)::Bool
     return identifier(a) == identifier(b)
 end
 
@@ -546,10 +567,7 @@ end
 
 Returns `true` if the sequence data of `a` and `b` are identical.
 """
-function samesequence(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::Bool
+function samesequence(a::AlignedRegion, b::AlignedRegion)::Bool
     return a.record.sequencedata == b.record.sequencedata
 end
 
@@ -559,8 +577,10 @@ end
 Given two overlapping `AlignedRegion`s, slice the regions such that the best-scoring region
 covers the overlapping interval. Returns an array of `AlignedRegion` objects.
 """
-function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
-    !skipcheck && !BioGenerics.isoverlapping(a, b) && error("region $a and $b are not overlapping")
+function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool = false)
+    !skipcheck &&
+        !BioGenerics.isoverlapping(a, b) &&
+        error("region $a and $b are not overlapping")
 
     overlappingregion = overlap(a, b)
     bestscore, lowestscore = order(a, b, overlappingregion)
@@ -568,27 +588,35 @@ function merge(a::AlignedRegion, b::AlignedRegion, skipcheck::Bool=false)
         bestfirst = fullsubject2subject(bestscore, bestscore.subjectfirst)
         bestlast = fullsubject2subject(bestscore, bestscore.subjectlast)
         return [slicealignment(bestscore, bestfirst:bestlast)]
-    elseif precedes(bestscore, lowestscore) || bestscore.subjectfirst == lowestscore.subjectfirst
+    elseif precedes(bestscore, lowestscore) ||
+           bestscore.subjectfirst == lowestscore.subjectfirst
         bestfirst = fullsubject2subject(bestscore, bestscore.subjectfirst)
         bestlast = fullsubject2subject(bestscore, last(overlappingregion))
         lowestfirst = fullsubject2subject(lowestscore, last(overlappingregion) + 1)
         lowestlast = fullsubject2subject(lowestscore, lowestscore.subjectlast)
-        return [slicealignment(bestscore, bestfirst:bestlast),
-                slicealignment(lowestscore, lowestfirst:lowestlast)]
+        return [
+            slicealignment(bestscore, bestfirst:bestlast),
+            slicealignment(lowestscore, lowestfirst:lowestlast),
+        ]
     else#if precedes(lowestscore, bestscore)
         beforeoverlap_first = fullsubject2subject(lowestscore, lowestscore.subjectfirst)
         beforeoverlap_last = fullsubject2subject(lowestscore, first(overlappingregion) - 1)
         bestfirst = fullsubject2subject(bestscore, first(overlappingregion))
         bestlast = fullsubject2subject(bestscore, last(overlappingregion))
         if lowestscore.subjectlast > last(overlappingregion)
-            afteroverlap_first = fullsubject2subject(lowestscore, last(overlappingregion) + 1)
+            afteroverlap_first =
+                fullsubject2subject(lowestscore, last(overlappingregion) + 1)
             afteroverlap_last = fullsubject2subject(lowestscore, lowestscore.subjectlast)
-            return [slicealignment(lowestscore, beforeoverlap_first:beforeoverlap_last),
+            return [
+                slicealignment(lowestscore, beforeoverlap_first:beforeoverlap_last),
                 slicealignment(bestscore, bestfirst:bestlast),
-                slicealignment(lowestscore, afteroverlap_first:afteroverlap_last)]
+                slicealignment(lowestscore, afteroverlap_first:afteroverlap_last),
+            ]
         else
-            return [slicealignment(lowestscore, beforeoverlap_first:beforeoverlap_last),
-                slicealignment(bestscore, bestfirst:bestlast)]
+            return [
+                slicealignment(lowestscore, beforeoverlap_first:beforeoverlap_last),
+                slicealignment(bestscore, bestfirst:bestlast),
+            ]
         end
     end
 end
@@ -598,10 +626,7 @@ end
 
 Returns the leftmost position at which the two regions `a` and `b` meet.
 """
-function leftintersection(
-    a::AlignedRegion,
-    b::AlignedRegion
-)
+function leftintersection(a::AlignedRegion, b::AlignedRegion)
     return max(subject_leftposition(a), subject_leftposition(b))
 end
 
@@ -610,10 +635,7 @@ end
 
 Returns the rightmost position at which the two regions `a` and `b` meet.
 """
-function rightintersection(
-    a::AlignedRegion,
-    b::AlignedRegion
-)
+function rightintersection(a::AlignedRegion, b::AlignedRegion)
     return min(subject_rightposition(a), subject_rightposition(b))
 end
 
@@ -629,10 +651,7 @@ b:      [-------]
     |...|....|....|
     1   5    10   15
 """
-function overlap(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::UnitRange
+function overlap(a::AlignedRegion, b::AlignedRegion)::UnitRange
     return leftintersection(a, b):rightintersection(a, b)
 end
 
@@ -648,16 +667,13 @@ b:      [-------]
     |...|....|....|
     1   5    10   15
 """
-function beforeoverlap(
-    a::AlignedRegion,
-    b::AlignedRegion
-)
+function beforeoverlap(a::AlignedRegion, b::AlignedRegion)
     if subject_leftposition(a) == subject_leftposition(b)
         error("Region $a and $b starts at the same position")
     elseif subject_leftposition(a) < subject_leftposition(b)
-        return (subject_leftposition(a):leftintersection(a,b) - 1)
+        return (subject_leftposition(a):(leftintersection(a, b) - 1))
     else
-        return (subject_leftposition(b):leftintersection(a,b) - 1)
+        return (subject_leftposition(b):(leftintersection(a, b) - 1))
     end
 end
 
@@ -673,16 +689,13 @@ b:      [-------]
     |...|....|....|
     1   5    10   15
 """
-function afteroverlap(
-    a::AlignedRegion,
-    b::AlignedRegion
-)
+function afteroverlap(a::AlignedRegion, b::AlignedRegion)
     if subject_rightposition(a) == subject_rightposition(b)
         error("Region $a and $b end at the same position")
     elseif subject_rightposition(a) > subject_rightposition(b)
-        return (rightintersection(a,b) + 1:subject_rightposition(a))
+        return ((rightintersection(a, b) + 1):subject_rightposition(a))
     elseif subject_rightposition(b) > subject_rightposition(a)
-        return (rightintersection(a,b) + 1:subject_rightposition(b))
+        return ((rightintersection(a, b) + 1):subject_rightposition(b))
     end
 end
 
@@ -709,10 +722,7 @@ Example 4: `false` since `a` is of equal length to `b`.
 a: [--------------]
 b: [--------------]
 """
-function shadows(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::Bool
+function shadows(a::AlignedRegion, b::AlignedRegion)::Bool
     return length(a) > length(b) &&
            subject_leftposition(a) <= subject_leftposition(b) &&
            subject_rightposition(a) >= subject_rightposition(b) # b ends BEFORE a, see docstring?!
@@ -735,10 +745,7 @@ b:    [-----]
     |...|....|....|
     1   5    10   15
 """
-function equalrange(
-    a::AlignedRegion,
-    b::AlignedRegion
-)::Bool
+function equalrange(a::AlignedRegion, b::AlignedRegion)::Bool
     return subject_leftposition(a) == subject_leftposition(b) &&
            subject_rightposition(a) == subject_rightposition(b)
 end
@@ -755,10 +762,7 @@ b:  [----]
     |...|....|....|
     1   5    10   15
 """
-function totalrange(
-    a::AlignedRegion,
-    b::AlignedRegion
-)
+function totalrange(a::AlignedRegion, b::AlignedRegion)
     if !BioGenerics.isoverlapping(a, b)
         error("Cannot do total range of non-overlapping regions, $a and $b")
     elseif equalrange(a, b)
@@ -768,8 +772,10 @@ function totalrange(
     elseif shadows(b, a)
         return (subject_leftposition(b), subject_rightposition(b))
     else
-        return (min(subject_leftposition(a), subject_leftposition(b)),
-                max(subject_rightposition(a), subject_rightposition(b)))
+        return (
+            min(subject_leftposition(a), subject_leftposition(b)),
+            max(subject_rightposition(a), subject_rightposition(b)),
+        )
     end
 end
 
@@ -788,10 +794,7 @@ Example 3: Returns `b` because `b` is longer than `a`.
 a: [--------]
 b: [-----------]
 """
-function longest(
-    a::AlignedRegion,
-    b::AlignedRegion
-)
+function longest(a::AlignedRegion, b::AlignedRegion)
     if length(a) >= length(b)
         return a
     else

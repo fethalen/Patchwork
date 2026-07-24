@@ -1,8 +1,8 @@
 # Provides a "sliding window" approach for removing spurious alignments
 
 function cutalignment(
-    alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAA,BioSequences.LongAA},
-    cuttingpoints::Vector{Tuple{Int64,Int64}}
+    alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAA, BioSequences.LongAA},
+    cuttingpoints::Vector{Tuple{Int64, Int64}},
 )
     keep = []
     keepopen = false
@@ -46,8 +46,8 @@ end
 
 function cutsequence(
     seq::Union{BioSequences.LongAA, BioSequences.LongDNA},
-    cuttingpoints::Vector{Tuple{Int64,Int64}},
-    seqend::Int64
+    cuttingpoints::Vector{Tuple{Int64, Int64}},
+    seqend::Int64,
 )
     keep = []
     keepopen = false
@@ -95,11 +95,11 @@ provided `alignment` where the average distance within the window falls below th
 `distancethreshold`. Returns a vector of starts and stops where the
 """
 function slidingwindow(
-    alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAA,BioSequences.LongAA},
+    alignment::BioAlignments.PairwiseAlignment{BioSequences.LongAA, BioSequences.LongAA},
     dna::BioSequences.LongDNA,
     windowsize::Int64,
     distancethreshold::Float64,
-    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel,
 )
     # If the alignment length is smaller or equal to that of the window size, then make
     # the window size the length of the alignment
@@ -111,8 +111,8 @@ function slidingwindow(
     alignmentend = last(anchors).refpos
     windowstart = 1
     windowstop = alignmentend - windowsize + windowstart
-    flagged = Tuple{Int64,Int64}[]
-    dnaflagged = Tuple{Int64,Int64}[]
+    flagged = Tuple{Int64, Int64}[]
+    dnaflagged = Tuple{Int64, Int64}[]
     cutbegin = 0
     cutend = 0
     cutopen = false
@@ -151,7 +151,11 @@ function slidingwindow(
     else
         anchors = alignment.a.aln.anchors
         alignmentend = last(anchors).seqpos # last(anchors).refpos
-        return pairalign_global(cutsequence(alignment.a.seq, flagged, alignmentend),
-            alignment.b, scoremodel).aln, cutsequence(dna, dnaflagged, lastindex(dna))
+        return pairalign_global(
+            cutsequence(alignment.a.seq, flagged, alignmentend),
+            alignment.b,
+            scoremodel,
+        ).aln,
+        cutsequence(dna, dnaflagged, lastindex(dna))
     end
 end

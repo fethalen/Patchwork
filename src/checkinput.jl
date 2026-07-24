@@ -1,31 +1,127 @@
-const MATRICES = Dict("BLOSUM45"=>BLOSUM45, "BLOSUM50"=>BLOSUM50,"BLOSUM62"=>BLOSUM62,
-                      "BLOSUM80"=>BLOSUM80, "BLOSUM90"=>BLOSUM90, "PAM30"=>PAM30,
-                      "PAM70"=>PAM70, "PAM250"=>PAM250)
-const GAPS = Dict("BLOSUM45"=>[(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13, 2),
-                               (14, 2), (15, 2), (16, 2), (16, 1), (17, 1), (18, 1),
-                               (19, 1)],
-                  "BLOSUM50"=>[(9, 3),(10, 3), (11, 3), (12, 3), (13, 3), (12, 2), (13, 2),
-                              (14, 2), (15, 2), (16, 2), (15, 1), (16, 1), (17, 1),
-                              (18, 1), (19, 1)],
-                  "BLOSUM62"=>[(6, 2), (7, 2), (8, 2), (9, 2), (10, 2), (11, 1), (9, 1),
-                               (10, 1), (11, 1), (12, 1), (13, 1)],
-                  "BLOSUM80"=>[(6, 2), (7, 2), (8, 2), (9, 2), (9, 1), (10, 1), (11, 1),
-                               (13, 2), (25, 2)],
-                  "BLOSUM90"=>[(6, 2), (7, 2), (8, 2), (9, 2), (9, 1), (10, 1), (11, 1)],
-                  "PAM30"=>[(5, 2), (6, 2), (7, 2), (8, 1), (9, 1), (10, 1)],
-                  "PAM70"=>[(6, 2), (7, 2), (8, 2), (9, 1), (10, 1), (11, 1)],
-                  "PAM250"=>[(11, 3), (12, 3), (13, 3), (14, 3), (15, 3), (13, 2), (14, 2),
-                             (15, 2), (16, 2), (17, 2), (17, 1), (18, 1), (19, 1), (20, 1),
-                             (21, 1)])
-const GAPDEFAULTS = Dict("BLOSUM45"=>(14, 2), "BLOSUM50"=>(13, 2), "BLOSUM62"=>(11, 1),
-                         "BLOSUM80"=>(10, 1), "BLOSUM90"=>(10, 1), "PAM30"=>(9, 1),
-                         "PAM70"=>(10, 1), "PAM250"=>(14, 2))
-const AVAIL_DIAMOND = ["iterate", "frameshift", "evalue", "min-score", #"sensitivity",
-    "max-target-seqs", "top", "max-hsps", "id", "query-cover", "subject-cover",
-    "query-gencode", "strand", "min-orf", "masking", "block-size"]
+const MATRICES = Dict(
+    "BLOSUM45"=>BLOSUM45,
+    "BLOSUM50"=>BLOSUM50,
+    "BLOSUM62"=>BLOSUM62,
+    "BLOSUM80"=>BLOSUM80,
+    "BLOSUM90"=>BLOSUM90,
+    "PAM30"=>PAM30,
+    "PAM70"=>PAM70,
+    "PAM250"=>PAM250,
+)
+const GAPS = Dict(
+    "BLOSUM45"=>[
+        (10, 3),
+        (11, 3),
+        (12, 3),
+        (13, 3),
+        (12, 2),
+        (13, 2),
+        (14, 2),
+        (15, 2),
+        (16, 2),
+        (16, 1),
+        (17, 1),
+        (18, 1),
+        (19, 1),
+    ],
+    "BLOSUM50"=>[
+        (9, 3),
+        (10, 3),
+        (11, 3),
+        (12, 3),
+        (13, 3),
+        (12, 2),
+        (13, 2),
+        (14, 2),
+        (15, 2),
+        (16, 2),
+        (15, 1),
+        (16, 1),
+        (17, 1),
+        (18, 1),
+        (19, 1),
+    ],
+    "BLOSUM62"=>[
+        (6, 2),
+        (7, 2),
+        (8, 2),
+        (9, 2),
+        (10, 2),
+        (11, 1),
+        (9, 1),
+        (10, 1),
+        (11, 1),
+        (12, 1),
+        (13, 1),
+    ],
+    "BLOSUM80"=>[
+        (6, 2),
+        (7, 2),
+        (8, 2),
+        (9, 2),
+        (9, 1),
+        (10, 1),
+        (11, 1),
+        (13, 2),
+        (25, 2),
+    ],
+    "BLOSUM90"=>[(6, 2), (7, 2), (8, 2), (9, 2), (9, 1), (10, 1), (11, 1)],
+    "PAM30"=>[(5, 2), (6, 2), (7, 2), (8, 1), (9, 1), (10, 1)],
+    "PAM70"=>[(6, 2), (7, 2), (8, 2), (9, 1), (10, 1), (11, 1)],
+    "PAM250"=>[
+        (11, 3),
+        (12, 3),
+        (13, 3),
+        (14, 3),
+        (15, 3),
+        (13, 2),
+        (14, 2),
+        (15, 2),
+        (16, 2),
+        (17, 2),
+        (17, 1),
+        (18, 1),
+        (19, 1),
+        (20, 1),
+        (21, 1),
+    ],
+)
+const GAPDEFAULTS = Dict(
+    "BLOSUM45"=>(14, 2),
+    "BLOSUM50"=>(13, 2),
+    "BLOSUM62"=>(11, 1),
+    "BLOSUM80"=>(10, 1),
+    "BLOSUM90"=>(10, 1),
+    "PAM30"=>(9, 1),
+    "PAM70"=>(10, 1),
+    "PAM250"=>(14, 2),
+)
+const AVAIL_DIAMOND = [
+    "iterate",
+    "frameshift",
+    "evalue",
+    "min-score", #"sensitivity",
+    "max-target-seqs",
+    "top",
+    "max-hsps",
+    "id",
+    "query-cover",
+    "subject-cover",
+    "query-gencode",
+    "strand",
+    "min-orf",
+    "masking",
+    "block-size",
+]
 const DIAMONDSTRANDS = ["both", "plus", "minus"]
-const DIAMONDMODES = ["fast", "mid-sensitive", "sensitive", "more-sensitive",
-    "very-sensitive", "ultra-sensitive"]
+const DIAMONDMODES = [
+    "fast",
+    "mid-sensitive",
+    "sensitive",
+    "more-sensitive",
+    "very-sensitive",
+    "ultra-sensitive",
+]
 const DMND_ITERATE = ["PATCHWORK_OFF"]
 const DIAMONDMASK = ["0", "1", "seg"]
 
@@ -45,10 +141,12 @@ were set in `--diamond-flags`.
 function checkmatrixtype(args::Dict{String, Any})
     if !isnothing(args["matrix"]) && !isnothing(args["custom-matrix"])
         error("You can only supply one of --matrix and --custom-matrix")
-    elseif !isnothing(args["custom-matrix"]) && (!("--lambda" in args["diamond-flags"])
-                                                 || !("--K" in args["diamond-flags"]))
-        error("DIAMOND custom scoring matrices require setting the --lambda and",
-              " --K options.")
+    elseif !isnothing(args["custom-matrix"]) &&
+           (!("--lambda" in args["diamond-flags"]) || !("--K" in args["diamond-flags"]))
+        error(
+            "DIAMOND custom scoring matrices require setting the --lambda and",
+            " --K options.",
+        )
     elseif !isnothing(args["matrix"]) && !(args["matrix"] in keys(MATRICES))
         error("Invalid scoring matrix: $matrix.")
     end
@@ -104,7 +202,7 @@ BLOSUM50, BLOSUM62, BLOSUM80, BLOSUM90, PAM30, PAM70, or PAM250).
 """
 function getmatrix(
     matrixname::AbstractString,
-    matrixtype::AbstractString
+    matrixtype::AbstractString,
 )::SubstitutionMatrix
     isequal("custom-matrix", matrixtype) && return read_custommatrix(matrixname)
     return MATRICES[matrixname]
@@ -159,11 +257,7 @@ end
 
 Ensure that the gap penalties are compatible with the matrix.
 """
-function checkgappenalty(
-    matrix::AbstractString,
-    gapopen::Int64,
-    gapextend::Int64
-)
+function checkgappenalty(matrix::AbstractString, gapopen::Int64, gapextend::Int64)
     if matrix in keys(MATRICES)
         allowedgaps = GAPS[matrix]
         if isnothing(findfirst(isequal((gapopen, gapextend)), allowedgaps))
@@ -306,13 +400,21 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
     #setpatchworkflags!(args)
     @assert !isnothing(args["gapopen"]) && !isnothing(args["gapextend"]) """set gap
         penalties with setpatchworkflags!(args) before calling this function"""
-    diamondflags = ["--" * getmatrixtype(args), args[getmatrixtype(args)],
-        "--gapopen", string(args["gapopen"]), "--gapextend", string(args["gapextend"]),
-        "--threads", string(args["threads"])]
+    diamondflags = [
+        "--" * getmatrixtype(args),
+        args[getmatrixtype(args)],
+        "--gapopen",
+        string(args["gapopen"]),
+        "--gapextend",
+        string(args["gapextend"]),
+        "--threads",
+        string(args["threads"]),
+    ]
 
     if !isnothing(args["strand"])
-        !in(args["strand"], DIAMONDSTRANDS) && error("Only values 'both', 'plus', and 'minus'
-            are allowed for the --strand option.")
+        !in(args["strand"], DIAMONDSTRANDS) &&
+            error("Only values 'both', 'plus', and 'minus'
+are allowed for the --strand option.")
     end
     # if !isnothing(args["sensitivity"])
     #     !in(args["sensitivity"], DIAMONDMODES) && error("""Only values 'fast', 'mid-sensitive',
@@ -322,8 +424,9 @@ function collectdiamondflags(args::Dict{String, Any})::Vector{String}
     # end
     if !isequal(args["iterate"], DMND_ITERATE)
         if !isempty(args["iterate"])
-            !min_diamondversion("2.0.12") && error("""DIAMOND version must be at least 2.0.12
-            to support providing a list of sensitivities with the --iterate option.""")
+            !min_diamondversion("2.0.12") &&
+                error("""DIAMOND version must be at least 2.0.12
+to support providing a list of sensitivities with the --iterate option.""")
             # if in("default", args["iterate"]) && length(args["iterate"]) > 1
             #     error("'default' may not be used in combination with other values when setting
             #         --iterate.")

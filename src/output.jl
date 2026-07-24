@@ -22,7 +22,7 @@ function write_alignmentfile(
     id::SequenceIdentifier,
     contigs::Int64,
     alignment::BioAlignments.PairwiseAlignment,
-    index::Int64
+    index::Int64,
 )
     count = string(index) * ". "
     subjectlength = length(alignment.b)
@@ -80,10 +80,7 @@ function write_fasta(
 
     isempty(otu) && return write_fasta(file, id.id, sequence)
 
-    write(
-        fastawriter,
-        FASTA.Record(otu, sequence)
-    )
+    write(fastawriter, FASTA.Record(otu, sequence))
     close(fastawriter)
     return file
 end
@@ -93,7 +90,7 @@ function write_fasta(
     queryid::SequenceIdentifier,
     subjectid::SequenceIdentifier,
     alignment::PairwiseAlignment,
-    delimiter::Char
+    delimiter::Char,
 )
     fastawriter = FASTA.Writer(open(file, "a"))
     otu = otupart(queryid)
@@ -101,10 +98,7 @@ function write_fasta(
 
     isempty(otu) && return write_fasta(file, sequenceid, alignment.a.seq)
 
-    write(
-        fastawriter,
-        FASTA.Record(otu * delimiter * sequenceid, alignment.a.seq)
-    )
+    write(fastawriter, FASTA.Record(otu * delimiter * sequenceid, alignment.a.seq))
     close(fastawriter)
     return file
 end

@@ -1,7 +1,19 @@
 # Provides basic types for working with the general feature format (GFF).
 
 columns = [:seqid, :source, :type, :start, :end_, :score, :strand, :phase, :attributes]
-attributelist = ["ID", "Name", "Alias", "Parent", "Target", "Gap", "Derives_from", "Note", "Dbxref", "Ontology_term", "Is_circular"]
+attributelist = [
+    "ID",
+    "Name",
+    "Alias",
+    "Parent",
+    "Target",
+    "Gap",
+    "Derives_from",
+    "Note",
+    "Dbxref",
+    "Ontology_term",
+    "Is_circular",
+]
 
 ###############################################################################################################
 ################################################ GFF3Attributes ###############################################
@@ -50,7 +62,7 @@ Get all the attributes from a GFF3.Record.
 This enables easier access to the data fields as well as validity checks on the data.
 """
 function GFF3Attributes(record::GFF3.Record)
-    allowsmultiplevalues = [3,4,9,10,12]
+    allowsmultiplevalues = [3, 4, 9, 10, 12]
     result = Vector{Any}(missing, length(attributelist) + 1)
     result[12] = [] # other
     recordattributes = Dict(GFF3.attributes(record))
@@ -74,7 +86,7 @@ function GFF3Attributes(record::GFF3.Record)
         end
     end
 
-    if(isempty(result[12]))
+    if (isempty(result[12]))
         result[12] = missing
     end
 
@@ -82,10 +94,20 @@ function GFF3Attributes(record::GFF3.Record)
 end
 
 function Base.isempty(attributes::GFF3Attributes)
-    return (ismissing(attributes.id) && ismissing(attributes.name) && ismissing(attributes.alias) &&
-            ismissing(attributes.parent) && ismissing(attributes.target) && ismissing(attributes.gap) &&
-            ismissing(attributes.derivesfrom) && ismissing(attributes.note) && ismissing(attributes.dbcrossreference) &&
-            ismissing(attributes.ontologyterm) && ismissing(attributes.iscircular) && ismissing(attributes.other))
+    return (
+        ismissing(attributes.id) &&
+        ismissing(attributes.name) &&
+        ismissing(attributes.alias) &&
+        ismissing(attributes.parent) &&
+        ismissing(attributes.target) &&
+        ismissing(attributes.gap) &&
+        ismissing(attributes.derivesfrom) &&
+        ismissing(attributes.note) &&
+        ismissing(attributes.dbcrossreference) &&
+        ismissing(attributes.ontologyterm) &&
+        ismissing(attributes.iscircular) &&
+        ismissing(attributes.other)
+    )
 end
 
 function Base.convert(::Type{String}, attributes::GFF3Attributes)
@@ -93,10 +115,19 @@ function Base.convert(::Type{String}, attributes::GFF3Attributes)
         return ""
     end
 
-    recordattributes = [attributes.id, attributes.name, attributes.alias,
-                        attributes.parent, attributes.target, attributes.gap,
-                        attributes.derivesfrom, attributes.note, attributes.dbcrossreference,
-                        attributes.ontologyterm, attributes.iscircular]
+    recordattributes = [
+        attributes.id,
+        attributes.name,
+        attributes.alias,
+        attributes.parent,
+        attributes.target,
+        attributes.gap,
+        attributes.derivesfrom,
+        attributes.note,
+        attributes.dbcrossreference,
+        attributes.ontologyterm,
+        attributes.iscircular,
+    ]
     attributes_tmp = []
 
     for (key, value) in zip(attributelist, recordattributes)
@@ -175,8 +206,17 @@ This enables easier access to data fields as well as validity checks on the data
 """
 function GFF3Record(record::GFF3.Record)
     result = Vector{Any}(missing, 9)
-    functions = [GFF3.seqid, GFF3.source, GFF3.featuretype, GFF3.seqstart,
-                 GFF3.seqend, GFF3.score, GFF3.strand, GFF3.phase, GFF3Attributes]
+    functions = [
+        GFF3.seqid,
+        GFF3.source,
+        GFF3.featuretype,
+        GFF3.seqstart,
+        GFF3.seqend,
+        GFF3.score,
+        GFF3.strand,
+        GFF3.phase,
+        GFF3Attributes,
+    ]
 
     for i in eachindex(result)
         try
@@ -209,10 +249,17 @@ function GFF3Record(record::AbstractString)
 end
 
 function BioCore.isfilled(record::GFF3Record)
-    return !(ismissing(record.seqid) && ismissing(record.source) && ismissing(record.type) &&
-            ismissing(record.start) && ismissing(record.end_) && ismissing(record.score) &&
-            ismissing(record.strand) && ismissing(record.phase) && ismissing(record.attributes))
-
+    return !(
+        ismissing(record.seqid) &&
+        ismissing(record.source) &&
+        ismissing(record.type) &&
+        ismissing(record.start) &&
+        ismissing(record.end_) &&
+        ismissing(record.score) &&
+        ismissing(record.strand) &&
+        ismissing(record.phase) &&
+        ismissing(record.attributes)
+    )
 end
 
 # convert GFF3Record back to GFF3.Record --> for GFF3.Writer
@@ -224,12 +271,23 @@ function GFF3.Record(record::GFF3Record)
     return convert(GFF3.Record, record)
 end
 
-function Base.convert(
-    ::Type{String},
-    record::GFF3Record
-)
-    tmp = replace(join([record.seqid, record.source, record.type, record.start, record.end_,
-                        record.score, record.strand, record.phase], "\t"), "missing" => ".")
+function Base.convert(::Type{String}, record::GFF3Record)
+    tmp = replace(
+        join(
+            [
+                record.seqid,
+                record.source,
+                record.type,
+                record.start,
+                record.end_,
+                record.score,
+                record.strand,
+                record.phase,
+            ],
+            "\t",
+        ),
+        "missing" => ".",
+    )
 
     if ismissing(record.attributes)
         return tmp * "\t"
@@ -259,8 +317,17 @@ function Base.show(io::IO, record::GFF3Record)
 end
 
 function Base.convert(::Type{DataFrames.DataFrame}, record::GFF3Record)
-    data = [[record.seqid], [record.source], [record.type], [record.start], [record.end_],
-            [record.score], [record.strand], [record.phase], [record.attributes]]
+    data = [
+        [record.seqid],
+        [record.source],
+        [record.type],
+        [record.start],
+        [record.end_],
+        [record.score],
+        [record.strand],
+        [record.phase],
+        [record.attributes],
+    ]
     result = DataFrames.DataFrame(data, columns)
     return result
 end
@@ -299,14 +366,15 @@ function checkcdsphase(record::GFF3Record)
     end
 end
 
-
 """
     gap_hastarget(record::GFF3Record)
 
 Returns false if this record specifies a `gap` attribute but does not specify a `target` attribute, and true otherwise.
 """
 function gap_hastarget(record::GFF3Record)
-    if !ismissing(record.attributes) && !ismissing(record.attributes.gap) && ismissing(record.attributes.target)
+    if !ismissing(record.attributes) &&
+       !ismissing(record.attributes.gap) &&
+       ismissing(record.attributes.target)
         return false
     else
         return true

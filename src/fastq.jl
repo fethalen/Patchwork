@@ -1,12 +1,14 @@
 function isfastqfile(
     file::AbstractString,
-    ext::AbstractVector{String}=FASTQEXTENSIONS
+    ext::AbstractVector{String} = FASTQEXTENSIONS,
 )::Bool
     # splits = split(file, ".")
     # length(splits) > 1 && last(splits) in ext && return true
     # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(file) && return true
     # return false
-    reader = isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file))
+    reader =
+        isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) :
+        FASTQ.Reader(open(file))
     record = FASTQ.Record()
     try # in case the file is a tmp file without extension
         read!(reader, record)
@@ -20,37 +22,50 @@ end
 
 function fastq2fasta(
     infile::AbstractString;
-    ext::Vector{String}=FASTQEXTENSIONS,
-    removeduplicates::Bool=true,
-    bysequence::Bool=true,
-    byid::Bool=true
+    ext::Vector{String} = FASTQEXTENSIONS,
+    removeduplicates::Bool = true,
+    bysequence::Bool = true,
+    byid::Bool = true,
 )::AbstractString
     isfastqfile(infile, ext) || error("Wrong file format; input must be a fastq file.")
-    msa = readmsa(infile; removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
+    msa = readmsa(
+        infile;
+        removeduplicates = removeduplicates,
+        bysequence = bysequence,
+        byid = byid,
+    )
     return mktemp_fasta(msa)
 end
 
 function fastq2fasta(
     infiles::Vector{String};
-    ext::Vector{String}=FASTQEXTENSIONS,
-    removeduplicates::Bool=true,
-    bysequence::Bool=true,
-    byid::Bool=true
+    ext::Vector{String} = FASTQEXTENSIONS,
+    removeduplicates::Bool = true,
+    bysequence::Bool = true,
+    byid::Bool = true,
 )::Vector{AbstractString}
     output = String[]
     for file in infiles
-        outfile = fastq2fasta(file; ext=ext, removeduplicates=removeduplicates, bysequence=bysequence, byid=byid)
+        outfile = fastq2fasta(
+            file;
+            ext = ext,
+            removeduplicates = removeduplicates,
+            bysequence = bysequence,
+            byid = byid,
+        )
         push!(output, outfile)
     end
     return output
 end
 
-function splitfile(path::AbstractString; recordsperfile::Int64=1000000)
+function splitfile(path::AbstractString; recordsperfile::Int64 = 1000000)
     isfastqfile(path) || error("Incorrect file type.")
 
     files = Tuple{String, Int64}[]
     record = FASTQ.Record()
-    reader = isgzipcompressed(path) ? FASTQ.Reader(GzipDecompressorStream(open(path))) : FASTQ.Reader(open(path, "r"))
+    reader =
+        isgzipcompressed(path) ? FASTQ.Reader(GzipDecompressorStream(open(path))) :
+        FASTQ.Reader(open(path, "r"))
 
     count = 1
     msa = MultipleSequenceAlignment()
@@ -71,7 +86,7 @@ function splitfile(path::AbstractString; recordsperfile::Int64=1000000)
 
     if !isempty(msa) # eof(reader)
         tmpfile = mktemp_fasta(msa)
-        push!(files,(tmpfile, length(msa)))
+        push!(files, (tmpfile, length(msa)))
     end
 
     return files # empty if input file empty
@@ -118,9 +133,11 @@ function combinefiles(files::AbstractVector{String})
         read!(readers[nextreader_index], record)
         seqrecord = SequenceRecord(FASTA.identifier(record), FASTA.sequence(record))
         # ...and add to array only if it doesn't yet contain any of sequence, revcomp or ID
-        if !(in(seqrecord.sequencedata, mappedsequences) ||
+        if !(
+            in(seqrecord.sequencedata, mappedsequences) ||
             in(reverse_complement(seqrecord.sequencedata), mappedsequences) ||
-            in(seqrecord.id.id, map(tuple -> tuple[1].id.id, seqrecords)))
+            in(seqrecord.id.id, map(tuple -> tuple[1].id.id, seqrecords))
+        )
             push!(seqrecords, (seqrecord, nextreader_index))
             sort!(seqrecords, by = tuple -> tuple[1]) # keep array sorted at all times
             mappedsequences = map(tuple -> tuple[1].sequencedata, seqrecords)

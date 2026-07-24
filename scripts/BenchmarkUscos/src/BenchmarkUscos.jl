@@ -22,8 +22,8 @@ using ArgParse
 using CSV
 using DataFrames
 
-export
-    otupart, sequencepart, splitdescription, SequenceRecord, SequenceIdentifier, DiamondSearchResult
+export otupart,
+    sequencepart, splitdescription, SequenceRecord, SequenceIdentifier, DiamondSearchResult
 
 include("sequenceidentifier.jl")
 include("sequencerecord.jl")
@@ -51,7 +51,7 @@ function write_alignmentfile(
     seqid::AbstractString,
     refid::AbstractString,
     row::Vector{Float64},
-    alignment::BioAlignments.PairwiseAlignment
+    alignment::BioAlignments.PairwiseAlignment,
 )
     count = string(index) * ". "
     open(outfile, "a") do io
@@ -74,7 +74,10 @@ function write_alignmentfile(
     end
 end
 
-function ArgParse.parse_item(::Type{T}, argument::AbstractString) where T <: AbstractVector
+function ArgParse.parse_item(
+    ::Type{T},
+    argument::AbstractString,
+) where {T <: AbstractVector}
     convert(T, split(argument, " "))
 end
 
@@ -95,7 +98,7 @@ function countsequences(path::AbstractString)::Int
     return count
 end
 
-function uniquehits(blasthits::Array{DiamondSearchResult,1})
+function uniquehits(blasthits::Array{DiamondSearchResult, 1})
     hitdata = DataFrame(blasthits)
     transform!(hitdata, :subjectid => ByRow(id -> id.id) => :subjectid)
     transform!(hitdata, :queryid => ByRow(id -> id.id) => :queryid)
@@ -107,37 +110,36 @@ function parse_parameters()
     overview = """
     Compare universal single-copy orthologs (USCOs) across different datasets.
     """
-    settings = ArgParseSettings(description=overview,
-                                version = "0.1.0",
-                                add_version = true)
+    settings =
+        ArgParseSettings(description = overview, version = "0.1.0", add_version = true)
     @add_arg_table! settings begin
         "--query"
-            help = "Path to a sequence file in FASTA format"
-            required = true
-            arg_type = String
-            metavar = "PATH"
+        help = "Path to a sequence file in FASTA format"
+        required = true
+        arg_type = String
+        metavar = "PATH"
         "--dna"
-            help = "Query sequences are DNA. If this flag is not set, query sequences are assumed to be proteins."
-            action = :store_true 
+        help = "Query sequences are DNA. If this flag is not set, query sequences are assumed to be proteins."
+        action = :store_true
         "--reference"
-            help = "Path to the file containing the single-copy orthologs in FASTA format"
-            default = "../data/helobdella_robusta_uscos.faa"
-            arg_type = String
-            metavar = "PATH"
+        help = "Path to the file containing the single-copy orthologs in FASTA format"
+        default = "../data/helobdella_robusta_uscos.faa"
+        arg_type = String
+        metavar = "PATH"
         "--output-dir"
-            help = "Write output files to this directory"
-            required = true
-            arg_type = String
-            default = "patchwork_output"
-            metavar = "PATH"
+        help = "Write output files to this directory"
+        required = true
+        arg_type = String
+        default = "patchwork_output"
+        metavar = "PATH"
         "--threads"
-            help = "Number of threads to utilize (default: all available)"
-            default = Sys.CPU_THREADS
-            arg_type = Int64
-            metavar = "NUMBER"
+        help = "Number of threads to utilize (default: all available)"
+        default = Sys.CPU_THREADS
+        arg_type = Int64
+        metavar = "NUMBER"
         "--overwrite"
-            help = "Overwrite output from previous runs without warning"
-            action = :store_true
+        help = "Overwrite output from previous runs without warning"
+        action = :store_true
     end
 
     return ArgParse.parse_args(settings)
@@ -163,12 +165,18 @@ function main()
 
     if args["dna"]
         blastout = diamond_blastx(
-            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir, 
-            DIAMONDXFLAGS)
+            queryseqs,
+            diamond_makeblastdb(referenceseqs, outdir),
+            outdir,
+            DIAMONDXFLAGS,
+        )
     else
         blastout = diamond_blastp(
-            queryseqs, diamond_makeblastdb(referenceseqs, outdir), outdir, 
-            DIAMONDPFLAGS)
+            queryseqs,
+            diamond_makeblastdb(referenceseqs, outdir),
+            outdir,
+            DIAMONDPFLAGS,
+        )
     end
     refseqs_count = countsequences(referenceseqs)
 
@@ -181,20 +189,31 @@ function main()
         no_deletions = Int64[],
         distance = Int64[],
         query_cover = Float64[],
-        percent_identity = Float64[]
+        percent_identity = Float64[],
     )
 
     sort!(alignmentstats, :percent_identity, rev = true)
     alignmentfile = outdir * "/" * "alignments.txt"
 
     for (count, hitrow) in enumerate(eachrow(uniquehits(blastout)))
-        (alignment, alignmentscore) = scorealignment(hitrow.full_querysequence, hitrow.full_subjectsequence)
+        (alignment, alignmentscore) =
+            scorealignment(hitrow.full_querysequence, hitrow.full_subjectsequence)
         push!(alignmentstats, alignmentscore)
-        write_alignmentfile(count, alignmentfile, hitrow.queryid, hitrow.subjectid,
-            alignmentscore, alignment.aln)
+        write_alignmentfile(
+            count,
+            alignmentfile,
+            hitrow.queryid,
+            hitrow.subjectid,
+            alignmentscore,
+            alignment.aln,
+        )
     end
 
-    plot_percentident(alignmentstats.percent_identity, refseqs_count, outdir * "/percent_identity.png")
+    plot_percentident(
+        alignmentstats.percent_identity,
+        refseqs_count,
+        outdir * "/percent_identity.png",
+    )
     plot_querycover(alignmentstats.query_cover, outdir * "/query_coverage.png")
 
     summary = select(describe(alignmentstats), Not([:nmissing, :eltype]))

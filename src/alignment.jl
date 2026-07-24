@@ -7,16 +7,20 @@ provided `scoremodel`.
 function pairalign_global(
     seq::SequenceRecord,
     ref::SequenceRecord,
-    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel,
 )
-    return BioAlignments.pairalign(BioAlignments.GlobalAlignment(), seq.sequencedata,
-        ref.sequencedata, scoremodel)
+    return BioAlignments.pairalign(
+        BioAlignments.GlobalAlignment(),
+        seq.sequencedata,
+        ref.sequencedata,
+        scoremodel,
+    )
 end
 
 function pairalign_global(
     seq::BioSequences.LongSequence,
     ref::BioSequences.LongSequence,
-    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel,
 )
     return BioAlignments.pairalign(BioAlignments.GlobalAlignment(), seq, ref, scoremodel)
 end
@@ -30,17 +34,20 @@ provided `scoremodel`.
 function pairalign_local(
     seq::SequenceRecord,
     ref::SequenceRecord,
-    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel,
 )
-    return BioAlignments.pairalign(BioAlignments.LocalAlignment(), seq.sequencedata,
-        ref.sequencedata, scoremodel)
+    return BioAlignments.pairalign(
+        BioAlignments.LocalAlignment(),
+        seq.sequencedata,
+        ref.sequencedata,
+        scoremodel,
+    )
 end
-
 
 function pairalign_local(
     seq::BioSequences.LongSequence,
     ref::BioSequences.LongSequence,
-    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel
+    scoremodel = DEFAULT_SCOREMODEL::BioAlignments.AbstractScoreModel,
 )
     return BioAlignments.pairalign(BioAlignments.LocalAlignment(), seq, ref, scoremodel)
 end
@@ -51,11 +58,7 @@ end
 Realign the provided `AlignedRegion` objects at the provided interval and a tuple with the
 best-scoring alignment first and the other alignment second.
 """
-function order(
-    a::AlignedRegion,
-    b::AlignedRegion,
-    interval::UnitRange
-)::Tuple
+function order(a::AlignedRegion, b::AlignedRegion, interval::UnitRange)::Tuple
     scorea = realign(a, fullsubject2subject(a, interval)).value
     scoreb = realign(b, fullsubject2subject(b, interval)).value
     if scorea > scoreb
@@ -85,16 +88,14 @@ end
 
 Realigned the `region` at the specific `interval`.
 """
-function realign(
-    region::AlignedRegion,
-    interval::UnitRange
-)
+function realign(region::AlignedRegion, interval::UnitRange)
     alignment = region.pairwisealignment
     queryinterval = BioAlignments.ref2seq(alignment, interval)
     subjectseq = alignment.b[interval]
     isequal(queryinterval, 0:0) &&
         return pairalign_local(BioSequences.LongAA(), subjectseq[interval])
-    queryinterval = max(1, first(queryinterval)):min(lastindex(alignment.a.seq), last(queryinterval))
+    queryinterval =
+        max(1, first(queryinterval)):min(lastindex(alignment.a.seq), last(queryinterval))
     queryseq = alignment.a.seq[queryinterval]
     pairalign_local(queryseq, subjectseq, DEFAULT_SCOREMODEL)
 end
@@ -107,49 +108,44 @@ Construct a `PairwiseAlignment` from two sequences, `seq` and `ref`, and a `ciga
 function BioAlignments.PairwiseAlignment(
     seq::BioSequences.LongSequence,
     ref::BioSequences.LongSequence,
-    cigar::String
+    cigar::String,
 )
     alignment = BioAlignments.Alignment(cigar)
     alignedseq = BioAlignments.AlignedSequence(seq, alignment)
     return BioAlignments.PairwiseAlignment(alignedseq, ref)
 end
 
-function BioAlignments.seq2ref(
-    aln::BioAlignments.PairwiseAlignment,
-    interval::UnitRange
-)
+function BioAlignments.seq2ref(aln::BioAlignments.PairwiseAlignment, interval::UnitRange)
     # for "negative" frames, the first < stop, so we grab the leftmost and rightmost
     # positions
     firstposition = first(interval)
     lastposition = last(interval)
     leftmost = min(firstposition, lastposition)
     rightmost = max(firstposition, lastposition)
-    return UnitRange(first(BioAlignments.seq2ref(aln, leftmost)),
-        first(BioAlignments.seq2ref(aln, rightmost)))
+    return UnitRange(
+        first(BioAlignments.seq2ref(aln, leftmost)),
+        first(BioAlignments.seq2ref(aln, rightmost)),
+    )
 end
 
-function BioAlignments.ref2seq(
-    aln::BioAlignments.PairwiseAlignment,
-    interval::UnitRange
-)
+function BioAlignments.ref2seq(aln::BioAlignments.PairwiseAlignment, interval::UnitRange)
     # for "negative" frames, the first < stop, so we grab the leftmost and rightmost
     # positions
     firstposition = first(interval)
     lastposition = last(interval)
     leftmost = min(firstposition, lastposition)
     rightmost = max(firstposition, lastposition)
-    return UnitRange(first(BioAlignments.ref2seq(aln, leftmost)),
-        first(BioAlignments.ref2seq(aln, rightmost)))
+    return UnitRange(
+        first(BioAlignments.ref2seq(aln, leftmost)),
+        first(BioAlignments.ref2seq(aln, rightmost)),
+    )
 end
 
 Base.firstindex(aln::BioAlignments.PairwiseAlignment) = 1
 Base.lastindex(aln::BioAlignments.PairwiseAlignment) = last(aln.a.aln.anchors).refpos
 Base.eachindex(aln::BioAlignments.PairwiseAlignment) = Base.OneTo(lastindex(aln))
 
-function Base.getindex(
-    aln::BioAlignments.PairwiseAlignment,
-    index::Integer
-)
+function Base.getindex(aln::BioAlignments.PairwiseAlignment, index::Integer)
     return aln[index:index]
 end
 
@@ -175,11 +171,7 @@ end
 Calculate the gap-excluded identity by calculating #matches / (#matches + #mismatches).
 The result is reported as a percentage, so 45% identity is reported as 45.0.
 """
-function gapexcluded_identity(
-    matches::Int,
-    mismatches::Int,
-    precision::Int = 2
-)
+function gapexcluded_identity(matches::Int, mismatches::Int, precision::Int = 2)
     if matches + mismatches == 0
         return 0.0
     end
