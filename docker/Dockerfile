@@ -37,7 +37,8 @@ RUN wget --quiet "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_SERIE
 ENV PATH="/opt/julia-${JULIA_VERSION}/bin:${PATH}"
 
 # Download and install DIAMOND
-RUN wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-linux64.tar.gz' \
+ARG DIAMOND_VERSION=2.2.4
+RUN wget "https://github.com/bbuchfink/diamond/releases/download/v${DIAMOND_VERSION}/diamond-linux64.tar.gz" \
     && tar -xvzf 'diamond-linux64.tar.gz' \
     && mv 'diamond' '/usr/local/bin' \
     && rm 'diamond-linux64.tar.gz'

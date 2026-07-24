@@ -200,7 +200,7 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const PATCHWORK_VERSION = pkgversion(@__MODULE__)
+patchwork_version() = pkgversion(@__MODULE__)
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
 const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(
     BioAlignments.BLOSUM62,
@@ -216,7 +216,7 @@ Print program title and basic information.
 """
 function printinfo(diamondversion::AbstractString, threads::Int64)
     about = """
-    P A T C H W O R K v$PATCHWORK_VERSION
+    P A T C H W O R K v$(patchwork_version())
     - Developers: Felicia Sandberg & Clara G. Köhne   - Cite      : 10.1093/gbe/evad227
     - Contact   : <felicia.sandberg@hest.ethz.ch>>    - DIAMOND v.: $diamondversion
     - Wiki      : github.com/fethalen/patchwork/wiki  - Threads   : $threads
@@ -278,7 +278,7 @@ function parse_parameters()
     """
     settings = ArgParseSettings(
         description = overview,
-        version = string(PATCHWORK_VERSION),
+        version = string(patchwork_version()),
         add_version = true,
     )
 
