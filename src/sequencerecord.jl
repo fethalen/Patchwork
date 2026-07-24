@@ -37,7 +37,7 @@ Base.length(alignment::SequenceRecord) = length(alignment.sequencedata)
 Base.firstindex(alignment::SequenceRecord) = firstindex(alignment.sequencedata)
 Base.lastindex(alignment::SequenceRecord) = lastindex(alignment.sequencedata)
 
-function Base.sort(records::Vector{SequenceRecord}; bysequence=true, byid=true)
+function Base.sort(records::Vector{SequenceRecord}; bysequence = true, byid = true)
     isempty(records) && return records
     !bysequence && !byid && error("Please specify if you want to sort by sequence or ID.")
     if bysequence && byid
@@ -54,7 +54,8 @@ function Base.sort(records::Vector{SequenceRecord}; bysequence=true, byid=true)
     return sortedrecords
 end
 
-Base.isless(first::SequenceRecord, second::SequenceRecord) = isless(first.sequencedata, second.sequencedata)
+Base.isless(first::SequenceRecord, second::SequenceRecord) =
+    isless(first.sequencedata, second.sequencedata)
 # function Base.isless(first::SequenceRecord, second::SequenceRecord; bysequence::Bool=true)
 #     if bysequence
 #         return isless(first.sequencedata, second.sequencedata)
@@ -64,8 +65,7 @@ Base.isless(first::SequenceRecord, second::SequenceRecord) = isless(first.sequen
 # end
 
 function BioSequences.ungap(alignment::SequenceRecord)::SequenceRecord
-    return SequenceRecord(alignment.id,
-                          ungap(alignment.sequencedata))
+    return SequenceRecord(alignment.id, ungap(alignment.sequencedata))
 end
 
 function BioSequences.ungap!(alignment::SequenceRecord)::SequenceRecord
@@ -112,7 +112,7 @@ function coverage(alignment::SequenceRecord)::Float64
     return length(ungap(alignment)) / alignmentlength
 end
 
-function gappositions(sequence::SequenceRecord)::Array{Int,1}
+function gappositions(sequence::SequenceRecord)::Array{Int, 1}
     gaprow = zeros(Int, length(sequence))
     for (index, position) in enumerate(sequence.sequencedata)
         if isgap(position)
@@ -181,13 +181,17 @@ the `coveredrange` by that `sequence`.
 function fillmissing(
     sequence::BioSequences.LongSequence,
     totalrange::Integer,
-    coveredrange::Tuple
+    coveredrange::Tuple,
 )::BioSequences.LongSequence
     leftmost, rightmost = coveredrange
     coveredpositions = rightmost - leftmost + 1
     if length(sequence) != coveredpositions
-        error("""Number of positions in the range $coveredrange is not equal to
-                 the sequence length (""", length(sequence), ')')
+        error(
+            """Number of positions in the range $coveredrange is not equal to
+               the sequence length (""",
+            length(sequence),
+            ')',
+        )
     end
     gapsbefore = ""
     gapsafter = ""
@@ -232,15 +236,19 @@ composed of these two regions.
     |...|....|....|....|....|....|
     1   5    10   15   20   25   30
 """
-function compoundregions(record::SequenceRecord)::Array{BioSequences.LongSequence{},1}
+function compoundregions(record::SequenceRecord)::Array{BioSequences.LongSequence{}, 1}
     regions = []
     seqlength = length(record)
     println(length(seqlength))
     for (leftmost, rightmost) in compoundranges(record)
-        push!(regions,
-              fillmissing(record.sequencedata[leftmost:rightmost],
-                          seqlength,
-                          (leftmost, rightmost)))
+        push!(
+            regions,
+            fillmissing(
+                record.sequencedata[leftmost:rightmost],
+                seqlength,
+                (leftmost, rightmost),
+            ),
+        )
     end
     return regions
 end
@@ -321,10 +329,7 @@ end
 Returns the identifier of `sequence`, including the OTU separated by
 `separator`.
 """
-function identifier(
-    sequence::SequenceRecord,
-    separator::AbstractChar='@'
-)::String
+function identifier(sequence::SequenceRecord, separator::AbstractChar = '@')::String
     return *(sequence.otu, separator, sequence.identifier)
 end
 
@@ -347,8 +352,12 @@ function isaminoacid(record::SequenceRecord)::Bool
 end
 
 function BioSequences.translate(record::SequenceRecord)::SequenceRecord
-    isnucleotide(record) || error("cannot translate non-nucleotide sequence in record: ", record)
-    recordtranslated = SequenceRecord(record.otu, record.identifier,
-        BioSequences.translate(record.sequencedata))
+    isnucleotide(record) ||
+        error("cannot translate non-nucleotide sequence in record: ", record)
+    recordtranslated = SequenceRecord(
+        record.otu,
+        record.identifier,
+        BioSequences.translate(record.sequencedata),
+    )
     return recordtranslated
 end

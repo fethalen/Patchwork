@@ -17,8 +17,11 @@ If `extendedchecks=true` is set, run all available tests. This may take some tim
 mutable struct GFF3RecordCollection
     records::Vector{GFF3Record}
 
-    function GFF3RecordCollection(records::AbstractVector{GFF3Record}; extendedchecks::Bool=false)
-        checkgff3input(records; extended=extendedchecks)
+    function GFF3RecordCollection(
+        records::AbstractVector{GFF3Record};
+        extendedchecks::Bool = false,
+    )
+        checkgff3input(records; extended = extendedchecks)
         return new(records)
     end
 end
@@ -40,17 +43,14 @@ Read a GFF3-file and save all non-empty feature records to a new `GFF3RecordColl
 The function verifies the validity of the input data. By default, this includes only start, end and phase.
 If `extendedchecks=true` is set, run all available tests. This may take some time.
 """
-function GFF3RecordCollection(
-    reader::GFF3.Reader;
-    extendedchecks::Bool=false
-)
+function GFF3RecordCollection(reader::GFF3.Reader; extendedchecks::Bool = false)
     result = []
     for record in reader
         if BioCore.isfilled(record) && GFF3.isfeature(record) # omit other record types
             push!(result, GFF3Record(record))
         end
     end
-    return GFF3RecordCollection(Vector{GFF3Record}(result); extendedchecks=extendedchecks)
+    return GFF3RecordCollection(Vector{GFF3Record}(result); extendedchecks = extendedchecks)
 end
 
 """
@@ -66,22 +66,18 @@ If `extendedchecks=true` is set, run all available tests. This may take some tim
 """
 function GFF3RecordCollection(
     file::AbstractString;
-    index=:auto,
-    extendedchecks::Bool=false
+    index = :auto,
+    extendedchecks::Bool = false,
 )
-    reader = GFF3.Reader(file; index=index)
-    result = GFF3RecordCollection(reader; extendedchecks=extendedchecks)
+    reader = GFF3.Reader(file; index = index)
+    result = GFF3RecordCollection(reader; extendedchecks = extendedchecks)
     close(reader)
     return result
 end
 
-function GFF3RecordCollection(
-    input::IO;
-    index=nothing,
-    extendedchecks::Bool=false
-)
-    reader = GFF3.Reader(input; index=index)
-    result = GFF3RecordCollection(reader; extendedchecks=extendedchecks)
+function GFF3RecordCollection(input::IO; index = nothing, extendedchecks::Bool = false)
+    reader = GFF3.Reader(input; index = index)
+    result = GFF3RecordCollection(reader; extendedchecks = extendedchecks)
     close(reader)
     return result
 end
@@ -90,10 +86,7 @@ function Base.length(records::GFF3RecordCollection)
     return length(records.records)
 end
 
-function Base.push!(
-    records::GFF3RecordCollection,
-    record::GFF3Record
-)
+function Base.push!(records::GFF3RecordCollection, record::GFF3Record)
     return push!(records.records, record)
 end
 
@@ -152,20 +145,35 @@ function Base.filter!(f, records::GFF3RecordCollection)
     return records
 end
 
-function Base.convert(
-    ::Type{DataFrames.DataFrame},
-    records::GFF3RecordCollection
-)
-    result = DataFrames.DataFrame(seqid = Union{String, Missing}[], source = Union{String, Missing}[],
-                                  type = Union{String, Missing}[], start = Union{Int64, Missing}[],
-                                  end_ = Union{Int64, Missing}[], score = Union{Float64, Missing}[],
-                                  strand = Union{GenomicFeatures.Strand, Missing}[], phase = Union{Char, Missing}[],
-                                  attributes = Union{GFF3Attributes, Missing}[])
+function Base.convert(::Type{DataFrames.DataFrame}, records::GFF3RecordCollection)
+    result = DataFrames.DataFrame(
+        seqid = Union{String, Missing}[],
+        source = Union{String, Missing}[],
+        type = Union{String, Missing}[],
+        start = Union{Int64, Missing}[],
+        end_ = Union{Int64, Missing}[],
+        score = Union{Float64, Missing}[],
+        strand = Union{GenomicFeatures.Strand, Missing}[],
+        phase = Union{Char, Missing}[],
+        attributes = Union{GFF3Attributes, Missing}[],
+    )
 
     for record in records
         if BioCore.isfilled(record)
-            push!(result, (record.seqid, record.source, record.type, record.start, record.end_,
-                           record.score, record.strand, record.phase, record.attributes))
+            push!(
+                result,
+                (
+                    record.seqid,
+                    record.source,
+                    record.type,
+                    record.start,
+                    record.end_,
+                    record.score,
+                    record.strand,
+                    record.phase,
+                    record.attributes,
+                ),
+            )
         end
     end
     return result
@@ -188,7 +196,7 @@ Verify that each record in `records` has valid `start` and `end`.
 """
 function checkstartend(records::AbstractVector{GFF3Record})
     for record in records
-       checkstartend(record)
+        checkstartend(record)
     end
     return
 end
@@ -234,14 +242,13 @@ function allids(records::GFF3RecordCollection)
     return allids(records.records)
 end
 
-function allparents(
-    records::AbstractVector{GFF3Record};
-    onlyunique::Bool=true
-) # HERE!!
+function allparents(records::AbstractVector{GFF3Record}; onlyunique::Bool = true) # HERE!!
     parents = []
     for record in records
         if onlyunique
-            if !ismissing(record.attributes) && !ismissing(record.attributes.parent) && !(record.attributes.parent in parents)
+            if !ismissing(record.attributes) &&
+               !ismissing(record.attributes.parent) &&
+               !(record.attributes.parent in parents)
                 push!(parents, record.attributes.parent...)
             end
         else
@@ -274,7 +281,9 @@ end
 function alltargets(records::AbstractVector{GFF3Record})
     targets = []
     for record in records
-        if !ismissing(record.attributes) && !ismissing(record.attributes.target) && !(record.attributes.target in targets)
+        if !ismissing(record.attributes) &&
+           !ismissing(record.attributes.target) &&
+           !(record.attributes.target in targets)
             push!(targets, record.attributes.target)
         end
     end
@@ -312,12 +321,15 @@ Verify that the Gap attributes of every record in `records` match the required p
 Verify that each record which specifies a `gap` also specifies a `target`.
 """
 function checkgaps(records::AbstractVector{GFF3Record})
-    pattern = r"(D[0-9]+|F[0-9]+|I[0-9]+|M[0-9]+|R[0-9]+)( (D[0-9]+|F[0-9]+|I[0-9]+|M[0-9]+|R[0-9]+))*"
+    pattern =
+        r"(D[0-9]+|F[0-9]+|I[0-9]+|M[0-9]+|R[0-9]+)( (D[0-9]+|F[0-9]+|I[0-9]+|M[0-9]+|R[0-9]+))*"
     for record in records
         if !gap_hastarget(record)
             error("Gap attribute requires an alignment target.")
         end
-        if !ismissing(record.attributes) && !ismissing(record.attributes.gap) && isnothing(match(pattern, record.attributes.gap))
+        if !ismissing(record.attributes) &&
+           !ismissing(record.attributes.gap) &&
+           isnothing(match(pattern, record.attributes.gap))
             error("Gap $(record.attributes.gap) has wrong format.")
         end
     end
@@ -362,10 +374,7 @@ Check start, end and phase for each record.
 If `extended=true` is set, run all available tests on the records in `records`.
 This may take some time.
 """
-function checkgff3input(
-    records::AbstractVector{GFF3Record};
-    extended::Bool=false
-)
+function checkgff3input(records::AbstractVector{GFF3Record}; extended::Bool = false)
     for record in records
         checkstartend(record)
         checkcdsphase(record)

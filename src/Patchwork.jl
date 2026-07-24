@@ -1,11 +1,6 @@
-# julia --trace-compile=precompiled.jl Patchwork.jl --contigs "../test/07673_lcal.fa" --reference "../test/07673_Alitta_succinea.fa" --diamond-flags "--frameshift 15 --ultra-sensitive" --output-dir "../test/patchwork-output"
-# julia --project=. src/Patchwork.jl --contigs "test/07673_lcal.fa" --reference "test/07673_Alitta_succinea.fa" --frameshift 15 --ultra-sensitive --output-dir "test/patchwork-output" --overwrite
-# diamond blastx --query 07673_dna.fa --db 07673_Alitta_succinea.fa --outfmt 6 qseqid qseq full_qseq qstart qend qframe sseqid sseq sstart send cigar pident bitscore --out diamond_results.tsv --frameshift 15
-
 module Patchwork
 
 using ArgParse
-using Base: Bool, Int64, func_for_method_checked, DEFAULT_COMPILER_OPTS, Cint
 using BioAlignments
 using BioSequences
 using BioSymbols
@@ -13,7 +8,6 @@ using CSV
 using CodecZlib
 using DataFrames
 using FASTX
-using PackageCompiler
 using PrettyTables
 using Statistics
 
@@ -52,60 +46,146 @@ export
     AlignedRegionCollection,
 
     # alignedregion
-    cleancigar, query_isreverse, query2subject, subject2query, subject2fullsubject,
-    subject2fullquery, fullsubject2subject, fullsubject2query, fullsubject2fullquery,
-    query2fullquery, fullsubject_queryboundaries, subject_queryboundaries, slicealignment,
-    query_leftposition, query_rightposition, subject_leftposition, subject_rightposition,
-    subjectinterval, queryinterval, queryframe, isordered, precedes, isoverlapping,
-    samerange, identifier, sameid, samesequence, merge, leftintersection, rightintersection,
-    overlap, beforeoverlap, afteroverlap, shadows, equalrange, totalrange, longest,
-    isnucleotide, isaminoacid,
+    cleancigar,
+    query_isreverse,
+    query2subject,
+    subject2query,
+    subject2fullsubject,
+    subject2fullquery,
+    fullsubject2subject,
+    fullsubject2query,
+    fullsubject2fullquery,
+    query2fullquery,
+    fullsubject_queryboundaries,
+    subject_queryboundaries,
+    slicealignment,
+    query_leftposition,
+    query_rightposition,
+    subject_leftposition,
+    subject_rightposition,
+    subjectinterval,
+    queryinterval,
+    queryframe,
+    isordered,
+    precedes,
+    isoverlapping,
+    samerange,
+    identifier,
+    sameid,
+    samesequence,
+    merge,
+    leftintersection,
+    rightintersection,
+    overlap,
+    beforeoverlap,
+    afteroverlap,
+    shadows,
+    equalrange,
+    totalrange,
+    longest,
+    isnucleotide,
+    isaminoacid,
 
     # alignedregioncollection
-    sameids, uniquesequences, has_uniquesequences, hasoverlaps, show_subjectintervals,
-    mergeoverlaps, isnucleotide, isaminoacid, queryids,
+    sameids,
+    uniquesequences,
+    has_uniquesequences,
+    hasoverlaps,
+    show_subjectintervals,
+    mergeoverlaps,
+    isnucleotide,
+    isaminoacid,
+    queryids,
 
     # alignment
-    DEFAULT_SCOREMODEL, pairalign_global, pairalign_local, order, realign,
+    DEFAULT_SCOREMODEL,
+    pairalign_global,
+    pairalign_local,
+    order,
+    realign,
     gapexcluded_identity,
 
     # alignmentconcatenation
-    createbridgealignment, concatenate, countmatches, occupancy, maskgaps, countgaps,
+    createbridgealignment,
+    concatenate,
+    countmatches,
+    occupancy,
+    maskgaps,
+    countgaps,
 
     # checkinput
-    MATRICES, GAPS, GAPDEFAULTS, DMND_ITERATE, #checkmatrixtype, getmatrixtype, setmatrixname,
+    MATRICES,
+    GAPS,
+    GAPDEFAULTS,
+    DMND_ITERATE, #checkmatrixtype, getmatrixtype, setmatrixname,
     #read_custommatrix, getmatrix, setgapopen, setgapextend, checkgappenalty,
     #checkdiamondflags, checkmakedbflags, setpatchworkflags, setdiamondflags,
     #collectdiamondflags,
 
     # diamond
-    FIELDS, OUTPUT_FORMAT, readblastTSV, frameshift, writeblastTSV, diamond_blastx,
-    diamond_makeblastdb, queryids, subjectids, isdiamonddatabase,
+    FIELDS,
+    OUTPUT_FORMAT,
+    readblastTSV,
+    frameshift,
+    writeblastTSV,
+    diamond_blastx,
+    diamond_makeblastdb,
+    queryids,
+    subjectids,
+    isdiamonddatabase,
 
     # fasta
-    FASTQEXTENSIONS, fastafiles, readmsa, get_fullseq, selectsequence, isfastafile, #isfastqfile,
+    FASTQEXTENSIONS,
+    fastafiles,
+    readmsa,
+    get_fullseq,
+    selectsequence,
+    isfastafile, #isfastqfile,
     isgzipcompressed, #fastq2fasta,
 
     # fastq
-    isfastqfile, fastq2fasta, splitfile, combinefiles,
+    isfastqfile,
+    fastq2fasta,
+    splitfile,
+    combinefiles,
 
     # filtering
     #remove_duplicates,
 
     # multiplesequencealignment
-    addalignment, removealignment, hasgaps, otus, otufrequencies, countotus, coverage,
-    equal_length, gapmatrix, gapfrequencies, mktemp_fasta, remove_duplicates,
-    remove_duplicates!, pool, cat,
+    addalignment,
+    removealignment,
+    hasgaps,
+    otus,
+    otufrequencies,
+    countotus,
+    coverage,
+    equal_length,
+    gapmatrix,
+    gapfrequencies,
+    mktemp_fasta,
+    remove_duplicates,
+    remove_duplicates!,
+    pool,
+    cat,
 
     # output
     #WIDTH, cleanfiles, warn_overwrite, write_alignmentfile, write_fasta,
 
     # sequenceidentifier
-    splitdescription, otupart, sequencepart,
+    splitdescription,
+    otupart,
+    sequencepart,
 
     # sequencerecord
-    missingdata, gappositions, nongap_range, has_compoundregions, fillmissing, compoundregions,
-    compoundranges, nongap_ranges
+    missingdata,
+    gappositions,
+    nongap_range,
+    has_compoundregions,
+    fillmissing,
+    compoundregions,
+    compoundranges,
+    nongap_ranges
 
 const EMPTY = String[]
 const DIAMONDFLAGS = ["--iterate", "--evalue", "0.001"]
@@ -120,10 +200,13 @@ const DIAMONDOUTPUT = "diamond_out"
 const STATSOUTPUT = "sequence_stats"
 const PLOTSOUTPUT = "plots"
 const RULER = repeat('─', 74)
-const VERSION = "0.7.0"
+patchwork_version() = pkgversion(@__MODULE__)
 # Default scoremodel taken from DIAMOND's defaults for BLOSUM62
-const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(BioAlignments.BLOSUM62,
-    gap_open = -11, gap_extend = -1)
+const DEFAULT_SCOREMODEL = BioAlignments.AffineGapScoreModel(
+    BioAlignments.BLOSUM62,
+    gap_open = -11,
+    gap_extend = -1,
+)
 const GZIP_MAGIC_NUMBER = UInt8[0x1f, 0x8b]
 
 """
@@ -131,14 +214,11 @@ const GZIP_MAGIC_NUMBER = UInt8[0x1f, 0x8b]
 
 Print program title and basic information.
 """
-function printinfo(
-    diamondversion::AbstractString,
-    threads::Int64
-)
+function printinfo(diamondversion::AbstractString, threads::Int64)
     about = """
-    P A T C H W O R K v$VERSION
-    - Developers: Felix Thalén & Clara G. Köhne       - Cite      : 10.1093/gbe/evad227
-    - Contact   : <felix.thalen@cardio-care.ch>       - DIAMOND v.: $diamondversion
+    P A T C H W O R K v$(patchwork_version())
+    - Developers: Felicia Sandberg & Clara G. Köhne   - Cite      : 10.1093/gbe/evad227
+    - Contact   : <felicia.sandberg@hest.ethz.ch>>    - DIAMOND v.: $diamondversion
     - Wiki      : github.com/fethalen/patchwork/wiki  - Threads   : $threads
     $RULER"""
     println(about)
@@ -176,10 +256,7 @@ function get_diamondversion()::AbstractString
     return last(split(versioncmd))
 end
 
-function getpercentage(
-    seqsin::Int,
-    seqsout::Int
-)::Float64
+function getpercentage(seqsin::Int, seqsout::Int)::Float64
     percent_markersout = 0.0
     if seqsout > 0
         percent_markersout = round((seqsin / seqsout) * 100, digits = 1)
@@ -187,7 +264,10 @@ function getpercentage(
     return percent_markersout
 end
 
-function ArgParse.parse_item(::Type{T}, argument::AbstractString) where {T<:AbstractVector}
+function ArgParse.parse_item(
+    ::Type{T},
+    argument::AbstractString,
+) where {T <: AbstractVector}
     convert(T, split(argument, " "))
 end
 
@@ -196,9 +276,11 @@ function parse_parameters()
     Alignment-based retrieval and concatenation of phylogenetic markers from
     whole-genome sequencing data
     """
-    settings = ArgParseSettings(description = overview,
-        version = VERSION,
-        add_version = true)
+    settings = ArgParseSettings(
+        description = overview,
+        version = string(patchwork_version()),
+        add_version = true,
+    )
 
     add_arg_group!(settings, "input/output")
     @add_arg_table! settings begin
@@ -299,7 +381,7 @@ function parse_parameters()
         help = "Set DIAMOND sensitivity mode to 'ultra-sensitive'."
         action = :store_true
         # ATTENTION: error when combining iterate and frameshift (GitHub issue #593)
-        "--iterate" # iterate with list requires diamond v. 2.0.12
+        "--iterate"
         help = """Set DIAMOND option --iterate. In version 2.0.12 or higher, you can
             optionally specify a space-separated list of sensitivity modes to iterate over.
             Allowed values are 'fast', 'mid-sensitive', 'sensitive', 'more-sensitive',
@@ -435,7 +517,8 @@ function main()
     diamondoutput = outdir * "/" * DIAMONDOUTPUT
     statsoutput = outdir * "/" * STATSOUTPUT
     plotsoutput = outdir * "/" * PLOTSOUTPUT
-    statistics = DataFrame(id = String[],
+    statistics = DataFrame(
+        id = String[],
         reference_len = Int[],
         query_len = Int[],
         regions = Int[],
@@ -444,12 +527,16 @@ function main()
         mismatches = Int[],
         deletions = Int[],
         query_coverage = Float64[],
-        identity = Float64[])
+        identity = Float64[],
+    )
     trimmedalignment_output = outdir * "/" * TRIMMEDALIGNMENT_OUTPUT
 
-    if (isfile(alignmentoutput) || isdir(statsoutput) && !isempty(readdir(statsoutput))
-        || (isdir(fastaoutput) && !isempty(readdir(fastaoutput)))
-        || (isdir(dnafastaoutput) && !isempty(readdir(dnafastaoutput))))
+    if (
+        isfile(alignmentoutput) ||
+        isdir(statsoutput) && !isempty(readdir(statsoutput)) ||
+        (isdir(fastaoutput) && !isempty(readdir(fastaoutput))) ||
+        (isdir(dnafastaoutput) && !isempty(readdir(dnafastaoutput)))
+    )
         if !args["overwrite"]
             answer = warn_overwrite()
             isequal(answer, "n") && return
@@ -513,39 +600,69 @@ function main()
         queryseqs_count += 1
         diamondhits = filter(hit -> isequal(referenceid, hit.subjectid), allhits)
         @assert length(diamondhits) != 0
-        writeblastTSV(*(diamondoutput, "/", referenceid.id, ".tsv"), diamondhits; header = true)
-        regions = AlignedRegionCollection(selectsequence(references_file, referenceid), diamondhits)
+        writeblastTSV(
+            *(diamondoutput, "/", referenceid.id, ".tsv"),
+            diamondhits;
+            header = true,
+        )
+        regions = AlignedRegionCollection(
+            selectsequence(references_file, referenceid),
+            diamondhits,
+        )
         # assuming all queries belong to same species:
 
         mergedregions = mergeoverlaps(regions)
-        concatenation, dna_concatenation = concatenate(mergedregions, args["species-delimiter"])
+        concatenation, dna_concatenation =
+            concatenate(mergedregions, args["species-delimiter"])
 
         # Mask inserts
         maskedalignment, maskeddna = maskgaps(concatenation, dna_concatenation)
 
         # Mask stop codons and ambiguous characters
-        maskedalignment, finaldna = maskalignment(maskedalignment.aln, maskeddna, DEFAULT_SCOREMODEL,
-            args["retain-stops"], args["retain-ambiguous"])
+        maskedalignment, finaldna = maskalignment(
+            maskedalignment.aln,
+            maskeddna,
+            DEFAULT_SCOREMODEL,
+            args["retain-stops"],
+            args["retain-ambiguous"],
+        )
 
         finalalignment = maskedalignment.aln
-        write_alignmentfile(alignmentoutput, referenceid, length(mergedregions), finalalignment, index)
+        write_alignmentfile(
+            alignmentoutput,
+            referenceid,
+            length(mergedregions),
+            finalalignment,
+            index,
+        )
 
         # Alignment trimming
         if !args["no-trimming"]
-            finalalignment, finaldna = slidingwindow(finalalignment, finaldna, args["window-size"],
-                args["required-distance"], DEFAULT_SCOREMODEL)
-            write_alignmentfile(trimmedalignment_output, referenceid, length(mergedregions), finalalignment, index)
+            finalalignment, finaldna = slidingwindow(
+                finalalignment,
+                finaldna,
+                args["window-size"],
+                args["required-distance"],
+                DEFAULT_SCOREMODEL,
+            )
+            write_alignmentfile(
+                trimmedalignment_output,
+                referenceid,
+                length(mergedregions),
+                finalalignment,
+                index,
+            )
         end
 
         write_fasta(
             *(fastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
             regions.records[1].queryid,
-            finalalignment.a.seq
+            finalalignment.a.seq,
         )
         write_fasta(
             *(dnafastaoutput, "/", sequencepart(referenceid), args["fasta-extension"]),
             regions.records[1].queryid,
-            finaldna
+            finaldna,
         )
         stats_row = [
             mergedregions.referencesequence.id.id,
@@ -556,9 +673,11 @@ function main()
             BioAlignments.count_matches(finalalignment),
             BioAlignments.count_mismatches(finalalignment),
             BioAlignments.count_deletions(finalalignment),
-            round(occupancy(finalalignment) * 100., digits = 2),
-            gapexcluded_identity(BioAlignments.count_matches(finalalignment),
-                                 BioAlignments.count_mismatches(finalalignment))
+            round(occupancy(finalalignment) * 100.0, digits = 2),
+            gapexcluded_identity(
+                BioAlignments.count_matches(finalalignment),
+                BioAlignments.count_mismatches(finalalignment),
+            ),
         ]
         push!(statistics, stats_row)
     end
@@ -573,11 +692,15 @@ function main()
 
     CSV.write(*(statsoutput, "/statistics.csv"), statistics, delim = ",")
     statssummary = select(describe(select(statistics, Not(:id))), Not([:nmissing, :eltype]))
-    pretty_table(statssummary, nosubheader = true)
+    pretty_table(statssummary, column_labels = string.(names(statssummary)))
 
     if !args["no-plots"]
         plot_querycover(statistics.query_coverage, *(plotsoutput, "/query_coverage.png"))
-        plot_percentident(statistics.identity, refseqs_count, *(plotsoutput, "/percent_identity.png"))
+        plot_percentident(
+            statistics.identity,
+            refseqs_count,
+            *(plotsoutput, "/percent_identity.png"),
+        )
     end
 
     CSV.write(*(statsoutput, "/average.csv"), statssummary, delim = ",")
@@ -592,10 +715,6 @@ function julia_main()::Cint
     end
 
     return 0
-end
-
-if length(ARGS) >= 1
-    julia_main()
 end
 
 end # module

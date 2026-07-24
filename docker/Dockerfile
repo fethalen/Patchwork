@@ -29,13 +29,16 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
 WORKDIR '/opt'
 
 # Download and install Julia
-RUN wget --quiet 'https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.3-linux-x86_64.tar.gz' \
-    && tar -xvzf 'julia-1.9.3-linux-x86_64.tar.gz' \
-    && rm 'julia-1.9.3-linux-x86_64.tar.gz'
-ENV PATH "/opt/julia-1.9.3/bin:${PATH}"
+ARG JULIA_VERSION=1.12.1
+ARG JULIA_SERIES=1.12
+RUN wget --quiet "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_SERIES}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
+    && tar -xzf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
+    && rm "julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
+ENV PATH="/opt/julia-${JULIA_VERSION}/bin:${PATH}"
 
 # Download and install DIAMOND
-RUN wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-linux64.tar.gz' \
+ARG DIAMOND_VERSION=2.2.4
+RUN wget "https://github.com/bbuchfink/diamond/releases/download/v${DIAMOND_VERSION}/diamond-linux64.tar.gz" \
     && tar -xvzf 'diamond-linux64.tar.gz' \
     && mv 'diamond' '/usr/local/bin' \
     && rm 'diamond-linux64.tar.gz'
@@ -52,11 +55,11 @@ RUN git clone 'https://github.com/fethalen/patchwork' \
 FROM ubuntu:22.04 AS production
 
 # Metadata
-LABEL org.opencontainers.image.authors="felix.thalen@cardio-care.ch"
+LABEL org.opencontainers.image.authors="felicia.sandberg@hest.ethz.ch"
 LABEL version="1"
 LABEL software="Patchwork"
-LABEL software.version="0.5.5"
-LABEL about.author="Felix Thalén <felix.thalen@cardio-care.ch>"
+LABEL software.version="0.8.0"
+LABEL about.author="Felicia Sandberg <felicia.sandberg@hest.ethz.ch>"
 LABEL about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
 LABEL about.home="https://github.com/fethalen/patchwork"
 LABEL about.documentation="https://github.com/fethalen/patchwork#readme"

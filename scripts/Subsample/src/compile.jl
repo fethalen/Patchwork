@@ -3,8 +3,8 @@
 # julia --project=. src/compile.jl . src/subsample_precompiled.jl build
 # the executable is build/bin/subsample
 
-import Pkg 
-Pkg.add(name="PackageCompiler", version="1.7.1")
+import Pkg
+Pkg.add(name = "PackageCompiler", version = "1.7.1")
 Pkg.instantiate()
 using PackageCompiler
 
@@ -14,7 +14,13 @@ precompiled = ARGS[2]
 outdirectory = ARGS[3]
 
 println("Starting compilation process...")
-create_app(projectdirectory, outdirectory; precompile_statements_file = precompiled, force = true, app_name="subsample")
+create_app(
+    projectdirectory,
+    outdirectory;
+    precompile_statements_file = precompiled,
+    force = true,
+    app_name = "subsample",
+)
 println("Compilation finished.")
 # println("Creating symlink to executable...")
 # try

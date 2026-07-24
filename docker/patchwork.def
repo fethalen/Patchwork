@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: ubuntu:22.04 
+From: ubuntu:22.04
 Stage: builder
 
 %post
@@ -34,13 +34,17 @@ mkdir -p '/opt'
 cd '/opt'
 
 # Download and install Julia
-wget --quiet 'https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.3-linux-x86_64.tar.gz' \
-&& tar -xvzf 'julia-1.9.3-linux-x86_64.tar.gz' \
-&& rm 'julia-1.9.3-linux-x86_64.tar.gz'
-PATH="/opt/julia-1.9.3/bin:${PATH}"
+JULIA_VERSION=1.12.1
+JULIA_SERIES=1.12
+wget --quiet "https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_SERIES}/julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
+&& tar -xzf "julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
+&& rm "julia-${JULIA_VERSION}-linux-x86_64.tar.gz"
+PATH="/opt/julia-${JULIA_VERSION}/bin:${PATH}"
+export PATH
 
 # Download and install DIAMOND
-wget 'http://github.com/bbuchfink/diamond/releases/download/v2.1.8/diamond-linux64.tar.gz' \
+DIAMOND_VERSION=2.2.4
+wget "https://github.com/bbuchfink/diamond/releases/download/v${DIAMOND_VERSION}/diamond-linux64.tar.gz" \
 && tar -xvzf 'diamond-linux64.tar.gz' \
 && mv 'diamond' '/usr/local/bin' \
 && rm 'diamond-linux64.tar.gz'
@@ -57,21 +61,20 @@ git clone 'https://github.com/fethalen/patchwork' \
 %environment
 export DEBIAN_FRONTEND=noninteractive
 export TZ=Europe/Zurich
-export PATH="/opt/julia-1.9.3/bin:${PATH}"
 
 Bootstrap: docker
-From: ubuntu:22.04 
+From: ubuntu:22.04
 Stage: production
 
 %files from builder
 /opt/patchwork/build/compiled /opt/patchwork
 /usr/local/bin/diamond /usr/local/bin/diamond
 %labels
-org.opencontainers.image.authors="felix.thalen@cardio-care.ch"
+org.opencontainers.image.authors="felicia.sandberg@hest.ethz.ch"
 version="1"
 software="Patchwork"
-software.version="0.5.4"
-about.author="Felix Thalén <felix.thalen@cardio-care.ch>"
+software.version="0.8.0"
+about.author="Felicia Sandberg <felicia.sandberg@hest.ethz.ch>"
 about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
 about.home="https://github.com/fethalen/patchwork"
 about.documentation="https://github.com/fethalen/patchwork#readme"

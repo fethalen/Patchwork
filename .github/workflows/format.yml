@@ -1,0 +1,23 @@
+name: Format
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: JuliaFormatter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check formatting
+        uses: julia-actions/julia-format@v4
+        with:
+          version: '2'

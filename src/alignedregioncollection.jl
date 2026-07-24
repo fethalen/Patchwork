@@ -24,14 +24,14 @@ mutable struct AlignedRegionCollection
 
     function AlignedRegionCollection(
         reference::SequenceRecord,
-        records::Vector{AlignedRegion}
+        records::Vector{AlignedRegion},
     )
         return new(reference, records)
     end
 
     function AlignedRegionCollection(
         reference::SequenceRecord,
-        results::Vector{DiamondSearchResult}
+        results::Vector{DiamondSearchResult},
     )
         regions = []
         for result in results
@@ -45,23 +45,15 @@ function Base.length(regions::AlignedRegionCollection)
     return length(regions.records)
 end
 
-function Base.push!(
-    regions::AlignedRegionCollection,
-    region::AlignedRegion
-)
+function Base.push!(regions::AlignedRegionCollection, region::AlignedRegion)
     return push!(regions.records, region)
 end
 
-function Base.pop!(
-    regions::AlignedRegionCollection
-)
+function Base.pop!(regions::AlignedRegionCollection)
     return pop!(regions.records)
 end
 
-function Base.getindex(
-    regions::AlignedRegionCollection,
-    index::Integer
-)
+function Base.getindex(regions::AlignedRegionCollection, index::Integer)
     return getindex(regions.records, index)
 end
 
@@ -95,7 +87,7 @@ function sameids(regions::AlignedRegionCollection)
         if !haskey(idgroups, id)
             idgroups[id] = [region]
         else
-           push!(idgroups[id], region)
+            push!(idgroups[id], region)
         end
     end
     return idgroups
@@ -152,10 +144,7 @@ end
 
 Returns `true` if there are overlapping sequences within `regions`.
 """
-function hasoverlaps(
-    regions::AlignedRegionCollection,
-    sorted=false
-)
+function hasoverlaps(regions::AlignedRegionCollection, sorted = false)
     if !sorted
         regions = sort(regions)
     end
@@ -186,9 +175,9 @@ how many times the function can run before stopping.
 """
 function mergeoverlaps(
     regions::AlignedRegionCollection,
-    sorted::Bool=false,
-    iteration::Int64=1,
-    maxiterate::Int64=10000
+    sorted::Bool = false,
+    iteration::Int64 = 1,
+    maxiterate::Int64 = 10000,
 )
     if !sorted
         regions = sort(regions)
@@ -260,8 +249,6 @@ function BioSequences.translate(regions::AlignedRegionCollection)
     return translatedregions
 end
 
-function queryids(
-    regions::AlignedRegionCollection
-)::Vector{SequenceIdentifier}
+function queryids(regions::AlignedRegionCollection)::Vector{SequenceIdentifier}
     return map(region -> region.queryid, regions)
 end

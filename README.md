@@ -31,6 +31,14 @@ install -c bioconda patchwork`. Until then, please refer to
 for installing from source. It is now also possible to [install
 Patchwork using Docker](https://github.com/fethalen/Patchwork/wiki/4.-Installation#installing-patchwork-with-docker).
 
+To build the standalone application, use its separate build environment:
+
+```sh
+julia --project=build build/build_app.jl
+```
+
+The executable will be written to `build/compiled/bin/patchwork`.
+
 ### Documentation
 
 Please see our [Wiki](https://github.com/fethalen/Patchwork/wiki).

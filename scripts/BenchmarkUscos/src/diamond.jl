@@ -7,10 +7,31 @@ using BioSequences
 const DATABASE = "database.dmnd"
 const DIAMONDDB_EXT = "dmnd"
 const FASTAEXTENSIONS = ["aln", "fa", "fn", "fna", "faa", "fasta", "FASTA"]
-const FIELDS = ["qseqid", "qseq", "full_qseq", "sseqid", "sseq", "full_sseq", "qframe",
-                "cigar", "pident", "bitscore"]
-const FIELDS_DNAQUERY = ["qseqid", "qseq", "qseq_translated", "full_qseq", "sseqid", "sseq", "full_sseq",
-                "qframe", "cigar", "pident", "bitscore"]
+const FIELDS = [
+    "qseqid",
+    "qseq",
+    "full_qseq",
+    "sseqid",
+    "sseq",
+    "full_sseq",
+    "qframe",
+    "cigar",
+    "pident",
+    "bitscore",
+]
+const FIELDS_DNAQUERY = [
+    "qseqid",
+    "qseq",
+    "qseq_translated",
+    "full_qseq",
+    "sseqid",
+    "sseq",
+    "full_sseq",
+    "qframe",
+    "cigar",
+    "pident",
+    "bitscore",
+]
 const OUTPUT_FORMAT = [6; FIELDS]
 const OUTPUT_FORMAT_DNAQUERY = [6; FIELDS_DNAQUERY]
 
@@ -37,15 +58,18 @@ Filters non-unique results and results with less percent identity than
 `6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore
  qframe sseq seq`
 """
-function readblastTSV(path::AbstractString; dnaquery::Bool=false)::Array{DiamondSearchResult,1}
+function readblastTSV(
+    path::AbstractString;
+    dnaquery::Bool = false,
+)::Array{DiamondSearchResult, 1}
     file, io = mktemp()
     run(pipeline(`sed 's/\\/b/g' $path`, file)) # b for backwards frameshift
     run(pipeline(`sed 's/\//f/g' $path`, file)) # f for forwards frameshift
 
-    if !dnaquery 
-        results = CSV.File(file; header=FIELDS, delim='\t') |> DataFrame
+    if !dnaquery
+        results = CSV.File(file; header = FIELDS, delim = '\t') |> DataFrame
     else
-        results = CSV.File(file; header=FIELDS_DNAQUERY, delim='\t') |> DataFrame
+        results = CSV.File(file; header = FIELDS_DNAQUERY, delim = '\t') |> DataFrame
     end
     unique!(results)
 
@@ -55,9 +79,16 @@ function readblastTSV(path::AbstractString; dnaquery::Bool=false)::Array{Diamond
         subjectid = SequenceIdentifier(String(row.sseqid))
         if !dnaquery
             result = DiamondSearchResult(
-                queryid, LongAA(row.qseq), LongAA(row.full_qseq),
-                subjectid, LongAA(row.sseq), LongAA(row.full_sseq),
-                row.qframe, row.cigar, row.pident, row.bitscore
+                queryid,
+                LongAA(row.qseq),
+                LongAA(row.full_qseq),
+                subjectid,
+                LongAA(row.sseq),
+                LongAA(row.full_sseq),
+                row.qframe,
+                row.cigar,
+                row.pident,
+                row.bitscore,
             )
         else
             # if no frameshift: 
@@ -92,12 +123,24 @@ function readblastTSV(path::AbstractString; dnaquery::Bool=false)::Array{Diamond
             # querysequence = translate_fromcigar(LongDNA{4}(row.qseq), row.cigar)  # julia-translation if frameshifting is allowed in DIAMOND
             # fullquery = patch_translate_fullquery(row.full_qseq, row.qseq, querysequences)
             querysequence = LongAA(row.qseq_translated)
-            fullquery = patch_translate_fullquery(row.full_qseq, row.qseq, row.qseq_translated, row.qframe)
+            fullquery = patch_translate_fullquery(
+                row.full_qseq,
+                row.qseq,
+                row.qseq_translated,
+                row.qframe,
+            )
 
             result = DiamondSearchResult(
-                queryid, querysequence, fullquery,
-                subjectid, LongAA(row.sseq), LongAA(row.full_sseq),
-                row.qframe, row.cigar, row.pident, row.bitscore
+                queryid,
+                querysequence,
+                fullquery,
+                subjectid,
+                LongAA(row.sseq),
+                LongAA(row.full_sseq),
+                row.qframe,
+                row.cigar,
+                row.pident,
+                row.bitscore,
             )
         end
         push!(diamondsearchresults, result)
@@ -121,7 +164,7 @@ function trim(full_qseq::AbstractString, qseq::AbstractString)::AbstractString
         error("Query is not a subsequence of Full Query.")
     end
     startidx = (first(subseqidx) % 3) == 0 ? 3 : (first(subseqidx) % 3)
-    
+
     #newlength = length(full_qseq) - startidx + 1
     #endidx = (last(subseqidx) == lastindex(full_qseq)) ? last(subseqidx) : length(full_qseq) - (newlength%3)
 
@@ -143,15 +186,21 @@ DIAMOND-translated `qseq_translated`, which corresponds to the aligned part of t
 and the julia-translated "rest" of the full query sequence (i.e. the parts that precede and 
 succeed the part of the full sequence that corresponds to `qseq_translated`).
 """
-function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractString, 
-    qseq_translated::AbstractString, qframe::Int64
+function patch_translate_fullquery(
+    full_qseq::AbstractString,
+    qseq::AbstractString,
+    qseq_translated::AbstractString,
+    qframe::Int64,
 )::LongAA
     translatedseq = LongAA(qseq_translated)
     return patch_translate_fullquery(full_qseq, qseq, translatedseq, qframe)
 end
 
-function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractString, 
-    qseq_translated::LongAA, qframe::Int64
+function patch_translate_fullquery(
+    full_qseq::AbstractString,
+    qseq::AbstractString,
+    qseq_translated::LongAA,
+    qframe::Int64,
 )::LongAA
     if isequal(full_qseq, qseq) #length(qseq) >= length(full_qseq)
         return qseq_translated
@@ -162,7 +211,7 @@ function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractStri
         println(full_qseq)
         error("lengths Query <= Full Query; and sequences not equal.")
     end
-    
+
     old_seq = full_qseq
     full_qseq = trim(full_qseq, qseq)
 
@@ -189,13 +238,13 @@ function patch_translate_fullquery(full_qseq::AbstractString, qseq::AbstractStri
         """
 
     if first(translatedpart) > firstindex(full_qseq)
-        firstpart = firstindex(full_qseq):(first(translatedpart)-1)
+        firstpart = firstindex(full_qseq):(first(translatedpart) - 1)
         firstseq = translate(LongDNA{4}(full_qseq[firstpart]))
     else
         firstseq = LongAA()
     end
     if last(translatedpart) < lastindex(full_qseq)
-        lastpart = (last(translatedpart)+1):lastindex(full_qseq)
+        lastpart = (last(translatedpart) + 1):lastindex(full_qseq)
         lastseq = translate(LongDNA{4}(full_qseq[lastpart]))
     else
         lastseq = LongAA()
@@ -280,12 +329,15 @@ optional `flags` such as `["--taxonnodes"]`.
 function diamond_makeblastdb(
     reference::AbstractString,
     outdir::AbstractString,
-    flags=[]
+    flags = [],
 )::AbstractString
     db_file = outdir * "/" * DATABASE
     logfile = outdir * "/diamond_makedb.log"
-    makedb_cmd = pipeline(`diamond makedb --in $reference $flags -d $db_file`,
-                          stdout=logfile, stderr=logfile)
+    makedb_cmd = pipeline(
+        `diamond makedb --in $reference $flags -d $db_file`,
+        stdout = logfile,
+        stderr = logfile,
+    )
     run(makedb_cmd)
     return db_file
 end
@@ -298,13 +350,16 @@ function diamond_blastp(
     query::AbstractString,
     subject::AbstractString,
     outdir::AbstractString,
-    flags=[]
-)::Array{DiamondSearchResult,1}
+    flags = [],
+)::Array{DiamondSearchResult, 1}
     logfile = outdir * "/diamond_blastp.log"
     blastout = outdir * "/blastp_out.tsv"
-    diamond_cmd = pipeline(`diamond blastp --query $query --db $subject $flags
-                            --outfmt $OUTPUT_FORMAT --out $blastout`, stdout=logfile,
-                            stderr=logfile)
+    diamond_cmd = pipeline(
+        `diamond blastp --query $query --db $subject $flags
+         --outfmt $OUTPUT_FORMAT --out $blastout`,
+        stdout = logfile,
+        stderr = logfile,
+    )
     run(diamond_cmd)
     return readblastTSV(blastout)
 end
@@ -317,13 +372,16 @@ function diamond_blastx(
     query::AbstractString,
     subject::AbstractString,
     outdir::AbstractString,
-    flags=[]
-)::Array{DiamondSearchResult,1}
+    flags = [],
+)::Array{DiamondSearchResult, 1}
     logfile = outdir * "/diamond_blastx.log"
     blastout = outdir * "/blastx_out.tsv"
-    diamond_cmd = pipeline(`diamond blastx --query $query --db $subject $flags
-                            --outfmt $OUTPUT_FORMAT_DNAQUERY --out $blastout`, stdout=logfile,
-                            stderr=logfile)         # in add. to qseq and full_qseq, save qseq_translated
+    diamond_cmd = pipeline(
+        `diamond blastx --query $query --db $subject $flags
+         --outfmt $OUTPUT_FORMAT_DNAQUERY --out $blastout`,
+        stdout = logfile,
+        stderr = logfile,
+    )         # in add. to qseq and full_qseq, save qseq_translated
     run(diamond_cmd)
-    return readblastTSV(blastout, dnaquery=true)    # query sequence needs translating, compare to qseq_translated
+    return readblastTSV(blastout, dnaquery = true)    # query sequence needs translating, compare to qseq_translated
 end

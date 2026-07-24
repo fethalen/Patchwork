@@ -9,15 +9,12 @@ Takes the path to a directory and a list of acceptable FASTA filetype
 extensions as an input and returns all of the FASTA files with that filetype
 extension within the provided directory in form of a names.
 """
-function fastafiles(
-    directory::String,
-    extensions::Array{String, 1}
-)::Array{String, 1}
+function fastafiles(directory::String, extensions::Array{String, 1})::Array{String, 1}
     absdir = abspath(directory)
     isdir(absdir) || error(*("the directory ", directory, " does not exist"))
     files = []
 
-    for path in readdir(directory, join=true)
+    for path in readdir(directory, join = true)
         if isfile(path)
             filetype_ext = strip(last(splitext(path)), '.')
             if filetype_ext in extensions
@@ -38,25 +35,32 @@ will be removed before returning the object.
 """
 function readmsa(
     file::String;
-    removeduplicates::Bool=true,
-    bysequence::Bool=true,
-    byid::Bool=true
+    removeduplicates::Bool = true,
+    bysequence::Bool = true,
+    byid::Bool = true,
 )::MultipleSequenceAlignment
     absfile = abspath(file)
     isfile(absfile) || error(*("cannot locate file ", file))
     msa = MultipleSequenceAlignment(absfile)
 
-    removeduplicates && !bysequence && !byid && error("Please choose whether duplicates " *
-        "should be removed based on sequence or ID.")
+    removeduplicates &&
+        !bysequence &&
+        !byid &&
+        error(
+            "Please choose whether duplicates " *
+            "should be removed based on sequence or ID.",
+        )
 
     if isfastafile(file)
         record = FASTA.Record()
-        reader = isgzipcompressed(file) ?
-            FASTA.Reader(GzipDecompressorStream(open(file))) : FASTA.Reader(open(file, "r"))
+        reader =
+            isgzipcompressed(file) ? FASTA.Reader(GzipDecompressorStream(open(file))) :
+            FASTA.Reader(open(file, "r"))
     elseif isfastqfile(file)
         record = FASTQ.Record()
-        reader = isgzipcompressed(file) ?
-            FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file, "r"))
+        reader =
+            isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) :
+            FASTQ.Reader(open(file, "r"))
     else
         error("incorrect file type.")
     end
@@ -66,9 +70,17 @@ function readmsa(
         alignment = SequenceRecord(FASTX.identifier(record), FASTX.sequence(record))
         # remove duplicated sequences (including reverse complement) and or IDs while reading
         if length(msa) >= 1 && removeduplicates
-            (bysequence && (in(alignment.sequencedata, map(aln -> aln.sequencedata, msa.sequences)) ||
-            in(reverse_complement(alignment.sequencedata), map(aln -> aln.sequencedata, msa.sequences))) ||
-            byid && in(alignment.id.id, map(aln -> aln.id.id, msa.sequences))) && continue
+            (
+                bysequence && (
+                    in(
+                        alignment.sequencedata,
+                        map(aln -> aln.sequencedata, msa.sequences),
+                    ) || in(
+                        reverse_complement(alignment.sequencedata),
+                        map(aln -> aln.sequencedata, msa.sequences),
+                    )
+                ) || byid && in(alignment.id.id, map(aln -> aln.id.id, msa.sequences))
+            ) && continue
             push!(msa, alignment)
         else
             push!(msa, alignment)
@@ -106,10 +118,7 @@ end
 Searches within a `fastafile` for a sequence record that matches the
 provided `identifier`. `nothing` is return if no matching records were found.
 """
-function selectsequence(
-    fastafile::AbstractString,
-    identifier::String
-)
+function selectsequence(fastafile::AbstractString, identifier::String)
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
     record = FASTA.Record()
@@ -124,10 +133,7 @@ function selectsequence(
     end
 end
 
-function selectsequence(
-    fastafile::AbstractString,
-    identifier::SequenceIdentifier
-)
+function selectsequence(fastafile::AbstractString, identifier::SequenceIdentifier)
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
 
@@ -137,7 +143,7 @@ function selectsequence(
             if isequal(currentid, identifier.id)
                 return SequenceRecord(
                     SequenceIdentifier(currentid),
-                    FASTX.sequence(LongAA, record)
+                    FASTX.sequence(LongAA, record),
                 )
             end
         end
@@ -152,7 +158,7 @@ provided `identifiers`.
 """
 function selectsequences(
     fastafile::AbstractString,
-    identifiers::Array{String}
+    identifiers::Array{String},
 )::MultipleSequenceAlignment
     abs_fastafile = abspath(fastafile)
     isfile(abs_fastafile) || error(*("cannot locate file ", fastafile))
@@ -174,13 +180,15 @@ end
 
 function isfastafile(
     path::AbstractString,
-    ext::AbstractVector{String}=FASTAEXTENSIONS
+    ext::AbstractVector{String} = FASTAEXTENSIONS,
 )::Bool
     # splits = split(path, ".")
     # length(splits) > 1 && last(splits) in ext && return true
     # length(splits) > 2 && splits[lastindex(splits)-1] in ext && isgzipcompressed(path) && return true
     # return false
-    reader = isgzipcompressed(path) ? FASTA.Reader(GzipDecompressorStream(open(path))) : FASTA.Reader(open(path))
+    reader =
+        isgzipcompressed(path) ? FASTA.Reader(GzipDecompressorStream(open(path))) :
+        FASTA.Reader(open(path))
     record = FASTA.Record()
     try # in case the file is a tmp file without extension
         read!(reader, record)
@@ -258,5 +266,3 @@ function fasta_countrecords(file::AbstractString)
 
     return recordcount, nucleotides
 end
-
-

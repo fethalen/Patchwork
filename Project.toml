@@ -1,6 +1,7 @@
 name = "Patchwork"
 uuid = "5568df11-beb6-4e3e-8878-8f1e5127fa36"
-authors = ["Felix Thalen <felix.thalen@cardio-care.ch>", "Clara Koehne <claragisela.koehne@stud.uni-goettingen.de>"]
+authors = ["Felicia Sandberg <felicia.sandberg@hest.ethz.ch>", "Clara Koehne"]
+version = "0.8.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
@@ -12,10 +13,13 @@ CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CodecZlib = "944b1d66-785c-5afd-91f1-9de20f533193"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FASTX = "c2308a5c-f048-11e8-3e8a-31650f418d12"
-PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
+
+[compat]
+julia = "1.12.1"
+PrettyTables = "3"

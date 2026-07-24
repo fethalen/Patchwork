@@ -6,9 +6,10 @@ Create a `PairwiseAlignment` object with an empty (gap-only) query and the provi
 """
 function createbridgealignment(
     reference::LongSequence,
-    range::UnitRange
+    range::UnitRange,
 )::BioAlignments.PairwiseAlignment
-    first(range) < 1 || last(range) > lastindex(reference) &&
+    first(range) < 1 ||
+        last(range) > lastindex(reference) &&
         error("The provided indices $range are out ouf bounds for this reference sequence.")
     gapquery = typeof(reference)()
     gapcigar = string(length(range)) * "D"
@@ -27,7 +28,7 @@ in the order in which they where provided. The sequences will not be realigned.
 """
 function concatenate(
     first::BioAlignments.PairwiseAlignment,
-    second::BioAlignments.PairwiseAlignment
+    second::BioAlignments.PairwiseAlignment,
 )::BioAlignments.PairwiseAlignment
     if isempty(first) && isempty(second)
         return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
@@ -48,7 +49,8 @@ function concatenate(
     # joinedquery = typeof(firstquery)(firstquery, secondquery)
     # joinedreference = typeof(firstquery)(firstreference, secondreference)
     joinedquery = firstquery * typeof(firstquery)(secondquery)
-    joinedreference = typeof(firstquery)(firstreference) * typeof(firstquery)(secondreference)
+    joinedreference =
+        typeof(firstquery)(firstreference) * typeof(firstquery)(secondreference)
     cigar = BioAlignments.cigar(first.a.aln) * BioAlignments.cigar(second.a.aln)
     return BioAlignments.PairwiseAlignment(joinedquery, joinedreference, cigar)
 end
@@ -60,7 +62,7 @@ Construct a new `PairwiseAlignment` object by joining the vector of alignment ob
 the order in which they where provided. The sequences will not be realigned.
 """
 function concatenate(
-    alignments::AbstractVector{<:BioAlignments.PairwiseAlignment}
+    alignments::AbstractVector{<:BioAlignments.PairwiseAlignment},
 )::BioAlignments.PairwiseAlignment
     if isempty(alignments)
         return BioAlignments.PairwiseAlignment(LongSequence(), LongSequence(), "")
@@ -99,7 +101,7 @@ are not covered by alignments to query sequences will be aligned to gaps (empty 
 """
 function concatenate(
     regions::Patchwork.AlignedRegionCollection,
-    delimiter::Char = '@'
+    delimiter::Char = '@',
 )::Tuple{BioAlignments.PairwiseAlignment, BioSequences.LongDNA}
     @assert !hasoverlaps(regions) "Detected overlaps in regions."
     @assert !isempty(regions.referencesequence) "Reference sequence must not be empty."
@@ -108,22 +110,29 @@ function concatenate(
         return createbridgealignment(reference, 1:lastindex(regions.referencesequence))#, DNA???
 
     if regions[1].subjectfirst > 1
-        alignments = [createbridgealignment(reference, 1:regions[1].subjectfirst-1),
-            regions[1].pairwisealignment]
-#        dnalength = 3 * (regions[1].subjectfirst-1)
-#        dnaqueries = [createbridge_dna(dnalength), regions[1].full_querysequence[regions[1].queryfirst:regions[1].querylast]]
+        alignments = [
+            createbridgealignment(reference, 1:(regions[1].subjectfirst - 1)),
+            regions[1].pairwisealignment,
+        ]
+        #        dnalength = 3 * (regions[1].subjectfirst-1)
+        #        dnaqueries = [createbridge_dna(dnalength), regions[1].full_querysequence[regions[1].queryfirst:regions[1].querylast]]
     else
         alignments = [regions[1].pairwisealignment]
-#        dnaqueries = [regions[1].full_querysequence[regions[1].queryfirst:regions[1].querylast]]
+        #        dnaqueries = [regions[1].full_querysequence[regions[1].queryfirst:regions[1].querylast]]
     end
     dnaqueries = [regions[1].full_querysequence[regions[1].queryfirst:regions[1].querylast]] # no need for bridge DNA!
 
     if lastindex(regions) == 1
         if regions[1].subjectlast < lastindex(regions.referencesequence)
-            push!(alignments, createbridgealignment(reference,
-                regions[1].subjectlast+1:lastindex(regions.referencesequence)))
-#            dnalength = 3 * (lastindex(regions.referencesequence)-regions[1].subjectlast)
-#            push!(dnaqueries, createbridge_dna(dnalength))
+            push!(
+                alignments,
+                createbridgealignment(
+                    reference,
+                    (regions[1].subjectlast + 1):lastindex(regions.referencesequence),
+                ),
+            )
+            #            dnalength = 3 * (lastindex(regions.referencesequence)-regions[1].subjectlast)
+            #            push!(dnaqueries, createbridge_dna(dnalength))
         end
         return concatenate(alignments), LongDNA{4}(join(dnaqueries))
     end
@@ -138,26 +147,41 @@ function concatenate(
         else
             otu = otupart(regions[i].queryid, delimiter)
         end
-        @assert regions[i-1].subjectlast < regions[i].subjectfirst """Regions incorrectly
-            sorted."""
-        if regions[i].subjectfirst > regions[i-1].subjectlast + 1
-            push!(alignments, createbridgealignment(reference,
-                    regions[i-1].subjectlast+1:regions[i].subjectfirst-1),
-                regions[i].pairwisealignment)
-#            dnalength = 3 * (regions[i].subjectfirst - regions[i-1].subjectlast + 1)
-#            push!(dnaqueries, createbridge_dna(dnalength), regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast])
+        @assert regions[i - 1].subjectlast < regions[i].subjectfirst """Regions incorrectly
+              sorted."""
+        if regions[i].subjectfirst > regions[i - 1].subjectlast + 1
+            push!(
+                alignments,
+                createbridgealignment(
+                    reference,
+                    (regions[i - 1].subjectlast + 1):(regions[i].subjectfirst - 1),
+                ),
+                regions[i].pairwisealignment,
+            )
+            #            dnalength = 3 * (regions[i].subjectfirst - regions[i-1].subjectlast + 1)
+            #            push!(dnaqueries, createbridge_dna(dnalength), regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast])
         else
             push!(alignments, regions[i].pairwisealignment)
-#            push!(dnaqueries, regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast])
+            #            push!(dnaqueries, regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast])
         end
-        push!(dnaqueries, regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast])
+        push!(
+            dnaqueries,
+            regions[i].full_querysequence[regions[i].queryfirst:regions[i].querylast],
+        )
 
-        if (i == lastindex(regions)
-            && regions[i].subjectlast < lastindex(regions.referencesequence))
-            push!(alignments, createbridgealignment(reference,
-                regions[i].subjectlast+1:length(regions.referencesequence)))
-#            dnalength = 3 * (length(regions.referencesequence) - regions[i].subjectlast + 1)
-#            push!(dnaqueries, createbridge_dna(dnalength))
+        if (
+            i == lastindex(regions) &&
+            regions[i].subjectlast < lastindex(regions.referencesequence)
+        )
+            push!(
+                alignments,
+                createbridgealignment(
+                    reference,
+                    (regions[i].subjectlast + 1):length(regions.referencesequence),
+                ),
+            )
+            #            dnalength = 3 * (length(regions.referencesequence) - regions[i].subjectlast + 1)
+            #            push!(dnaqueries, createbridge_dna(dnalength))
         end
     end
     return concatenate(alignments), LongDNA{4}(join(dnaqueries))
@@ -169,9 +193,7 @@ end
 Compute the absolute number of residues in the query sequence that align to residues in the
 reference sequence.
 """
-function countmatches(
-    alignment::BioAlignments.PairwiseAlignment
-)::Int64
+function countmatches(alignment::BioAlignments.PairwiseAlignment)::Int64
     isempty(alignment) && return 0
 
     covered = 0
@@ -179,7 +201,7 @@ function countmatches(
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
     for i in 2:lastindex(anchors)
         if BioAlignments.ismatchop(anchors[i].op)
-            covered += (anchors[i].seqpos - anchors[i-1].seqpos)
+            covered += (anchors[i].seqpos - anchors[i - 1].seqpos)
         end
     end
     return covered
@@ -210,7 +232,7 @@ function countgaps(alignment::BioAlignments.PairwiseAlignment)::Int64
     @assert anchors[1].op == BioAlignments.OP_START "Alignments must start with OP_START."
     for i in 2:lastindex(anchors)
         if BioAlignments.isdeleteop(anchors[i].op)
-            gaps += (anchors[i].refpos - anchors[i-1].refpos)
+            gaps += (anchors[i].refpos - anchors[i - 1].refpos)
         end
     end
     return gaps
@@ -251,7 +273,6 @@ function occupancy(regions::AlignedRegionCollection)::Float64
     return occupancy(concatenate(regions)[1]) # use the pw aln, not the concatenated dna seq
 end
 
-
 """
     maskgaps(alignment::BioAlignments.PairwiseAlignment)
 Remove unaligned columns (i.e., insertions in the reference sequence) _in the query
@@ -259,7 +280,7 @@ sequence_.
 """
 function maskgaps(
     alignment::BioAlignments.PairwiseAlignment,
-    dna::BioSequences.LongDNA
+    dna::BioSequences.LongDNA,
 )::Tuple{BioAlignments.PairwiseAlignmentResult, BioSequences.LongDNA}
     anchors = alignment.a.aln.anchors
     maskedseq = BioSequences.LongAA()
@@ -269,14 +290,14 @@ function maskgaps(
     gapcount = 0
     for i in 2:lastindex(anchors)
         if isinsertop(anchors[i].op) # === BioAlignments.OP_INSERT
-            firstinsertion = anchors[i-1].seqpos + 1
+            firstinsertion = anchors[i - 1].seqpos + 1
             lastinsertion = anchors[i].seqpos
-            to = anchors[i-1].seqpos
+            to = anchors[i - 1].seqpos
             gapcount += lastinsertion - firstinsertion + 1
             maskedseq *= alignment.a.seq[from:to]
             from = anchors[i].seqpos + 1
             # convert AA coords to DNA coords for masking DNA seq
-            dnato = 3 * anchors[i-1].seqpos
+            dnato = 3 * anchors[i - 1].seqpos
             maskeddna *= dna[dnafrom:dnato]
             dnafrom = 3 * anchors[i].seqpos + 1
         elseif i == lastindex(anchors)
@@ -302,7 +323,7 @@ function maskalignment(
     dnaseq::BioSequences.LongDNA,
     scoremodel::BioAlignments.AbstractScoreModel,
     retainstops::Bool = false,
-    retainambiguous::Bool = false
+    retainambiguous::Bool = false,
 )::Tuple{BioAlignments.PairwiseAlignmentResult, BioSequences.LongDNA}
     flagged = Int64[]
     dnaflagged = Int64[]
@@ -313,13 +334,14 @@ function maskalignment(
     for (position, letters) in enumerate(alignment)
         position > alignmentend && break
         (queryletter, refletter) = letters
-        if ((!retainstops && queryletter == AA_Term) ||
+        if (
+            (!retainstops && queryletter == AA_Term) ||
             (!retainambiguous && isambiguous(queryletter)) ||
             (refletter == AA_Gap)
         )
             querypos = first(aln2seq(alignment, position))
             push!(flagged, querypos)
-            push!(dnaflagged, 3 * (querypos - 1) + 1:3 * querypos...)
+            push!(dnaflagged, (3 * (querypos - 1) + 1):(3 * querypos)...)
         end
     end
     # We reverse the list of indices as deleting from left shifts the next deletion

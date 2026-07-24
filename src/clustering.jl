@@ -9,7 +9,7 @@
 # --> exact match +1, mismatch +-0 (for now, can be adjusted or added to fct signature later)
 # score(x,y) = score(x-1, y-1) + m or - mm depending
 # any(score(x,y) / length(shorter sequence) >= t) ? success : fail
-function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
+function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T <: BioSequence}
     matrix = zeros(Int64, length(s1), length(s2)) # s1 ^= rows, s2 ^= columns; 0st row/col ^= gap
     m = 1
     mm = 0
@@ -19,8 +19,8 @@ function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
     # iterate: thresholdpos row -> 1 -> thresholdpos col
     diagonals = [collect(zip(1:shorter, 1:shorter))] # init: middle diagonal
     for diagstart in 2:thresholdposition
-        diagrow = collect(zip(diagstart:shorter, 1:shorter-diagstart))
-        diagcol = collect(zip(1:shorter-diagstart, diagstart:shorter))
+        diagrow = collect(zip(diagstart:shorter, 1:(shorter - diagstart)))
+        diagcol = collect(zip(1:(shorter - diagstart), diagstart:shorter))
         push!(diagonals, diagrow, diagcol)
     end
     for diag in diagonals
@@ -30,7 +30,9 @@ function gapfreealign_t(s1::T, s2::T, t::Float64)::Bool where {T<:BioSequence}
             if x == 1 || y == 1 # no internal gaps allowed
                 matrix[x, y] = isequal(s1[x], s2[y]) ? m : -mm
             else # no internal gaps allowed
-                matrix[x, y] = isequal(s1[x], s2[y]) ? matrix[x-1, y-1] + m : matrix[x-1, y-1] - mm
+                matrix[x, y] =
+                    isequal(s1[x], s2[y]) ? matrix[x - 1, y - 1] + m :
+                    matrix[x - 1, y - 1] - mm
             end
             if matrix[x, y] / shorter >= t # threshold met!
                 return true
@@ -54,10 +56,24 @@ rotateleft(val, bits) = xor(val << bits, val >> (16 - bits))
 
 function circularhash(kmer::LongDNA, k::Int64)
     # fixed 16bit randoms
-    rands = Dict(DNA_A => 0x4567, DNA_C => 0x23c6, DNA_G => 0x9869, DNA_T => 0x4873,
-        DNA_M => 0xdc51, DNA_R => 0x5cff, DNA_W => 0x944a, DNA_S => 0x58ec, DNA_Y => 0x1f29,
-        DNA_K => 0x7ccd, DNA_V => 0x58ba, DNA_H => 0xd7ab, DNA_D => 0x41f2, DNA_B => 0x1efb,
-        DNA_N => 0xa9e3, DNA_Gap => 0xe146)
+    rands = Dict(
+        DNA_A => 0x4567,
+        DNA_C => 0x23c6,
+        DNA_G => 0x9869,
+        DNA_T => 0x4873,
+        DNA_M => 0xdc51,
+        DNA_R => 0x5cff,
+        DNA_W => 0x944a,
+        DNA_S => 0x58ec,
+        DNA_Y => 0x1f29,
+        DNA_K => 0x7ccd,
+        DNA_V => 0x58ba,
+        DNA_H => 0xd7ab,
+        DNA_D => 0x41f2,
+        DNA_B => 0x1efb,
+        DNA_N => 0xa9e3,
+        DNA_Gap => 0xe146,
+    )
     h = 0x0
     h = xor(h, rands[kmer[1]])
     for i in 2:k
@@ -69,10 +85,24 @@ end
 
 # rolling hash variant for previous hash function
 function circularhash_next(seq::LongDNA, k::Int64, prevbase::DNA, h::UInt16)
-    rands = Dict(DNA_A => 0x4567, DNA_C => 0x23c6, DNA_G => 0x9869, DNA_T => 0x4873,
-        DNA_M => 0xdc51, DNA_R => 0x5cff, DNA_W => 0x944a, DNA_S => 0x58ec, DNA_Y => 0x1f29,
-        DNA_K => 0x7ccd, DNA_V => 0x58ba, DNA_H => 0xd7ab, DNA_D => 0x41f2, DNA_B => 0x1efb,
-        DNA_N => 0xa9e3, DNA_Gap => 0xe146)
+    rands = Dict(
+        DNA_A => 0x4567,
+        DNA_C => 0x23c6,
+        DNA_G => 0x9869,
+        DNA_T => 0x4873,
+        DNA_M => 0xdc51,
+        DNA_R => 0x5cff,
+        DNA_W => 0x944a,
+        DNA_S => 0x58ec,
+        DNA_Y => 0x1f29,
+        DNA_K => 0x7ccd,
+        DNA_V => 0x58ba,
+        DNA_H => 0xd7ab,
+        DNA_D => 0x41f2,
+        DNA_B => 0x1efb,
+        DNA_N => 0xa9e3,
+        DNA_Gap => 0xe146,
+    )
     h = xor(h, rotateleft(rands[prevbase], (5 * k) % 16))
     h = rotateleft(h, 5)
     h = xor(h, rands[seq[k]])
@@ -107,8 +137,9 @@ Base.isempty(kmerindex::KmerIndex) = isempty(kmerindex.kmer)
 function buildkmertable(
     name::AbstractString,
     reader::Union{FASTA.Reader, FASTQ.Reader},
-    k::Int64, m::Int64,
-    filelength::Int64=10000000
+    k::Int64,
+    m::Int64,
+    filelength::Int64 = 10000000,
 )
     record = typeof(reader) == FASTA.Reader ? FASTA.Record() : FASTQ.Record()
     all_kmertable = repeat([Vector{KmerIndex}()], filelength)
@@ -131,16 +162,19 @@ function buildkmertable(
         seq_kmers = Vector{Tuple{LongDNA, UInt16, Int64}}(undef, seqlen - k + 1)
         seq_kmers[1] = (seq[1:k], circularhash(seq[1:k], k), 1)
 
-        for i in 2:seqlen - k + 1 # compute hashes for all kmers
-            seq_kmers[i] = (seq[i:i+k-1],
-                circularhash_next(seq, i+k-1, seq[i-1], seq_kmers[i-1][2]), i)
+        for i in 2:(seqlen - k + 1) # compute hashes for all kmers
+            seq_kmers[i] = (
+                seq[i:(i + k - 1)],
+                circularhash_next(seq, i+k-1, seq[i - 1], seq_kmers[i - 1][2]),
+                i,
+            )
         end
 
         if length(seq_kmers) > m # store the m lowest-hashing kmers in the index table
             for i in 1:m
                 minhash, idx = findmin(map(tup -> tup[2], seq_kmers))
-                kmertable[i] = KmerIndex(seq_kmers[idx][1], seqlen, seq_kmers[idx][3],
-                    msaindex)
+                kmertable[i] =
+                    KmerIndex(seq_kmers[idx][1], seqlen, seq_kmers[idx][3], msaindex)
                 if minhash == 0xffff
                     deleteat!(seq_kmers, idx)
                 else # avoid relocating m * ~l array entries where possible
@@ -162,15 +196,22 @@ end
 
 function buildkmertable(
     file::AbstractString,
-    k::Int64, m::Int64,
-    filelength::Int64=10000000
+    k::Int64,
+    m::Int64,
+    filelength::Int64 = 10000000,
 )
     if isfastafile(file)
-        reader = isgzipcompressed(file) ? FASTA.Reader(GzipDecompressorStream(open(file))) : FASTA.Reader(open(file))
+        reader =
+            isgzipcompressed(file) ? FASTA.Reader(GzipDecompressorStream(open(file))) :
+            FASTA.Reader(open(file))
     elseif isfastqfile(file)
-        reader = isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) : FASTQ.Reader(open(file))
+        reader =
+            isgzipcompressed(file) ? FASTQ.Reader(GzipDecompressorStream(open(file))) :
+            FASTQ.Reader(open(file))
     else
-        println("File must be either in FASTA or FASTQ format (gzipped input is supported).")
+        println(
+            "File must be either in FASTA or FASTQ format (gzipped input is supported).",
+        )
         return MultipleSequenceAlignment(), Vector{KmerIndex()}()
     end
     return buildkmertable(file, reader, k, m, filelength)
@@ -181,7 +222,10 @@ function mktemp_kmertable(kmertable::Vector{KmerIndex})
     # --> get kmertable with blocks of kmers, inside of which the longest/center seq is at the top
     # one kmer block corresponds to exactly one center sequence, so the whole thing is also ordered
     # by center sequence right from the beginning
-    sort!(kmertable, by = kmerindex -> (kmerindex.kmer, -kmerindex.seqlen, kmerindex.msaindex))
+    sort!(
+        kmertable,
+        by = kmerindex -> (kmerindex.kmer, -kmerindex.seqlen, kmerindex.msaindex),
+    )
     tmpfile, tmpio = mktemp()
     if isempty(kmertable)
         close(tmpio)
@@ -195,7 +239,7 @@ function mktemp_kmertable(kmertable::Vector{KmerIndex})
         if !isequal(kmertable[i].kmer, currentcenter.kmer) # entered new kmer block in sorted kmer table
             if writestart < i-1 # don't write trivial/1-sequence blocks
                 write(tmpio, string(currentcenter.msaindex)) # write center'\t's1'\t's2'\t's3'\t'...'\t'sn'\n'
-                for j in writestart+1:i-1 # write the entire previous group to file
+                for j in (writestart + 1):(i - 1) # write the entire previous group to file
                     if !isempty(kmertable[j]) # reduntant entries were marked empty instead of deleted
                         write(tmpio, "\t" * string(kmertable[j].msaindex))
                     end
@@ -208,25 +252,25 @@ function mktemp_kmertable(kmertable::Vector{KmerIndex})
             i += 1
         else # still in same kmer block, sequence is not the current center
             kmertable[i].kmerpos = currentcenter.kmerpos - kmertable[i].kmerpos # overwrite absolute with relative position
-            if kmertable[i].msaindex == kmertable[i-1].msaindex # same sequence has more than one matching kmer with center
+            if kmertable[i].msaindex == kmertable[i - 1].msaindex # same sequence has more than one matching kmer with center
                 # keep only entry with smaller relative kmer pos
                 # make sure to keep currentcenter (writestart), if current center seq has same kmer in diff pos
-                if kmertable[i].kmerpos >= kmertable[i-1].kmerpos || writestart == i-1
+                if kmertable[i].kmerpos >= kmertable[i - 1].kmerpos || writestart == i-1
                     # deleteat!(kmertable, i)
                     kmertable[i] = KmerIndex() # avoid relocating the array
                 else
                     # deleteat!(kmertable, i - 1)
-                    kmertable[i-1] = KmerIndex()
+                    kmertable[i - 1] = KmerIndex()
                 end
-            # else
-            #     i += 1 # no entry deleted --> next seq == next index
+                # else
+                #     i += 1 # no entry deleted --> next seq == next index
             end
             i += 1 # entries aren't deleted but just emptied, so it's always next seq == next index
         end
     end
     if writestart < i-1 # don't write trivial/1-sequence blocks
         write(tmpio, string(currentcenter.msaindex)) # write center'\t's1'\t's2'\t's3'\t'...'\t'sn'\n'
-        for j in writestart+1:i-1 # write the entire previous group to file
+        for j in (writestart + 1):(i - 1) # write the entire previous group to file
             if !isempty(kmertable[j]) # reduntant entries were marked empty instead of deleted
                 write(tmpio, "\t" * string(kmertable[j].msaindex))
             end
@@ -239,7 +283,12 @@ function mktemp_kmertable(kmertable::Vector{KmerIndex})
 end
 
 # ungapped alignment filter
-function gapfreealign_tocenter(kmertable_file::AbstractString, filelength::Int64, msa::MultipleSequenceAlignment, t::Float64)
+function gapfreealign_tocenter(
+    kmertable_file::AbstractString,
+    filelength::Int64,
+    msa::MultipleSequenceAlignment,
+    t::Float64,
+)
     # edges = Vector{Int64}[] # [[center idx, s1 idx, s2 idx, ...],...]
     edges = repeat([Vector{Int64}()], filelength) # [[center idx, s1 idx, s2 idx, ...],...]
     i = 1
@@ -280,7 +329,10 @@ function gapfreealign_tocenter(kmertable_file::AbstractString, filelength::Int64
     return tmpfile
 end
 
-function greedyincremental_clustering(edgesfile::AbstractString, msa::MultipleSequenceAlignment)
+function greedyincremental_clustering(
+    edgesfile::AbstractString,
+    msa::MultipleSequenceAlignment,
+)
     keepers = repeat([true], length(msa))
     open(edgesfile) do reader
         while !eof(reader)
