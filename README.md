@@ -29,15 +29,7 @@ the user will be able to install this program by running `conda
 install -c bioconda patchwork`. Until then, please refer to
 [these instructions](https://github.com/fethalen/Patchwork/wiki/4.-Installation)
 for installing from source. It is now also possible to [install
-Patchwork using Docker](https://github.com/fethalen/Patchwork/wiki/4.-Installation#installing-patchwork-with-docker).
-
-To build the standalone application, use its separate build environment:
-
-```sh
-julia --project=build build/build_app.jl
-```
-
-The executable will be written to `build/compiled/bin/patchwork`.
+Patchwork using Docker](https://github.com/fethalen/Patchwork/wiki/4.-Installation#installing-patchwork-with-docker)..
 
 ### Documentation
 
