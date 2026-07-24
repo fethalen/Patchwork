@@ -72,7 +72,7 @@ Stage: production
 org.opencontainers.image.authors="felicia.sandberg@hest.ethz.ch"
 version="1"
 software="Patchwork"
-software.version="0.5.4"
+software.version="0.8.0"
 about.author="Felicia Sandberg <felicia.sandberg@hest.ethz.ch>"
 about.summary="Alignment-based Exon Retrieval and Concatenation with Phylogenomic Applications"
 about.home="https://github.com/fethalen/patchwork"

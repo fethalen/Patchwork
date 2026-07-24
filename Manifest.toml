@@ -681,7 +681,7 @@ version = "2.8.6"
 deps = ["ArgParse", "BioAlignments", "BioGenerics", "BioSequences", "BioSymbols", "CSV", "CodecZlib", "DataFrames", "FASTX", "Pkg", "Plots", "PrettyTables", "Random", "Statistics", "UnicodePlots"]
 path = "."
 uuid = "5568df11-beb6-4e3e-8878-8f1e5127fa36"
-version = "0.7.0"
+version = "0.8.0"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "LLVMOpenMP_jll", "Libdl"]
