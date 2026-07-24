@@ -1,0 +1,68 @@
+name: Release binaries
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: macos-arm64
+          - runner: ubuntu-24.04
+            platform: linux-x86_64
+          - runner: ubuntu-24.04-arm
+            platform: linux-arm64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.12.1"
+
+      - uses: julia-actions/cache@v2
+
+      - name: Build application
+        env:
+          JULIA_CPU_TARGET: generic
+        run: julia --project=build build/build_app.jl
+
+      - name: Smoke test
+        run: build/compiled/bin/patchwork --help
+
+      - name: Create archive
+        shell: bash
+        run: |
+          archive="patchwork-${GITHUB_REF_NAME}-${{ matrix.platform }}.tar.gz"
+          tar -C build -czf "$archive" compiled
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: patchwork-${{ matrix.platform }}
+          path: patchwork-*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: patchwork-*
+          path: dist
+          merge-multiple: true
+
+      - name: Attach binaries to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz --clobber
